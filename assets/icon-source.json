@@ -1,0 +1,7 @@
+{
+  "name": "Ztime hourglass Z",
+  "selectedConcept": "C",
+  "master": "icon-master.png",
+  "method": "built-in image_gen, followed by icon-format and size conversion",
+  "prompt": "Preserve selected concept C: charcoal hourglass with a Z-shaped neck on a warm ivory rounded-square tile. Keep the chosen silhouette and proportions. Make the exterior corners transparent, keep the tile opaque, no text or extra symbols."
+}

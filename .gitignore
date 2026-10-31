@@ -1,0 +1,24 @@
+node_modules/
+.data*/
+dist/
+installed/
+.tools/
+android/.gradle/
+android/local.properties
+android/**/build/
+android/app/src/main/assets/web/
+*.log
+artifacts/
+
+# Machine-specific handoff and local credentials
+docs/HANDOFF.md
+*.sqlite*
+*.db
+*.db-wal
+*.db-shm
+*.pem
+*.key
+*.keystore
+*.jks
+.env
+.env.*
