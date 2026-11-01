@@ -1,3 +1,41 @@
+// @generated desk-preview:start
+// Presentation shared by the Windows renderer and its example-data review board.
+const html=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const desktopTitles={trend:'使用时间',ranking:'应用排行',compare:'期间对比',devices:'设备用时占比',focus:'应用集中度'};
+function desktopLayout(saved){
+ const defaults=Object.keys(desktopTitles).map(key=>({key,visible:['trend','ranking'].includes(key)}));
+ if(!Array.isArray(saved) || saved.some(r=>!r || !Object.hasOwn(desktopTitles,r.key) || typeof r.visible!=='boolean') || new Set(saved.map(r=>r.key)).size!==saved.length)return defaults;
+ return [...saved,...defaults.filter(row=>!saved.some(r=>r.key===row.key))];
+}
+function usageArea(bins,format){
+ if(!bins.length)return '<p>所选期间暂无使用记录</p>';
+ const max=Math.max(60000,...bins.map(b=>b.duration||0)), width=640, height=126;
+ const points=bins.flatMap((b,i)=>b.duration==null?[]:[{x:(i+.5)*width/bins.length,y:height-height*b.duration/max,b}]);
+ const line=points.map(({x,y},i)=>(i?'L':'M')+x+' '+y).join(' ');
+ const fill=points.length?line+' L'+points.at(-1).x+' '+height+' L'+points[0].x+' '+height+' Z':'';
+ const step=Math.ceil(bins.length/8);
+ return `<div class="usage-chart"><div class="usage-y"><span>${(max/3600000).toFixed(1)}</span><span>0</span></div><div><svg viewBox="0 0 ${width} ${height+4}" preserveAspectRatio="none" role="img" aria-label="使用时间面积图，单位小时"><path d="${fill}" fill="currentColor" opacity=".16"/><path d="${line}" fill="none" stroke="currentColor" stroke-width="2.5" vector-effect="non-scaling-stroke"/>${points.map(({x,y,b})=>`<g><title>${html(b.label)} · ${html(format(b.duration))}</title><circle cx="${x}" cy="${y}" r="2.3" fill="currentColor"/><rect x="${x-width/bins.length/2}" width="${width/bins.length}" height="${height}" fill="transparent"/></g>`).join('')}</svg><div class="usage-x" style="grid-template-columns:repeat(${bins.length},1fr)">${bins.map((b,i)=>'<span>'+(i%step===0||i===bins.length-1?html(b.label):'')+'</span>').join('')}</div></div></div>`;
+}
+function shareChart(key,apps,format){
+ const total=apps.reduce((n,a)=>n+a.duration,0);
+ if(!total)return '<p>所选期间暂无使用记录</p>';
+ const devices=key==='devices', first=devices?apps.filter(a=>a.platform==='windows').reduce((n,a)=>n+a.duration,0):apps.slice(0,3).reduce((n,a)=>n+a.duration,0);
+ const groups=[[devices?'电脑':'排行前三',first],[devices?'手机':'其他应用',total-first]];
+ return '<div class="share-meter" aria-hidden="true"><i style="width:'+100*first/total+'%"></i></div>'+groups.map(([name,n])=>`<div class="share-row"><span>${name}</span><b>${Math.round(n*100/total)}%</b><small>${html(format(n))}</small></div>`).join('');
+}
+const popular={'Asia/Shanghai':'北京 / 上海','Asia/Hong_Kong':'香港','Asia/Macau':'澳门','Asia/Taipei':'台北','Asia/Singapore':'新加坡','Asia/Tokyo':'东京','Asia/Seoul':'首尔','Asia/Kolkata':'新德里','Europe/London':'伦敦','Europe/Paris':'巴黎','Europe/Berlin':'柏林','America/New_York':'纽约','America/Los_Angeles':'洛杉矶','America/Toronto':'多伦多','Australia/Sydney':'悉尼','Pacific/Auckland':'奥克兰','UTC':'协调世界时'};
+const regions={Africa:'非洲',America:'美洲',Antarctica:'南极洲',Arctic:'北极',Asia:'亚洲',Atlantic:'大西洋',Australia:'澳洲',Europe:'欧洲',Indian:'印度洋',Pacific:'太平洋'};
+function zoneSelect(current){
+ const groups=new Map([['常用城市',Object.entries(popular)]]);
+ for(const id of new Set([current,...(Intl.supportedValuesOf?.('timeZone')||[])])){
+  if(!id||Object.hasOwn(popular,id))continue;
+  const region=regions[id.split('/')[0]]||'其他时区';
+  if(!groups.has(region))groups.set(region,[]);
+  groups.get(region).push([id,id.split('/').slice(1).join(' / ').replaceAll('_',' ')||id]);
+ }
+ return '<select id="timeZone">'+[...groups].map(([label,items])=>'<optgroup label="'+label+'">'+items.map(([id,city])=>`<option value="${html(id)}" ${current===id?'selected':''}>${html(city)}</option>`).join('')+'</optgroup>').join('')+'</select>';
+}
+// @generated desk-preview:end
 // All state lives in the current fixture document; no calls to the product or the notes API.
 const timers=new WeakMap();
 function notice(d,message){
@@ -33,6 +71,7 @@ function handleStyleDemo(d,el){
   case 'save':{
    const hint=d.querySelector('[data-save-hint]');if(hint)hint.textContent='示例起点：'+d.querySelector('[data-style-id=day-start]').value;
     if(d.body.dataset.reviewDevice==='mobile' && d.getElementById('timeZone'))mobileZone=d.getElementById('timeZone').value;
+   if(currentDraft() && d.getElementById('timeZone'))desktopZone=d.getElementById('timeZone').value;
    notice(d,'示例设置已保存');break;
   }
   case 'export':notice(d,'示例：'+button.textContent.trim().replace(/\s+/g,' ')+'（不会下载真实记录）');break;
@@ -69,6 +108,7 @@ const currentDraft=()=>frame.dataset.feature===desktopV2;
 const dashboardRoute=()=>device.value==='desktop'?desktopV2:'dashboard';
 const isDashboard = f=>['dashboard','calendar','layout',desktopV2].includes(f);
 
+let desktopZone='Asia/Hong_Kong';
 let mobileZone='Asia/Hong_Kong';
 function populateTimeZones(d){
   const select=d.getElementById('timeZone');
@@ -87,9 +127,14 @@ function populateTimeZones(d){
 }
 
 function applySecondDesktopDraft(d,pageId){
-  d.body.classList.add('desktop-v2');
+  d.body.classList.add('desktop-v2','desk-ui');
+
   if(pageId!=='settings')return;
   const grid=d.querySelector('.settings-grid');
+  const input=d.getElementById('timeZone');input.outerHTML=zoneSelect(desktopZone);
+  const pause=grid.querySelector('[data-action=pause]'), startup=grid.querySelector('[data-action=autostart]');
+  const row=d.createElement('div');row.className='record-actions';pause.before(row);const p=startup.parentElement;
+  row.append(pause,startup);p.remove();
   grid.querySelector('.accent-picker')?.remove();
   const about=[...grid.children].find(card=>card.querySelector('h2')?.textContent==='Ztime');
   about?.remove();
@@ -278,6 +323,10 @@ const mobileAnnotationTargets={
 function targetFor(note) {
   if(secondDraftNote(note)!==currentDraft())return null;
   try {
+    if(secondDraftNote(note) && note.id===37){
+      const card=doc().querySelector('[data-card-key=compare]');
+      return card?.hidden?doc().querySelector('[data-cal=layout-toggle][data-key=compare]')||doc().querySelector('[data-cal=layout]'):card;
+    }
     const replacement=mobileAnnotationTargets[note.board]?.[note.selector];
     if(replacement)return doc().querySelector(replacement);
     const el=doc().querySelector(note.selector);
@@ -297,6 +346,7 @@ function locate(note) {
     return;
   }
   if(dashboardNote)periodView.restore(flow);
+  if(v2 && note.id===37 && doc().querySelector('[data-card-key=compare]')?.hidden)periodView.open('layout');
   const el = targetFor(note);
   if (el) {
     reveal(el);
@@ -529,9 +579,11 @@ function mountPeriodDashboard(d,onChange){
  const label=r=>len(r)===1?stamp(r[0]):stamp(r[0])+' – '+short(r[1]);
  const root=d.createElement('section');root.id='period-dashboard';root.hidden=true;d.body.append(root);
  let mode='day',period=[today,today],comparison=null,scope='all',picker=null;
+ const desktop=currentDraft();
  const apps=[['浏览器','pc'],['阅读','phone'],['编辑器','pc'],['笔记','phone']];
- const base=(n,i)=>{const q=Math.abs((n*(19+i*8)+Math.floor(n/7)*(i+11))%167);return [40,19,35,10][i]+q%[95,45,85,35][i];};
- const vector=r=>{const totals=[0,0,0,0];for(let n=r[0];n<=r[1];n++)for(let i=0;i<4;i++)if(scope==='all'||scope===apps[i][1])totals[i]+=base(n,i);return totals;};
+ if(desktop)apps.push(['邮件','pc'],['日历','phone'],['终端','pc'],['相册','phone'],['音乐','pc'],['地图','phone']);
+ const base=(n,i)=>{const q=Math.abs((n*(19+i*8)+Math.floor(n/7)*(i+11))%167);if(i>=4)return 2+q%14;return [40,19,35,10][i]+q%[95,45,85,35][i];};
+ const vector=r=>{const totals=apps.map(()=>0);for(let n=r[0];n<=r[1];n++)for(let i=0;i<apps.length;i++)if(scope==='all'||scope===apps[i][1])totals[i]+=base(n,i);return totals;};
  const total=v=>v.reduce((a,b)=>a+b,0),dur=m=>{const v=Math.round(m);return v>=60?Math.floor(v/60)+' 小时 '+v%60+' 分钟':v+' 分钟';};
  function bins(){
   const [a,b]=period;
@@ -543,18 +595,19 @@ function mountPeriodDashboard(d,onChange){
   return Array.from({length:len(period)},(_,i)=>({label:String(dayOf(a+i)),minutes:total(vector([a+i,a+i]))}));
  }
  const layoutKey='review-dashboard-layout-'+device.value+(currentDraft()?'-v2':'');
- const modules={trend:'用时趋势',ranking:'应用排行',compare:'期间对比'};
- let layout=Object.keys(modules).map(key=>({key,visible:true}));
+ const modules=desktop?desktopTitles:{trend:'用时趋势',ranking:'应用排行',compare:'期间对比'};
+ let layout=desktop?desktopLayout():Object.keys(modules).map(key=>({key,visible:true}));
  try{
    const saved=JSON.parse(sessionStorage.getItem(layoutKey));
-   if(Array.isArray(saved) && saved.length===layout.length && new Set(saved.map(r=>r.key)).size===layout.length &&
+   if(desktop)layout=desktopLayout(saved);
+   else if(Array.isArray(saved) && saved.length===layout.length && new Set(saved.map(r=>r.key)).size===layout.length &&
       saved.every(row=>Object.hasOwn(modules,row.key)&&typeof row.visible==='boolean'))layout=saved;
  }catch{/* Use the default design when no saved preference exists. */}
  let layoutDraft=null,returnFocus='dates';
  function layoutPanel(){
    const rows=layoutDraft.map(({key,visible},i)=>{
      const name=modules[key];
-     return `<div class="pd-module-row"><b>${name}</b><button data-cal="layout-up" data-key="${key}" aria-label="上移${name}" ${i===0?'disabled':''}>↑</button><button data-cal="layout-down" data-key="${key}" aria-label="下移${name}" ${i===layoutDraft.length-1?'disabled':''}>↓</button><button data-cal="layout-toggle" data-key="${key}" aria-pressed="${visible}">${visible?'显示':'隐藏'}</button></div>`;
+     return `<div class="pd-module-row"><b>${name}</b><button data-cal="layout-up" data-key="${key}" aria-label="上移${name}" ${i===0?'disabled':''}>↑</button><button data-cal="layout-down" data-key="${key}" aria-label="下移${name}" ${i===layoutDraft.length-1?'disabled':''}>↓</button><button data-cal="layout-toggle" data-key="${key}" aria-pressed="${visible}">${desktop?(visible?'已添加':'添加'):(visible?'显示':'隐藏')}</button></div>`;
    }).join('');
    return '<section class="pd-picker"><h3>仪表盘布局</h3><p class="pd-help">调整卡片顺序和显示状态。</p>'+rows+'<div class="pd-end"><button data-cal="cancel">取消</button><button class="pd-primary" data-cal="layout-save">保存布局</button></div></section>';
  }
@@ -564,9 +617,20 @@ function mountPeriodDashboard(d,onChange){
    grid.prepend(trend);
    const [ranking,compare]=[...grid.children].slice(1);
    const cards={trend,ranking,compare};
+   if(desktop){
+     const appTotals=vector(period).map((m,i)=>({duration:m,platform:apps[i][1]==='pc'?'windows':'android'})).sort((a,b)=>b.duration-a.duration);
+     trend.querySelector('h3').textContent='使用时间';
+     trend.querySelector('.pd-plot').outerHTML=usageArea(bins().map(b=>({label:b.label,duration:b.minutes==null?null:b.minutes*60000})),ms=>dur(ms/60000));
+     const scroll=d.createElement('div');scroll.className='rank-scroll';scroll.tabIndex=0;scroll.setAttribute('aria-label','应用排行');scroll.setAttribute('role','region');
+     scroll.append(...ranking.querySelectorAll('.pd-app'));ranking.append(scroll);
+     for(const key of ['devices','focus']){
+       const card=d.createElement('section');card.className='pd-card';
+       card.innerHTML='<h3>'+modules[key]+'</h3>'+shareChart(key,appTotals,ms=>dur(ms/60000));cards[key]=card;
+     }
+   }
    for(const entry of layout){
      const card=cards[entry.key];
-     card.hidden=!entry.visible;
+     card.dataset.cardKey=entry.key;card.hidden=!entry.visible;
      card.classList.toggle('pd-trend',entry.key==='trend');
      grid.append(card);
    }

@@ -1,0 +1,36 @@
+// Presentation shared by the Windows renderer and its example-data review board.
+const html=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export const desktopTitles={trend:'使用时间',ranking:'应用排行',compare:'期间对比',devices:'设备用时占比',focus:'应用集中度'};
+export function desktopLayout(saved){
+ const defaults=Object.keys(desktopTitles).map(key=>({key,visible:['trend','ranking'].includes(key)}));
+ if(!Array.isArray(saved) || saved.some(r=>!r || !Object.hasOwn(desktopTitles,r.key) || typeof r.visible!=='boolean') || new Set(saved.map(r=>r.key)).size!==saved.length)return defaults;
+ return [...saved,...defaults.filter(row=>!saved.some(r=>r.key===row.key))];
+}
+export function usageArea(bins,format){
+ if(!bins.length)return '<p>所选期间暂无使用记录</p>';
+ const max=Math.max(60000,...bins.map(b=>b.duration||0)), width=640, height=126;
+ const points=bins.flatMap((b,i)=>b.duration==null?[]:[{x:(i+.5)*width/bins.length,y:height-height*b.duration/max,b}]);
+ const line=points.map(({x,y},i)=>(i?'L':'M')+x+' '+y).join(' ');
+ const fill=points.length?line+' L'+points.at(-1).x+' '+height+' L'+points[0].x+' '+height+' Z':'';
+ const step=Math.ceil(bins.length/8);
+ return `<div class="usage-chart"><div class="usage-y"><span>${(max/3600000).toFixed(1)}</span><span>0</span></div><div><svg viewBox="0 0 ${width} ${height+4}" preserveAspectRatio="none" role="img" aria-label="使用时间面积图，单位小时"><path d="${fill}" fill="currentColor" opacity=".16"/><path d="${line}" fill="none" stroke="currentColor" stroke-width="2.5" vector-effect="non-scaling-stroke"/>${points.map(({x,y,b})=>`<g><title>${html(b.label)} · ${html(format(b.duration))}</title><circle cx="${x}" cy="${y}" r="2.3" fill="currentColor"/><rect x="${x-width/bins.length/2}" width="${width/bins.length}" height="${height}" fill="transparent"/></g>`).join('')}</svg><div class="usage-x" style="grid-template-columns:repeat(${bins.length},1fr)">${bins.map((b,i)=>'<span>'+(i%step===0||i===bins.length-1?html(b.label):'')+'</span>').join('')}</div></div></div>`;
+}
+export function shareChart(key,apps,format){
+ const total=apps.reduce((n,a)=>n+a.duration,0);
+ if(!total)return '<p>所选期间暂无使用记录</p>';
+ const devices=key==='devices', first=devices?apps.filter(a=>a.platform==='windows').reduce((n,a)=>n+a.duration,0):apps.slice(0,3).reduce((n,a)=>n+a.duration,0);
+ const groups=[[devices?'电脑':'排行前三',first],[devices?'手机':'其他应用',total-first]];
+ return '<div class="share-meter" aria-hidden="true"><i style="width:'+100*first/total+'%"></i></div>'+groups.map(([name,n])=>`<div class="share-row"><span>${name}</span><b>${Math.round(n*100/total)}%</b><small>${html(format(n))}</small></div>`).join('');
+}
+const popular={'Asia/Shanghai':'北京 / 上海','Asia/Hong_Kong':'香港','Asia/Macau':'澳门','Asia/Taipei':'台北','Asia/Singapore':'新加坡','Asia/Tokyo':'东京','Asia/Seoul':'首尔','Asia/Kolkata':'新德里','Europe/London':'伦敦','Europe/Paris':'巴黎','Europe/Berlin':'柏林','America/New_York':'纽约','America/Los_Angeles':'洛杉矶','America/Toronto':'多伦多','Australia/Sydney':'悉尼','Pacific/Auckland':'奥克兰','UTC':'协调世界时'};
+const regions={Africa:'非洲',America:'美洲',Antarctica:'南极洲',Arctic:'北极',Asia:'亚洲',Atlantic:'大西洋',Australia:'澳洲',Europe:'欧洲',Indian:'印度洋',Pacific:'太平洋'};
+export function zoneSelect(current){
+ const groups=new Map([['常用城市',Object.entries(popular)]]);
+ for(const id of new Set([current,...(Intl.supportedValuesOf?.('timeZone')||[])])){
+  if(!id||Object.hasOwn(popular,id))continue;
+  const region=regions[id.split('/')[0]]||'其他时区';
+  if(!groups.has(region))groups.set(region,[]);
+  groups.get(region).push([id,id.split('/').slice(1).join(' / ').replaceAll('_',' ')||id]);
+ }
+ return '<select id="timeZone">'+[...groups].map(([label,items])=>'<optgroup label="'+label+'">'+items.map(([id,city])=>`<option value="${html(id)}" ${current===id?'selected':''}>${html(city)}</option>`).join('')+'</optgroup>').join('')+'</select>';
+}
