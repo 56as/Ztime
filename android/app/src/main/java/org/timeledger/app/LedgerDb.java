@@ -15,7 +15,15 @@ public class LedgerDb extends SQLiteOpenHelper {
     public synchronized JSONObject object(String key,JSONObject fallback){String value=get(key,null);if(value==null||value.equals("null"))return fallback;try{return new JSONObject(value);}catch(Exception e){return fallback;}}
     public synchronized void put(String key,Object value){ContentValues v=new ContentValues();v.put("key",key);v.put("value",String.valueOf(value));getWritableDatabase().insertWithOnConflict("meta",null,v,SQLiteDatabase.CONFLICT_REPLACE);}
     public synchronized long next(){long n=Long.parseLong(get("sequence","0"))+1;put("sequence",n);return n;}
-    public synchronized JSONObject device() throws JSONException {JSONObject d=object("device",null);if(d==null){d=new JSONObject().put("id",UUID.randomUUID().toString()).put("name",Build.MANUFACTURER+" "+Build.MODEL).put("platform","android");put("device",d);}upsertDevice(d);return d;}
+    public synchronized JSONObject device() throws JSONException {
+        // Activity and background worker may open separate helpers on first launch.
+        SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
+        try {
+            JSONObject d=object("device",null);
+            if(d==null){d=new JSONObject().put("id",UUID.randomUUID().toString()).put("name",Build.MANUFACTURER+" "+Build.MODEL).put("platform","android");put("device",d);}
+            upsertDevice(d);db.setTransactionSuccessful();return d;
+        } finally {db.endTransaction();}
+    }
     public synchronized JSONObject settings() throws JSONException {JSONObject s=object("settings",null);if(s==null){s=new JSONObject().put("dayStart",4).put("timeZone","Asia/Hong_Kong").put("weekStart",1).put("revision","default").put("baseRevision",JSONObject.NULL);put("settings",s);}return s;}
     public synchronized void upsertDevice(JSONObject d) throws JSONException {ContentValues v=new ContentValues();v.put("id",d.getString("id"));v.put("name",d.getString("name"));v.put("platform",d.getString("platform"));v.put("last_seen",System.currentTimeMillis());getWritableDatabase().insertWithOnConflict("devices",null,v,SQLiteDatabase.CONFLICT_REPLACE);}
     public synchronized JSONArray devices() throws JSONException {JSONArray a=new JSONArray();String own=device().getString("id");try(Cursor c=getReadableDatabase().rawQuery("SELECT * FROM devices",null)){while(c.moveToNext())a.put(new JSONObject().put("id",c.getString(0)).put("name",c.getString(1)).put("platform",c.getString(2)).put("lastSeen",c.getLong(3)).put("local",c.getString(0).equals(own)));}return a;}
