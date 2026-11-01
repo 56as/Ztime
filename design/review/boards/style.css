@@ -373,8 +373,7 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .settings-view .record-actions button {grid-column:auto;min-width:0;min-height:36px;padding:4px 6px}
 .desktop-v2 .settings-view .record-actions + .field {max-width:255px;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .desktop-v2 .settings-view .record-actions + .field #theme {width:100%;min-width:0}
-@media (min-width:1100px) {
-  .desktop-v2 .settings-grid {grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.18fr);align-items:start}
-  .desktop-v2 .settings-grid > .panel {height:auto;padding:16px}
+@media (min-width:820px) {
+  .desktop-v2 .settings-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
   .desktop-v2 #design-settings-data .row button {padding-inline:8px}
 }
