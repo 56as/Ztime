@@ -339,6 +339,9 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .pd-controls {margin-bottom:0;border-top:3px solid var(--accent);border-bottom:0;border-radius:14px 14px 0 0;padding:10px 14px 4px}
 .desktop-v2 .pd-summary {padding:4px 14px 10px;margin-bottom:10px;border-top:0;border-radius:0 0 14px 14px}
 .desktop-v2 .pd-summary :is(small,h2) {font:550 16px/1.4 system-ui,"Microsoft YaHei",sans-serif;color:#42536b;letter-spacing:normal;margin:0}
+.desktop-v2 .pd-summary .pd-scope {order:-1}
+.desktop-v2 .pd-summary > div:first-child {margin-inline-start:auto}
+.desktop-v2 .rank-scroll {scrollbar-width:none;scrollbar-gutter:auto;padding-right:0}
 .desktop-v2 .pd-bottom {gap:12px}
 .desktop-v2 .pd-card {padding:16px 18px}
 /* The default stack uses the available window height. Additional cards use normal page flow. */
