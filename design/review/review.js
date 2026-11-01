@@ -358,6 +358,7 @@ function comparisonNote(note){
 function targetFor(note) {
   if(secondDraftNote(note)!==currentDraft())return null;
   try {
+    if(note.board==='mobile-home' && note.selector==='#point-detail' && !doc().querySelector('#point-detail')?.textContent)return doc().querySelector('.point-plot');
     if(comparisonNote(note)){
       const card=doc().querySelector('[data-card-key=compare]');
       return card?.hidden?doc().querySelector('[data-cal=layout-toggle][data-key=compare]'):card;
@@ -401,6 +402,7 @@ function pins() {
   if (!layer) return;
   layer.replaceChildren();
   const phoneNav=device.value==='mobile' && doc().querySelector('#period-dashboard:not([hidden]) .pd-nav, .unified .sidebar');
+  const pinCounts=new Map();
   for (const note of notes.filter(n => noteBoard(n) === frame.dataset.loaded && !n.resolved)) {
     const el = targetFor(note);
     if (!el) continue;
@@ -410,12 +412,21 @@ function pins() {
     if(flow?.startsWith('仪表盘 · ') && periodView?.describeState()!==flow)continue;
     const pin = doc().createElement('button');
     pin.className = 'review-pin';
-    pin.style.left = box.left + box.width*note.x + 'px';
     // Keep toolbar actions clickable while their feedback remains open.
     const above=currentDraft() && el.closest('.pd-tools button') ||
       device.value==='mobile' && el.matches('button,select,.pd-nav,.pd-controls');
-    const y=above?box.top-8:box.top + box.height*note.y;
+    let x=box.left + box.width*note.x, y=above?box.top-8:box.top + box.height*note.y;
+    const tools=phoneNav && el.closest('.pd-tools');
+    const summary=phoneNav && el.matches('.pd-summary > div:first-child');
+    if(tools || summary){
+      const anchor=tools || el, bounds=anchor.getBoundingClientRect();
+      const count=pinCounts.get(anchor)||0;
+      pinCounts.set(anchor,count+1);
+      x=tools?bounds.left-16-26*count:bounds.right+16+26*count;
+      y=bounds.top+bounds.height/2;
+    }
     if(phoneNav && !phoneNav.contains(el) && y+12>phoneNav.getBoundingClientRect().top)continue;
+    pin.style.left = x + 'px';
     pin.style.top = y + 'px';
     pin.textContent = note.id; pin.title = '#' + note.id + ' ' + note.text;
     pin.onclick = () => locate(note);
@@ -668,7 +679,6 @@ function mountPeriodDashboard(d,onChange){
    }
    slider.oninput=slider.onclick=()=>{if(!picking){inspect(Number(slider.value));onChange();}};
    if(pointIndex!==null && series[pointIndex])inspect(pointIndex);
-   else detail.textContent='点按图表，查看该时段的应用和用时。';
  }
  function bins(){
   const [a,b]=period;
@@ -728,7 +738,7 @@ function mountPeriodDashboard(d,onChange){
      }
    }
    const shown=layout.filter(row=>row.visible);
-   grid.classList.toggle('default-pair',desktop && shown.length===2 && shown.every(row=>['ranking','trend'].includes(row.key)));
+   grid.classList.toggle('default-pair',(desktop || mobile) && shown.length===2 && shown.every(row=>['ranking','trend'].includes(row.key)));
    for(const entry of layout){
      const card=cards[entry.key];
      card.dataset.cardKey=entry.key;card.hidden=!entry.visible;

@@ -232,25 +232,52 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
   display:grid;place-items:center;text-align:center;min-height:44px;font-size:14px;padding:6px;border-radius:10px;
 }
 [data-review-device=mobile].unified .nav .icon {display:none}
-[data-review-device=mobile] .pd-main {padding-bottom:calc(84px + env(safe-area-inset-bottom))}
-[data-review-device=mobile] #period-dashboard .pd-tools button {height:40px;min-width:40px}
-[data-review-device=mobile] #period-dashboard [data-cal=layout] {padding:0 8px;background:#efebfc;border:1px solid #cfc3ec;color:#51417c}
+[data-review-device=mobile] .pd-main {padding:12px 14px calc(66px + env(safe-area-inset-bottom))}
+[data-review-device=mobile] #period-dashboard .pd-tools button {height:32px;min-width:32px;padding:0 6px}
+[data-review-device=mobile] #period-dashboard [data-cal=layout] {background:#efebfc;border:1px solid #cfc3ec;color:#51417c}
 [data-review-device=mobile] #period-dashboard [data-cal=refresh] {background:#e6f0ff;color:#18599c}
 [data-review-device=mobile] .pd-controls {flex-wrap:nowrap;gap:6px}
 [data-review-device=mobile] #period-dashboard .pd-modes button {min-width:clamp(33px,10vw,40px);padding:8px 5px}
 [data-review-device=mobile] .pd-summary :is(small,h2) {
-  font-family:inherit;font-size:18px;font-weight:600;line-height:1.4;letter-spacing:normal;
+  font-family:inherit;font-size:18px;font-weight:600;line-height:1.4;letter-spacing:normal;color:#191919;
 }
+[data-review-device=mobile] .pd-header,[data-review-device=mobile] .pd-controls {margin-bottom:8px}
+[data-review-device=mobile] #period-dashboard h1 {font-size:26px;margin:0}
+[data-review-device=mobile] .pd-summary {
+  display:grid;grid-template-columns:max-content;justify-content:start;gap:5px;padding:9px 14px;margin-bottom:8px;
+}
+[data-review-device=mobile] .pd-summary > div:first-child {gap:4px}
+[data-review-device=mobile] #period-dashboard .pd-scope button {flex:auto;color:#191919;padding:3px 8px}
 [data-review-device=mobile] .pd-range {min-width:0;gap:0}
 [data-review-device=mobile] #period-dashboard .pd-range button {padding:8px 5px;white-space:nowrap}
-[data-review-device=mobile] .pd-bottom {gap:14px}
+[data-review-device=mobile] .pd-bottom {gap:8px}
+[data-review-device=mobile] .pd-bottom .pd-card {padding:10px 14px}
+[data-review-device=mobile] .usage-chart {margin-top:8px}
+[data-review-device=mobile] .usage-chart :is(svg,.usage-y) {height:clamp(75px,calc(27dvh - 55px),150px)}
+[data-review-device=mobile] .pd-main:has(.default-pair):not(:has(.point-total)) {
+  height:max(100dvh,500px);display:grid;grid-template-rows:auto auto auto minmax(0,1fr);
+}
+/* The list takes the remaining first-screen space; extra cards and drill-down use natural page flow. */
+[data-review-device=mobile] .default-pair:not(:has(.point-total)) {
+  grid-template-rows:min-content minmax(0,1fr);align-items:stretch;
+}
+[data-review-device=mobile] .default-pair:not(:has(.point-total)):has(> [data-card-key=ranking]:nth-child(1 of :not([hidden]))) {
+  grid-template-rows:minmax(0,1fr) min-content;
+}
+[data-review-device=mobile] .default-pair:not(:has(.point-total)) [data-card-key=ranking] {
+  display:flex;flex-direction:column;min-height:0;
+}
+[data-review-device=mobile] .default-pair:not(:has(.point-total)) .rank-scroll {
+  max-height:none;min-height:0;
+}
 [data-review-device=mobile] .pd-app {display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 8px}
 [data-review-device=mobile] .rank-track {grid-column:1/-1}
 [data-review-device=mobile] .rank-scroll {max-height:196px}
 .point-plot {position:relative}
 .point-plot input {position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:crosshair}
 .point-plot:focus-within {outline:2px solid var(--accent);outline-offset:2px}
-.point-detail {margin-top:10px;padding-top:10px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+.point-detail {margin-top:8px;color:var(--muted);font-size:12px}
+.point-detail:empty {display:none}
 .point-total,.point-detail li {display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .point-total {color:var(--text);font-size:13px}
 .point-detail ul {list-style:none;margin:6px 0 0;padding:0}
@@ -262,6 +289,49 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
   border:0;padding:0;margin-top:12px;
 }
 [data-review-device=mobile] .risk-block .style-confirm {flex-basis:100%}
+
+[data-review-device=mobile].unified main {padding:12px 14px calc(66px + env(safe-area-inset-bottom))}
+[data-review-device=mobile].unified .page-header.topbar {margin-bottom:10px}
+[data-review-device=mobile].unified .page-heading h1 {font-size:26px}
+[data-review-device=mobile].unified .page-header .statusbar {margin-top:2px}
+[data-review-device=mobile].unified .panel {padding:11px 14px;margin-bottom:8px}
+[data-review-device=mobile].unified .panel h2 {margin-bottom:8px}
+[data-review-device=mobile].unified .devices-view .section-head h2 {margin:0}
+[data-review-device=mobile] .devices-view .device {padding:8px 0;gap:8px}
+[data-review-device=mobile] .devices-view .device-icon {padding:8px}
+[data-review-device=mobile] .devices-view details {margin-top:8px}
+[data-review-device=mobile] .devices-view .panel p {margin:3px 0}
+[data-review-device=mobile].unified .settings-grid {gap:8px}
+[data-review-device=mobile].unified .settings-grid .panel {margin:0}
+[data-review-device=mobile] .settings-view .field {margin:6px 0}
+[data-review-device=mobile] .settings-view .fixed-setting {
+  display:grid;grid-template-columns:1fr auto;align-items:center;
+}
+[data-review-device=mobile] .settings-view .fixed-setting h2 {margin:0}
+[data-review-device=mobile] .settings-view .fixed-setting .field {grid-column:1/-1}
+[data-review-device=mobile] .settings-view [data-action=save-settings] {grid-column:2;grid-row:1}
+[data-review-device=mobile] .settings-view select {height:36px;min-height:36px}
+[data-review-device=mobile] .settings-view .record-actions {gap:5px}
+[data-review-device=mobile] .record-actions button {min-height:36px;padding:4px 8px}
+[data-review-device=mobile] #mobile-version {margin-top:8px}
+@media(max-height:620px) {
+  [data-review-device=mobile].unified main {padding-top:8px}
+  [data-review-device=mobile].unified .panel {padding:8px 12px}
+  [data-review-device=mobile].unified .page-header.topbar {margin-bottom:5px}
+  [data-review-device=mobile].unified .devices-view .section-head {margin-bottom:4px}
+  [data-review-device=mobile].unified .devices-view .device {padding-block:4px}
+  [data-review-device=mobile].unified .devices-view details {margin-top:4px}
+  [data-review-device=mobile].unified .settings-grid {gap:6px}
+  [data-review-device=mobile] .settings-view .field {margin-block:3px}
+  [data-review-device=mobile].unified .settings-section button {min-height:32px;padding-block:4px}
+  [data-review-device=mobile] .settings-view select {height:32px;min-height:32px}
+  [data-review-device=mobile] #design-settings-data {
+    display:flex;flex-wrap:wrap;align-items:center;gap:5px;
+  }
+  [data-review-device=mobile] #design-settings-data h2 {flex-basis:100%;margin:0}
+  [data-review-device=mobile] #design-settings-data .risk-block {margin:0}
+  [data-review-device=mobile] #design-settings-data .risk-block:has(.style-confirm) {flex-basis:100%}
+}
 
 /* Desktop review #61–66: keep the two default charts visible together. */
 .desktop-v2 .pd-main {padding-block:clamp(12px,3vh,24px)}
