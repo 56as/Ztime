@@ -131,7 +131,7 @@ button:disabled{opacity:.46;cursor:default}
 .unified .page-header.topbar {background:transparent;border:0;box-shadow:none;padding:0;margin:0 0 22px}
 .unified .page-heading h1 {font-size:32px;letter-spacing:-.04em}
 .unified .panel,.unified .period-card {background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 24px;margin:0 0 14px;box-shadow:none}
-.unified:not([data-review-device=mobile]) .devices-view .panel:first-of-type,
+.unified:not(.desktop-v2):not([data-review-device=mobile]) .devices-view .panel:first-of-type,
 .unified .period-total {border-top:3px solid var(--accent)}
 [data-review-device=mobile] .dashboard-header[data-widget=header],
 [data-review-device=mobile] .pd-summary,
@@ -163,3 +163,20 @@ body:has(.pd-scrim) {overflow:hidden}
 .pd-app {flex-wrap:wrap}
 .rank-track {display:block;width:100%;height:5px;background:#eef2f7;border-radius:4px}
 .rank-track i {display:block;height:100%;background:#4983c3;border-radius:inherit}
+
+/* Second Windows draft. Keep these rules scoped to its review route. */
+body.desktop-v2.unified .devices-view > .panel {border-top:1px solid var(--line)}
+body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px solid var(--accent)}
+.desktop-v2 .settings-grid {align-items:stretch;gap:14px}
+.desktop-v2 .settings-grid > .fixed-setting {padding:18px 20px}
+.desktop-v2 .fixed-setting h2 {margin:0 0 14px}
+.desktop-v2 .fixed-setting .field {display:grid;grid-template-columns:74px minmax(0,1fr);align-items:center;gap:10px;margin:10px 0}
+.desktop-v2 .fixed-setting .field input,.desktop-v2 .fixed-setting .field select {min-width:0}
+.desktop-v2 .fixed-setting p {margin:8px 0}
+.desktop-v2 #desktop-version {margin-top:auto;padding:18px 12px 0;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.desktop-v2 .pd-main {max-width:1160px;padding-top:32px}
+.desktop-v2 .pd-controls {background:white;border:1px solid #e1e6ee;border-radius:14px;padding:8px 12px}
+.desktop-v2 .pd-summary {padding:18px 22px}
+.desktop-v2 .pd-bottom {grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:14px}
+.desktop-v2 .pd-app {display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 10px;padding:9px 0}
+.desktop-v2 .pd-app b {font-variant-numeric:tabular-nums}.desktop-v2 .rank-track {grid-column:1/-1;height:6px}

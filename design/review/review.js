@@ -61,7 +61,24 @@ function pageTitle(id) {
 }
 let periodView=null;
 const refreshGlyph='<svg class="review-refresh-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 7v5h-5 M19.4 11a7.4 7.4 0 1 0-2 6.5"/></svg>';
-const isDashboard = f=>['dashboard','calendar','layout'].includes(f);
+const desktopV2='desktop-v2';
+const secondDraftPrefix='电脑版第二版 · ';
+const secondDraftNote=note=>note.flow?.startsWith(secondDraftPrefix)===true;
+const currentDraft=()=>frame.dataset.feature===desktopV2;
+const dashboardRoute=()=>currentDraft() && device.value==='desktop'?desktopV2:'dashboard';
+const isDashboard = f=>['dashboard','calendar','layout',desktopV2].includes(f);
+
+function applySecondDesktopDraft(d,pageId){
+  d.body.classList.add('desktop-v2');
+  if(pageId!=='settings')return;
+  const grid=d.querySelector('.settings-grid');
+  grid.querySelector('.accent-picker')?.remove();
+  const about=[...grid.children].find(card=>card.querySelector('h2')?.textContent==='Ztime');
+  about?.remove();
+  const version=d.createElement('small');
+  version.id='desktop-version';version.textContent='版本 0.2.10';
+  d.querySelector('.sidebar').append(version);
+}
 let flowTrail = '', trialMode = false, originals = new Map();
 // All synchronization here is simulated with the same two fixed example devices.
 const syncDemo = {state:'ready', initiator:null, lastSuccess:null, hasChanges:true};
@@ -108,7 +125,7 @@ function resize() {
   const height = Math.round(stage.clientHeight / scale);
   $('mount').style.width = width * scale + 'px';
   Object.assign(frame.style, {width: width + 'px', height: height + 'px', transform: 'scale(' + scale + ')'});
-  $('caption').textContent = (frame.dataset.feature==='controls'?'控件样式':isDashboard(frame.dataset.feature)&&page.value==='home'?'仪表盘':describe(board())) + '　' + width + ' × ' + height + ' px';
+  $('caption').textContent = (frame.dataset.feature===desktopV2?secondDraftPrefix:'') + (frame.dataset.feature==='controls'?'控件样式':isDashboard(frame.dataset.feature)&&page.value==='home'?'仪表盘':describe(board())) + '　' + width + ' × ' + height + ' px';
 }
 function setPicking(enabled) {
   picking = enabled;
@@ -183,6 +200,7 @@ function nodeLabel(el) {
   return [title, detail].filter((v,i,a) => v && a.indexOf(v) === i).join(' / ');
 }
 function editor(note) {
+  if(!note.id && currentDraft() && !secondDraftNote(note))note.flow=secondDraftPrefix+(note.flow||describe(note.board));
   setPicking(false);
   doc().querySelector('[data-review-selected]')?.removeAttribute('data-review-selected');
   targetFor(note)?.setAttribute('data-review-selected','');
@@ -230,6 +248,7 @@ function reveal(el){
   if(state)state.hidden=false;
 }
 function targetFor(note) {
+  if(secondDraftNote(note)!==currentDraft())return null;
   try {
     const el=doc().querySelector(note.selector);
     if(!el && note.flow?.startsWith('仪表盘 · ') && note.label==='ZTIME / 使用概览')return doc().getElementById('pd-heading');
@@ -238,14 +257,16 @@ function targetFor(note) {
 }
 function locate(note) {
   if (!allowLeave()) return;
-  const dashboardNote=note.flow?.startsWith('仪表盘 · ');
+  const v2=secondDraftNote(note);
+  const flow=v2?note.flow.slice(secondDraftPrefix.length):note.flow;
+  const dashboardNote=flow?.startsWith('仪表盘 · ');
   const unifiedPage=note.flow?.includes('仪表盘') && /-(devices|settings)$/.test(note.board);
-  if (board() !== note.board || frame.dataset.loaded !== note.board || (dashboardNote && !periodView) || (unifiedPage && !isDashboard(frame.dataset.feature))) {
+  if (board() !== note.board || frame.dataset.loaded !== note.board || v2!==currentDraft() || (dashboardNote && !periodView) || (unifiedPage && !isDashboard(frame.dataset.feature))) {
     jumpTo = note;
-    showBoard(note.board,dashboardNote||unifiedPage?'dashboard':'');
+    showBoard(note.board,v2?desktopV2:dashboardNote||unifiedPage?'dashboard':'');
     return;
   }
-  if(dashboardNote)periodView.restore(note.flow);
+  if(dashboardNote)periodView.restore(flow);
   const el = targetFor(note);
   if (el) {
     reveal(el);
@@ -266,7 +287,8 @@ function pins() {
     if (!el) continue;
     const box = el.getBoundingClientRect();
     if (!box.width || !box.height) continue;
-    if(note.flow?.startsWith('仪表盘 · ') && periodView?.describeState()!==note.flow)continue;
+    const flow=secondDraftNote(note)?note.flow.slice(secondDraftPrefix.length):note.flow;
+    if(flow?.startsWith('仪表盘 · ') && periodView?.describeState()!==flow)continue;
     const pin = doc().createElement('button');
     pin.className = 'review-pin';
     pin.style.left = box.left + box.width*note.x + 'px';
@@ -338,6 +360,7 @@ frame.onload = () => {
       d.querySelectorAll('[data-page=home]').forEach(el=>{for(const n of el.childNodes)if(n.nodeType===3)n.textContent='仪表盘';});
     }
   }
+  if(feature===desktopV2)applySecondDesktopDraft(d,page.value);
   const anchor=feature==='extension'?d.getElementById('extension-settings'):feature==='report'?d.getElementById('design-report-preview'):feature==='data'?d.getElementById('design-settings-data'):null;
   if(anchor){anchor.hidden=false;anchor.scrollIntoView({block:'center'});}
   const css = d.createElement('style');
@@ -375,7 +398,7 @@ frame.onload = () => {
       if (flow) changeBoard(flow.dataset.flow,flow.textContent.trim());
       else if (el.closest('[data-close]')) changeBoard(board().split('-detail-')[0],'关闭明细');
       else if (app && ['home','week'].includes(page.value)) changeBoard(board()+'-detail-'+app.dataset.app,'点应用排行');
-      else if (nav) changeBoard(device.value+'-'+nav.dataset.page,nav.textContent.trim(),['home','devices','settings'].includes(nav.dataset.page)?'dashboard':'');
+      else if (nav) changeBoard(device.value+'-'+nav.dataset.page,nav.textContent.trim(),['home','devices','settings'].includes(nav.dataset.page)?dashboardRoute():'');
       else if (el.closest('[data-demo-format]')) d.querySelector('[data-demo-status]').textContent='示例：正式版将保存 '+el.closest('[data-demo-format]').dataset.demoFormat+' 格式的本地文件。';
       else if (el.closest('summary')) { const box=el.closest('details');box.open=!box.open; }
       else if (action==='design-extension') d.getElementById('design-connection').hidden=false;
@@ -390,7 +413,7 @@ frame.onload = () => {
     if(trialMode){
       if(!canEdit(el))return status('请选择一处文字，例如按钮文字或标题。间距或位置可用批注标记。');
       const selector=selectorFor(el);
-      const saved=notes.findLast(n=>n.board===board() && n.selector===selector && n.trial && !n.resolved);
+      const saved=notes.findLast(n=>n.board===board() && n.selector===selector && secondDraftNote(n)===currentDraft() && n.trial && !n.resolved);
       editor(saved || {board:board(),selector,label:nodeLabel(el),x:0.5,y:0.5,kind:'UI',size:frame.contentWindow.innerWidth+' × '+frame.contentWindow.innerHeight,flow:el.closest('#period-dashboard')?periodView.describeState():flowTrail||describe(board()),trial:{copy:el.textContent.trim().slice(0,300),size:null}});
       return;
     }
@@ -424,8 +447,8 @@ $('editor').onsubmit=async e=>{
   $('editor').querySelector('.primary').disabled=true;
   try {await save({...draft,...(trial?{trial}:{}),text,kind:$('kind').value});} finally {$('editor').querySelector('.primary').disabled=false;}
 };
-device.onchange=()=>changeBoard(page.value.startsWith('pair-')?device.value+'-devices':board(),'',isDashboard(frame.dataset.feature)?frame.dataset.feature:'');
-page.onchange=()=>changeBoard(board(),'',isDashboard(frame.dataset.feature)&&['home','devices','settings'].includes(page.value)?'dashboard':'');
+device.onchange=()=>changeBoard(page.value.startsWith('pair-')?device.value+'-devices':board(),'',isDashboard(frame.dataset.feature)?(currentDraft()?dashboardRoute():frame.dataset.feature):'');
+page.onchange=()=>changeBoard(board(),'',isDashboard(frame.dataset.feature)&&['home','devices','settings'].includes(page.value)?dashboardRoute():'');
 $('flow').onclick=()=>changeBoard('desktop-pair-invite');
 new ResizeObserver(resize).observe($('stage'));
 $('trial').onclick=()=>{if(!allowLeave())return;const enable=!picking||!trialMode;clearEditor();trialMode=true;setPicking(enable);status(enable?'点选画板中要改的文字。':'');};
@@ -437,6 +460,7 @@ document.querySelector('.quick').onclick=e=>{
 function routeFromHash(){
  const [key,requested='']=location.hash.slice(1).split('/');
  const valid=/^((desktop|mobile)-((home|week)(-edit|-detail-(writer|browser|reader|notes))?|devices|settings)|desktop-pair-(invite|request)|mobile-pair-(scan|confirm|wait|success|refused|timeout))$/;
+ if(requested===desktopV2 && /^desktop-(home|devices|settings)$/.test(key))return [key,desktopV2];
  return [valid.test(key)?key:'desktop-home',['report','extension','data','controls','dashboard','calendar','layout'].includes(requested)?requested:(key?'':'dashboard')];
 }
 window.addEventListener('hashchange',()=>{
@@ -478,7 +502,7 @@ function mountPeriodDashboard(d,onChange){
   }
   return Array.from({length:len(period)},(_,i)=>({label:String(dayOf(a+i)),minutes:total(vector([a+i,a+i]))}));
  }
- const layoutKey='review-dashboard-layout-'+device.value;
+ const layoutKey='review-dashboard-layout-'+device.value+(currentDraft()?'-v2':'');
  const modules={trend:'用时趋势',ranking:'应用排行',compare:'期间对比'};
  let layout=Object.keys(modules).map(key=>({key,visible:true}));
  try{
