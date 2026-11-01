@@ -155,3 +155,7 @@ body:has(.pd-scrim) {overflow:hidden}
 .pd-module-row {display:flex;align-items:center;gap:5px;padding:10px 0;border-bottom:1px solid #e8ecf1}.pd-module-row b{margin-right:auto}
 .unified .settings-grid .fixed-setting {border-top:3px solid var(--accent)}
 @media(max-width:700px){#period-dashboard .pd-modes{flex:none}.pd-summary h2{font-size:22px}.pd-modal .pd-picker{padding:16px}}
+
+.pd-app {flex-wrap:wrap}
+.rank-track {display:block;width:100%;height:5px;background:#eef2f7;border-radius:4px}
+.rank-track i {display:block;height:100%;background:#4983c3;border-radius:inherit}

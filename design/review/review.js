@@ -57,7 +57,7 @@ function pageTitle(id) {
     const [parent, , app] = id.split('-');
     return titles[parent]+' · '+({writer:'文稿编辑器',browser:'浏览器',reader:'阅读',notes:'笔记'})[app]+'明细';
   }
-  return titles[id];
+  return titles[id] || ({week:'每周（历史批注）','week-edit':'每周编辑（历史批注）'})[id];
 }
 let periodView=null;
 const refreshGlyph='<svg class="review-refresh-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 7v5h-5 M19.4 11a7.4 7.4 0 1 0-2 6.5"/></svg>';
@@ -136,7 +136,7 @@ function showBoard(key, feature = "") {
   const [mode, ...parts] = key.split('-');
   const id = parts.join('-');
   page.querySelector('[data-context]')?.remove();
-  if (!titles[id]) {const o=new Option(pageTitle(id),id);o.dataset.context='';page.add(o);}
+  if (![...page.options].some(o=>o.value===id)) {const o=new Option(pageTitle(id),id);o.dataset.context='';page.add(o);}
   device.value = mode; page.value = id;
   page.querySelector('option[value="home"]').textContent=isDashboard(feature)?'仪表盘':'今日';
   $('sync-scenario').hidden=id!=='devices';
@@ -314,10 +314,10 @@ frame.onload = () => {
   const feature=frame.dataset.feature;
   showCatalog(d,feature==='controls');periodView=null;
   for(const button of d.querySelectorAll('[data-action=refresh],[data-style-demo=refresh]')){
-    button.querySelector('svg')?.remove();
-    button.insertAdjacentHTML('afterbegin',refreshGlyph);
+    button.innerHTML=refreshGlyph;
+    button.setAttribute('aria-label','更新');button.title='更新';button.style.order='99';
   }
-  if(isDashboard(feature)){
+  if(isDashboard(feature)||['devices','settings'].includes(page.value)){
     if(page.value==='home'){
       periodView=mountPeriodDashboard(d,()=>{applyTrials();pins();});
       periodView.root.hidden=false;d.getElementById('app').hidden=true;
@@ -333,7 +333,7 @@ frame.onload = () => {
           card.classList.toggle('fixed-setting',rank===0||rank===1);
         }
       }
-      d.querySelectorAll('[data-page=week]').forEach(el=>el.hidden=true);
+      d.querySelectorAll('[data-page=week]').forEach(el=>el.remove());
       d.querySelectorAll('[data-page=home]').forEach(el=>{for(const n of el.childNodes)if(n.nodeType===3)n.textContent='仪表盘';});
     }
   }
@@ -374,7 +374,7 @@ frame.onload = () => {
       if (flow) changeBoard(flow.dataset.flow,flow.textContent.trim());
       else if (el.closest('[data-close]')) changeBoard(board().split('-detail-')[0],'关闭明细');
       else if (app && ['home','week'].includes(page.value)) changeBoard(board()+'-detail-'+app.dataset.app,'点应用排行');
-      else if (nav) changeBoard(device.value+'-'+nav.dataset.page,nav.textContent.trim(),isDashboard(feature)?'dashboard':'');
+      else if (nav) changeBoard(device.value+'-'+nav.dataset.page,nav.textContent.trim(),['home','devices','settings'].includes(nav.dataset.page)?'dashboard':'');
       else if (el.closest('[data-demo-format]')) d.querySelector('[data-demo-status]').textContent='示例：正式版将保存 '+el.closest('[data-demo-format]').dataset.demoFormat+' 格式的本地文件。';
       else if (el.closest('summary')) { const box=el.closest('details');box.open=!box.open; }
       else if (action==='design-extension') d.getElementById('design-connection').hidden=false;
@@ -533,8 +533,8 @@ function mountPeriodDashboard(d,onChange){
   const barUnit=mode==='day'?'时':mode==='year'?'月':'日';
   const bars=series.map((s,i)=>{const display=series.length<=12||i%Math.ceil(series.length/8)===0||i===series.length-1;return '<div class="pd-col" title="'+s.label+(barUnit==='月'?'':barUnit)+' · '+(s.minutes===null?'尚未到达':dur(s.minutes))+'"><div class="pd-track"><i style="height:'+((s.minutes||0)*100/max)+'%"></i></div><small>'+(display?s.label:'&nbsp;')+'</small></div>';}).join('');
   const presetButtons=Object.entries({day:'日',week:'周',month:'月',year:'年'}).map(([k,v])=>'<button data-cal="mode" data-mode="'+k+'" aria-pressed="'+(mode===k)+'" data-style-id="pd-'+k+'">'+v+'</button>').join('');
-  const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>'<div class="pd-app"><span>'+apps[i][0]+'</span><small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small><b>'+dur(m)+'</b></div>').join('');
-  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div><button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button></nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">仪表盘</h1></div><div class="pd-tools"><button data-cal="refresh">'+refreshGlyph+'更新</button><button data-cal="layout" aria-haspopup="dialog">布局</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates">'+(mode==='year'?yr(period[0])+' 年　▾':label(period)+'　▾')+'</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
+  const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>'<div class="pd-app"><span>'+apps[i][0]+'</span><small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small><b>'+dur(m)+'</b><i class="rank-track"><i style="width:'+100*m/Math.max(...v)+'%"></i></i></div>').join('');
+  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div><button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button></nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">仪表盘</h1></div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates">'+(mode==='year'?yr(period[0])+' 年　▾':label(period)+'　▾')+'</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
   '<section class="pd-summary"><div><small>设备累计</small><h2>'+dur(sum)+'</h2></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
   (comparison?'<p class="pd-comp-label">'+label(comparison)+'</p><p>对比期累计　'+dur(compare)+'</p><strong>日均'+(Math.abs(delta)<0.5?'持平':(delta>0?'增加 ':'减少 ')+dur(Math.abs(delta)))+'</strong><p>本期日均 '+dur(sum/len(period))+' · 对比期日均 '+dur(compare/len(comparison))+'</p>':'<p>'+(mode==='year'?'比较上年同期的使用情况。':'可选另一月份的一段日期，比较日均用时。')+'</p>')+
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
