@@ -166,7 +166,7 @@ function applySecondDesktopDraft(d,pageId){
   const about=[...grid.children].find(card=>card.querySelector('h2')?.textContent==='Ztime');
   about?.remove();
   const version=d.createElement('small');
-  version.id='desktop-version';version.textContent='版本 0.2.13';
+  version.id='desktop-version';version.textContent='版本 0.2.14';
   d.querySelector('.sidebar').append(version);
 }
 let flowTrail = '', trialMode = false, originals = new Map();

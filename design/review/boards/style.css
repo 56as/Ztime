@@ -173,7 +173,7 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .fixed-setting .field {display:grid;grid-template-columns:74px minmax(0,1fr);align-items:center;gap:10px;margin:10px 0}
 .desktop-v2 .fixed-setting .field input,.desktop-v2 .fixed-setting .field select {min-width:0}
 .desktop-v2 .fixed-setting p {margin:8px 0}
-.desktop-v2 #desktop-version {margin-top:auto;padding:18px 12px 0;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.desktop-v2 #desktop-version {margin-top:auto;padding:18px 12px 0;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
 .desktop-v2 .pd-main {max-width:1160px;padding-top:32px}
 .desktop-v2 .pd-controls {background:white;border:1px solid #e1e6ee;border-radius:14px;padding:8px 12px}
 .desktop-v2 .pd-summary {padding:18px 22px}
@@ -345,7 +345,14 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 }
 
 /* Desktop review #61–66: keep the two default charts visible together. */
-.desktop-v2 .pd-main {padding-block:clamp(12px,3vh,24px)}
+.desktop-v2 .pd-main,.desktop-v2.unified main {padding-block:clamp(12px,3vh,24px)}
+.desktop-v2 #period-dashboard :is(.pd-modes,.pd-scope) {height:36px;border:1px solid var(--line);padding:3px;align-items:stretch}
+.desktop-v2 #period-dashboard :is(.pd-modes,.pd-scope) button {min-height:0;height:28px;padding:0 12px;font-size:13px;line-height:28px}
+.desktop-v2 #period-dashboard h1 {margin:0;line-height:1.35}
+.desktop-v2 .pd-header .statusbar {margin:7px 0 0;font-size:11px;line-height:1.5;min-height:0}
+.desktop-v2.unified .page-header.topbar {margin-bottom:14px}
+.desktop-v2 .pd-main {padding-inline:clamp(20px,4vw,56px)}
+@media(min-width:1101px){.desktop-v2 .pd-layout {grid-template-columns:208px minmax(0,1fr)}}
 .desktop-v2 .pd-header {margin-bottom:14px}
 .desktop-v2 .pd-controls {margin-bottom:0;border-top:3px solid var(--accent);border-bottom:0;border-radius:14px 14px 0 0;padding:10px 14px 4px}
 .desktop-v2 .pd-summary {padding:4px 14px 10px;margin-bottom:10px;border-top:0;border-radius:0 0 14px 14px}
@@ -367,10 +374,10 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .default-pair .usage-chart svg {height:100%;min-height:0}
 .desktop-v2 .default-pair .usage-y {height:auto;margin-bottom:20px}
 .desktop-v2 .default-pair .rank-scroll {flex:1;min-height:0;max-height:none}
-.desktop-v2 .devices-view {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:12px;padding-block:clamp(16px,3vh,28px)}
+.desktop-v2 .devices-view {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:14px}
 .desktop-v2 .devices-view > .page-header,.desktop-v2 .devices-view > .page-header + .panel,.desktop-v2 .devices-view > [aria-live] {grid-column:1/-1}
 .desktop-v2.unified .devices-view > .panel {padding:14px 18px;margin:0}
-.desktop-v2 .devices-view > .page-header {margin:0}
+.desktop-v2.unified .devices-view > .page-header.topbar {margin:0}
 .desktop-v2 .devices-view .device {padding:8px 0}
 .desktop-v2 .devices-view .panel h2 {margin-bottom:8px}
 .desktop-v2 .devices-view .section-head h2 {margin:0}
