@@ -1,0 +1,22 @@
+/* Control roles share appearance tokens with the rest of Ztime, including dark mode. */
+body{--ctl-fill:color-mix(in srgb,var(--text) 5%,var(--surface));--ctl-line:color-mix(in srgb,var(--text) 15%,var(--surface));--ctl-accent:color-mix(in srgb,var(--accent) 74%,var(--text));--ctl-radius:10px}
+.page-header .actions button,.dashboard-toolbar .actions button{border:0;border-radius:var(--ctl-radius);background:var(--ctl-fill);color:var(--text);min-height:36px;font-size:13px;font-weight:550}
+.page-header .actions [data-action=week-report]{color:var(--ctl-accent);background:var(--tint)}
+.page-header .actions input[type=date]{border:1px solid var(--ctl-line);border-radius:var(--ctl-radius);background:var(--surface);font-size:13px}
+button.primary,.actions button.primary{border-radius:var(--ctl-radius);min-height:36px;background:var(--accent);color:var(--on-accent,#fff);font-weight:600}
+.widget-header:has(.device-segments){flex-wrap:wrap;row-gap:6px}
+.device-segments{display:inline-flex;max-width:100%;padding:3px;gap:2px;background:var(--ctl-fill);border-radius:11px}
+.device-segments label{position:relative;cursor:pointer}.device-segments input{position:absolute;width:1px;height:1px;opacity:0}
+.device-segments span{display:grid;place-items:center;min-height:30px;padding:0 8px;border:1px solid transparent;border-radius:8px;color:var(--muted);font-size:12px;white-space:nowrap}
+.device-segments :checked+span{background:var(--surface);border-color:var(--ctl-line);font-weight:650;color:var(--ctl-accent);box-shadow:0 1px 2px #16243c16}
+.device-segments :focus-visible+span{outline:2px solid var(--accent);outline-offset:1px}
+[data-export]{background:var(--tint);color:var(--ctl-accent);border:1px solid transparent;font-weight:550;border-radius:var(--ctl-radius);min-height:36px}
+.report-formats{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;padding-top:14px;border-top:1px solid var(--ctl-line)}
+.report-formats button{display:grid;justify-items:start;gap:6px;background:var(--ctl-fill);border:1px solid var(--ctl-line);color:var(--text);border-radius:12px;padding:10px 12px}
+.report-formats button::before{content:attr(data-file-code);font-size:10px;font-weight:700;color:var(--ctl-accent);background:var(--surface);border:1px solid var(--ctl-line);border-radius:4px;padding:1px 5px}
+.report-formats button:hover,[data-export]:hover{border-color:var(--ctl-accent);background:var(--tint)}
+.risk-block{border-top:1px solid var(--ctl-line);padding-top:16px;margin-top:20px}
+button.danger{border:1px solid color-mix(in srgb,var(--danger) 40%,var(--surface));color:var(--danger);background:var(--surface);border-radius:var(--ctl-radius)}
+button.danger:hover{background:color-mix(in srgb,var(--danger) 8%,var(--surface))}
+@media(max-width:700px){.page-header .actions button,.page-header .actions input[type=date],.device-segments span,.report-formats button,[data-export],button.primary,button.danger{min-height:44px}.report-formats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+

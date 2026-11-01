@@ -6,6 +6,8 @@ const paths=[
  'web/report-view.js',
  'web/device-list.js',
  'web/style.css',
+ 'web/controls.css',
+ 'web/delete-confirm.js',
  'web/brand-icon.png',
  'shared/week-report.js',
  'shared/time.js',

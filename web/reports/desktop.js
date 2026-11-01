@@ -13,10 +13,10 @@ export function desktopPreview(snapshot,report){
  const textFile=(body,type)=>new Blob(['\uFEFF',body],{type:type+';charset=utf-8'});
  const image=async format=>(await import('./image-export.js')).graphicExport(sheet,format);
  const formats=[
-  ['txt','文本',()=>textFile(text,'text/plain')],
-  ['csv','CSV',()=>textFile(reportCsv(model),'text/csv')],
-  ['pdf','PDF',()=>image('pdf')],
-  ['png','PNG 图片',()=>image('png')]
+  ['txt','导出文本',()=>textFile(text,'text/plain')],
+  ['csv','导出 CSV',()=>textFile(reportCsv(model),'text/csv')],
+  ['pdf','导出 PDF',()=>image('pdf')],
+  ['png','导出图片',()=>image('png')]
  ];
  return {text,sheet,formats:formats.map(([id,label])=>[id,label]),async save(format){
   const entry=formats.find(([id])=>id===format);

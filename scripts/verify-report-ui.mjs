@@ -14,9 +14,16 @@ try{
  }
  browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage(),errors=[];
  page.on('pageerror',e=>errors.push(e.message));await page.goto(service.url);
+ await page.locator('[data-filter=apps][value=android] + span').click();
+ assert.equal(await page.locator('[data-filter=apps][value=android]').isChecked(),true);await page.reload();
+ await page.locator('[data-filter=apps][value=android]:checked').waitFor({state:'attached'});
+ await page.click('[data-page=settings]');await page.click('[data-action=delete-data]');
+ assert.equal(await page.locator('#dialog .danger').isDisabled(),true);await page.click('#dialog [data-cancel]');
+ assert.equal(await page.locator('#dialog').isVisible(),false);
  await page.click('[data-page=week]');
  assert.deepEqual(await page.locator('.header-main .actions button').allTextContents(),['导出周报',' 更新',' 编辑']);
  await page.click('[data-action=week-report]');await page.locator('.report-image svg').waitFor();assert.match(await page.locator('.report-image').textContent(),/本周观察/);
+ assert.match(await page.locator('.report-image').textContent(),/单位：小时/);
  const preview=await page.locator('.report-image').boundingBox(), formats=await page.locator('.report-formats').boundingBox();
  assert.ok(formats.y>=preview.y+preview.height,'export actions below recap');
  const out=process.env.ZTIME_REPORT_QA_DIR||tmp;fs.mkdirSync(out,{recursive:true});
