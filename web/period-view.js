@@ -1,3 +1,4 @@
+import {recordingStatus} from './recording-status.js';
 import {desktopTitles,desktopLayout} from './shared/desktop-card-layout.js';
 import {usageArea,shareChart} from './desktop-insights.js';
 import {refreshControl} from './refresh-control.js';
@@ -148,7 +149,7 @@ export function createPeriodView({api, escape, duration, details, report, onErro
  function paint() {
    const modesHtml=Object.entries(modes).map(([key,name])=>`<button data-cal="mode" data-mode="${key}" aria-pressed="${mode===key}">${name}</button>`).join('');
    const scopeHtml=[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([key,name])=>`<button data-cal="scope" data-scope="${key}" aria-pressed="${scope===key}">${name}</button>`).join('');
-   const header=`<header class="topbar page-header"><div class="page-heading"><h1>仪表盘</h1></div><div class="actions"><button data-tool="layout" aria-haspopup="dialog">布局</button>${mode==='week'?'<button data-tool="report">导出周报</button>':''}${refreshControl('data-tool="refresh"')}</div></header>`;
+   const header=`<header class="topbar page-header"><div class="page-heading"><h1>仪表盘</h1>${desktop?recordingStatus(snapshot.collector,escape):''}</div><div class="actions"><button data-tool="layout" aria-haspopup="dialog">布局</button>${mode==='week'?'<button data-tool="report">导出周报</button>':''}${refreshControl('data-tool="refresh"')}</div></header>`;
    const controls=`<div class="pd-controls"><div class="pd-modes">${modesHtml}</div><div class="pd-range"><button aria-label="上一期间" data-cal="prev">‹</button><button data-cal="dates" aria-haspopup="dialog">${mode==='year'?yr(period[0])+' 年':label(period)}　▾</button><button aria-label="下一期间" data-cal="next" ${period[1]>=today?'disabled':''}>›</button></div></div>`;
    const ranking=(desktop?result?.apps:result?.apps.slice(0,20))?.map((a,index)=>`<button class="app-row" data-rank="${index}"><span class="app-name">${escape(a.name)}</span><small>${a.platform==='android'?'手机':'电脑'}</small><strong>${duration(a.duration,true)}</strong><span class="rank-track" aria-hidden="true"><i style="width:${100*a.duration/result.apps[0].duration}%"></i></span></button>`).join('');
    const cards=result?{

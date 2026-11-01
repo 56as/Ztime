@@ -9,6 +9,7 @@ const paths=[
  'web/controls.css',
  'web/period.css',
  'web/period-view.js',
+ 'web/recording-status.js',
  'web/desktop-insights.js',
  'web/desktop-insights.css',
  'shared/desktop-card-layout.js',

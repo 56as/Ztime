@@ -12,6 +12,7 @@ const service=await createApp({dataDir:dir,port:0,syncPort:0,collect:false,autos
 let browser;
 try{
   const now=Date.now();
+  service.store.set('collector',{state:'active',appName:'Editor <Example>'});
   for(const [appId,minutes] of [['notes',20],['reader',5]])
     service.store.write({id:appId,appId,appName:appId,deviceId:service.store.device.id,start:now-minutes*60000,end:now});
   browser=await chromium.launch({channel:process.env.ZTIME_BROWSER||'msedge'});
@@ -24,6 +25,7 @@ try{
   const cal=name=>click('[data-cal="'+name+'"]');
   const modal=page.locator('.period-dialog');
   await page.locator('.period-total').waitFor();
+  assert.equal(await page.locator('.page-header .statusbar').innerText(),'正在记录 · Editor <Example>');
   assert.deepEqual(await page.locator('[data-mode]').allTextContents(),['日','周','月','年']);
   await click('[data-mode=week]');
   const bars=page.locator('.rank-track i');

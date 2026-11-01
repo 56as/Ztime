@@ -1,3 +1,4 @@
+import {recordingStatus} from './recording-status.js';
 import {refreshControl} from './refresh-control.js';
 import {WIDGETS,defaultsFor} from './shared/layout.js';
 import {distribution,weekDays} from './shared/dashboard.js';
@@ -14,7 +15,7 @@ export function makeDashboard(ctx) {
   if(state.edit)return `<button data-action="cancel-edit">取消</button><button data-action="save-layout" class="primary">完成</button>${refreshControl('data-action="refresh"')}`;
   return `${isWeek()?'<button data-action="week-report">导出周报</button>':''}${state.page==='home'?`<input type="date" id="selectedDate" value="${esc(state.data.date)}" aria-label="选择统计日期">`:''}${editable?`<button data-action="edit">${icon('edit')} 编辑</button>`:''}${refreshControl('data-action="refresh"')}`;
  }
- function status(){const d=state.data;const label={active:'正在记录',paused:'已暂停',locked:'屏幕已锁定',sleeping:'电脑休眠',starting:'正在启动记录',error:'采集暂不可用',stopped:'采集已停止',unsupported:'此系统暂不支持采集',unknown:'暂时无法识别前台窗口',permission:'需要应用使用权限',ready:'已读取系统使用记录'}[d.collector?.state]||'等待记录';return `<div class="statusbar"><span class="state"><span class="dot ${['active','ready'].includes(d.collector?.state)?'':'off'}"></span>${label}${isWeek()?' · 截至 '+esc(stamp(d.week.end)):d.collector?.appName?' · '+esc(d.collector.appName):''}</span></div>`;}
+ function status(){const d=state.data;return recordingStatus(d.collector,esc,isWeek()?'截至 '+stamp(d.week.end):d.collector?.appName);}
  function simpleHeader(){return `<header class="topbar page-header"><div class="page-heading"><h1>${state.page==='devices'?'设备':'设置'}</h1>${status()}</div><div class="actions">${actions(false)}</div></header>`;}
  function controls(w){return `<div class="module-controls"><button class="phone-only" data-move="up" data-id="${w.id}" aria-label="上移${esc(title(w))}">↑</button><button class="phone-only" data-move="down" data-id="${w.id}" aria-label="下移${esc(title(w))}">↓</button><button class="drag-handle desktop-only" draggable="true" aria-label="拖动${esc(title(w))}">⠿</button><button data-hide="${w.id}" aria-label="移除${esc(title(w))}">移除</button></div>`;}
  function choices(w){if(w.id==='pie'||w.id==='deviceShare')return [['donut','环形图'],['pie','饼图']];if(w.id==='apps')return [['bar','条形图'],['list','列表']];if(w.id==='hours')return [['bar','柱状图'],['line','折线图']];if(w.id==='week')return [['numbers','数字对照'],['bar','分组柱状图']];return [];}
