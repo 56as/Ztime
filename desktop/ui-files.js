@@ -4,6 +4,7 @@ const paths=[
  'web/app.js',
  'web/dashboard.js',
  'web/report-view.js',
+ 'web/device-list.js',
  'web/style.css',
  'web/brand-icon.png',
  'shared/week-report.js',
