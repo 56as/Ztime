@@ -58,6 +58,8 @@ function pageTitle(id) {
   }
   return titles[id];
 }
+let periodView=null;
+const isDashboard = f=>['dashboard','calendar'].includes(f);
 let flowTrail = '', trialMode = false, originals = new Map();
 // All synchronization here is simulated with the same two fixed example devices.
 const syncDemo = {state:'ready', initiator:null, lastSuccess:null, hasChanges:true};
@@ -104,7 +106,7 @@ function resize() {
   const height = Math.round(stage.clientHeight / scale);
   $('mount').style.width = width * scale + 'px';
   Object.assign(frame.style, {width: width + 'px', height: height + 'px', transform: 'scale(' + scale + ')'});
-  $('caption').textContent = (frame.dataset.feature==='controls'?'控件样式':describe(board())) + '　' + width + ' × ' + height + ' px';
+  $('caption').textContent = (frame.dataset.feature==='controls'?'控件样式':isDashboard(frame.dataset.feature)&&page.value==='home'?'仪表盘':describe(board())) + '　' + width + ' × ' + height + ' px';
 }
 function setPicking(enabled) {
   picking = enabled;
@@ -134,6 +136,7 @@ function showBoard(key, feature = "") {
   page.querySelector('[data-context]')?.remove();
   if (!titles[id]) {const o=new Option(pageTitle(id),id);o.dataset.context='';page.add(o);}
   device.value = mode; page.value = id;
+  page.querySelector('option[value="home"]').textContent=isDashboard(feature)?'仪表盘':'今日';
   $('sync-scenario').hidden=id!=='devices';
   clearEditor(); frame.dataset.feature=feature; resize();
   location.hash = feature?key+'/'+feature:key;
@@ -186,7 +189,7 @@ function editor(note) {
   $('target').textContent = (note.id ? '#' + note.id + ' ' : '') + describe(note.board) + ' · ' + note.label;
   $('message').value = note.text || '';
   $('kind').value = note.kind || (note.board.includes('-pair-')?'UX':'UI');
-  $('trail').textContent = note.flow || describe(note.board);
+  $('trail').textContent = (note.flow || describe(note.board)).split('｜')[0];
   $('trial-fields').hidden=!note.trial;
   $('editor').querySelector('.primary').textContent=note.trial?'保存试改':'保存批注';
   if(note.trial){$('trial-copy').value=note.trial.copy;$('trial-size').value=note.trial.size??'';$('trial-copy').focus();}
@@ -196,7 +199,7 @@ function canEdit(el){
   return el && !el.children.length && el.matches('button,h1,h2,h3,p,span,strong,label,small,td,th,a') && el.textContent.trim();
 }
 function applyTrials(){
-  for(const [el,base] of originals){el.textContent=base.copy;el.style.fontSize=base.size;}
+  for(const [el,base] of originals){if(!el.isConnected){originals.delete(el);continue;}el.textContent=base.copy;el.style.fontSize=base.size;}
   for(const n of notes){
     if(n.board!==frame.dataset.loaded || !n.trial || n.resolved)continue;
     const el=targetFor(n);if(!canEdit(el))continue;
@@ -220,7 +223,7 @@ function showCatalog(d,visible){
  d.getElementById('app').hidden=visible;
 }
 function reveal(el){
- if(el)showCatalog(el.ownerDocument,!!el.closest('#design-control-gallery'));
+ if(el){const active=!!el.closest('#period-dashboard');showCatalog(el.ownerDocument,!!el.closest('#design-control-gallery'));if(periodView){periodView.root.hidden=!active;if(active)el.ownerDocument.getElementById('app').hidden=true;}}
   const state=el?.closest('#design-report-preview,#design-connection');
   if(state)state.hidden=false;
 }
@@ -229,11 +232,13 @@ function targetFor(note) {
 }
 function locate(note) {
   if (!allowLeave()) return;
-  if (board() !== note.board || frame.dataset.loaded !== note.board) {
+  const dashboardNote=note.flow?.startsWith('仪表盘 · ');
+  if (board() !== note.board || frame.dataset.loaded !== note.board || (dashboardNote && !periodView)) {
     jumpTo = note;
-    showBoard(note.board);
+    showBoard(note.board,dashboardNote?'dashboard':'');
     return;
   }
+  if(dashboardNote)periodView.restore(note.flow);
   const el = targetFor(note);
   if (el) {
     reveal(el);
@@ -254,6 +259,7 @@ function pins() {
     if (!el) continue;
     const box = el.getBoundingClientRect();
     if (!box.width || !box.height) continue;
+    if(note.flow?.startsWith('仪表盘 · ') && periodView?.describeState()!==note.flow)continue;
     const pin = doc().createElement('button');
     pin.className = 'review-pin';
     pin.style.left = box.left + box.width*note.x + 'px';
@@ -299,7 +305,17 @@ frame.onload = () => {
   frame.dataset.loaded = d.location.pathname.split('/').pop().replace('.html','');
   originals=new Map();drawSync();applyTrials();
   const feature=frame.dataset.feature;
-  showCatalog(d,feature==='controls');
+  showCatalog(d,feature==='controls');periodView=null;
+  if(isDashboard(feature)){
+    if(page.value==='home'){
+      periodView=mountPeriodDashboard(d,()=>{applyTrials();pins();});
+      periodView.root.hidden=false;d.getElementById('app').hidden=true;
+      if(feature==='calendar')periodView.open();
+    }else{
+      d.querySelectorAll('[data-page=week]').forEach(el=>el.hidden=true);
+      d.querySelectorAll('[data-page=home]').forEach(el=>{for(const n of el.childNodes)if(n.nodeType===3)n.textContent='仪表盘';});
+    }
+  }
   const anchor=feature==='extension'?d.getElementById('extension-settings'):feature==='report'?d.getElementById('design-report-preview'):feature==='data'?d.getElementById('design-settings-data'):null;
   if(anchor){anchor.hidden=false;anchor.scrollIntoView({block:'center'});}
   const css = d.createElement('style');
@@ -322,6 +338,12 @@ frame.onload = () => {
     if (el.closest('#review-pins')) return;
     if(!picking && el.closest('[data-style-native], input[type=date], select'))return;
     e.preventDefault();
+    if(!picking && el.closest('#period-dashboard') && el.closest('[data-cal]')){
+      if(!allowLeave())return;if(draft)clearEditor();
+      const trigger=el.closest('[data-cal]');periodView.act(trigger);
+      if(trigger.dataset.cal==='compare')periodView.root.querySelector('.pd-picker')?.scrollIntoView({block:'center'});
+      return;
+    }
     if (!picking && handleStyleDemo(d,el))return;
     if (!picking) {
       const nav=el.closest('[data-page]'), action=el.closest('[data-action]')?.dataset.action;
@@ -329,7 +351,7 @@ frame.onload = () => {
       if (flow) changeBoard(flow.dataset.flow,flow.textContent.trim());
       else if (el.closest('[data-close]')) changeBoard(board().split('-detail-')[0],'关闭明细');
       else if (app && ['home','week'].includes(page.value)) changeBoard(board()+'-detail-'+app.dataset.app,'点应用排行');
-      else if (nav) changeBoard(device.value+'-'+nav.dataset.page,nav.textContent.trim());
+      else if (nav) changeBoard(device.value+'-'+nav.dataset.page,nav.textContent.trim(),isDashboard(feature)?'dashboard':'');
       else if (el.closest('[data-demo-format]')) d.querySelector('[data-demo-status]').textContent='示例：正式版将保存 '+el.closest('[data-demo-format]').dataset.demoFormat+' 格式的本地文件。';
       else if (el.closest('summary')) { const box=el.closest('details');box.open=!box.open; }
       else if (action==='design-extension') d.getElementById('design-connection').hidden=false;
@@ -345,12 +367,12 @@ frame.onload = () => {
       if(!canEdit(el))return status('请选择一处文字，例如按钮文字或标题。间距或位置可用批注标记。');
       const selector=selectorFor(el);
       const saved=notes.findLast(n=>n.board===board() && n.selector===selector && n.trial && !n.resolved);
-      editor(saved || {board:board(),selector,label:nodeLabel(el),x:0.5,y:0.5,kind:'UI',size:frame.contentWindow.innerWidth+' × '+frame.contentWindow.innerHeight,flow:flowTrail||describe(board()),trial:{copy:el.textContent.trim().slice(0,300),size:null}});
+      editor(saved || {board:board(),selector,label:nodeLabel(el),x:0.5,y:0.5,kind:'UI',size:frame.contentWindow.innerWidth+' × '+frame.contentWindow.innerHeight,flow:el.closest('#period-dashboard')?periodView.describeState():flowTrail||describe(board()),trial:{copy:el.textContent.trim().slice(0,300),size:null}});
       return;
     }
     const box=el.getBoundingClientRect(), clamp=v=>Math.max(0,Math.min(v,1));
     const syncState=el.closest('[data-sync-state]');
-    const trail=(flowTrail||describe(board()))+(syncState?' → '+syncState.querySelector('h2').textContent:'');
+    const trail=el.closest('#period-dashboard')?periodView.describeState():(flowTrail||describe(board()))+(syncState?' → '+syncState.querySelector('h2').textContent:'');
     editor({board:board(),kind:syncState?'UX':undefined,flow:trail,size:frame.contentWindow.innerWidth+' × '+frame.contentWindow.innerHeight,selector:selectorFor(el),label:nodeLabel(el),x:clamp((e.clientX-box.left)/(box.width||1)),y:clamp((e.clientY-box.top)/(box.height||1))});
     pins();
   },true);
@@ -378,8 +400,8 @@ $('editor').onsubmit=async e=>{
   $('editor').querySelector('.primary').disabled=true;
   try {await save({...draft,...(trial?{trial}:{}),text,kind:$('kind').value});} finally {$('editor').querySelector('.primary').disabled=false;}
 };
-device.onchange=()=>changeBoard(page.value.startsWith('pair-')?device.value+'-devices':board());
-page.onchange=()=>changeBoard(board());
+device.onchange=()=>changeBoard(page.value.startsWith('pair-')?device.value+'-devices':board(),'',isDashboard(frame.dataset.feature)?frame.dataset.feature:'');
+page.onchange=()=>changeBoard(board(),'',isDashboard(frame.dataset.feature)&&['home','devices','settings'].includes(page.value)?'dashboard':'');
 $('flow').onclick=()=>changeBoard('desktop-pair-invite');
 new ResizeObserver(resize).observe($('stage'));
 $('trial').onclick=()=>{if(!allowLeave())return;const enable=!picking||!trialMode;clearEditor();trialMode=true;setPicking(enable);status(enable?'点选画板中要改的文字。':'');};
@@ -391,7 +413,7 @@ document.querySelector('.quick').onclick=e=>{
 function routeFromHash(){
  const [key,requested='']=location.hash.slice(1).split('/');
  const valid=/^((desktop|mobile)-((home|week)(-edit|-detail-(writer|browser|reader|notes))?|devices|settings)|desktop-pair-(invite|request)|mobile-pair-(scan|confirm|wait|success|refused|timeout))$/;
- return [valid.test(key)?key:'desktop-home',['report','extension','data','controls'].includes(requested)?requested:(key?'':'controls')];
+ return [valid.test(key)?key:'desktop-home',['report','extension','data','controls','dashboard','calendar'].includes(requested)?requested:(key?'':'dashboard')];
 }
 window.addEventListener('hashchange',()=>{
  const [key,feature]=routeFromHash();
@@ -400,3 +422,96 @@ window.addEventListener('hashchange',()=>{
 });
 showBoard(...routeFromHash());
 load().catch(e=>status(e.message));
+
+// Independent calendar fixture. All numbers below come from one synthetic daily ledger.
+function mountPeriodDashboard(d,onChange){
+ const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
+ const today=num(new Date(Date.now()-4*3600000).toLocaleDateString('sv-SE',{timeZone:'Asia/Hong_Kong'}));
+ const ymd=(y,m,day=1)=>Date.UTC(y,m,day)/DAY;
+ const month=n=>iso(n).slice(0,7),stamp=n=>iso(n).replaceAll('-','/'),short=n=>iso(n).slice(5).replace('-','/');
+ const dt=n=>new Date(n*DAY),first=n=>ymd(dt(n).getUTCFullYear(),dt(n).getUTCMonth()),nextMonth=n=>ymd(dt(n).getUTCFullYear(),dt(n).getUTCMonth()+1);
+ const yr=n=>dt(n).getUTCFullYear(), dayOf=n=>dt(n).getUTCDate(),len=r=>r[1]-r[0]+1;
+ const modes={day:'每日',week:'每周',month:'每月',year:'每年',custom:'自选'};
+ const span=(mode,n)=>{let a=n,b=n;
+  if(mode==='week'){const mon=n-(dt(n).getUTCDay()+6)%7;a=mon;b=mon+6;}
+  if(mode==='month'){a=first(n);b=nextMonth(n)-1;}
+  if(mode==='year'){a=ymd(yr(n),0);b=ymd(yr(n)+1,0)-1;}
+  return [a,Math.min(b,today)];
+ };
+ const label=r=>len(r)===1?stamp(r[0]):stamp(r[0])+' – '+short(r[1]);
+ const root=d.createElement('section');root.id='period-dashboard';root.hidden=true;d.body.append(root);
+ let mode='day',period=[today,today],comparison=null,scope='all',picker=null;
+ const apps=[['浏览器','pc'],['阅读','phone'],['编辑器','pc'],['笔记','phone']];
+ const base=(n,i)=>{const q=Math.abs((n*(19+i*8)+Math.floor(n/7)*(i+11))%167);return [40,19,35,10][i]+q%[95,45,85,35][i];};
+ const vector=r=>{const totals=[0,0,0,0];for(let n=r[0];n<=r[1];n++)for(let i=0;i<4;i++)if(scope==='all'||scope===apps[i][1])totals[i]+=base(n,i);return totals;};
+ const total=v=>v.reduce((a,b)=>a+b,0),dur=m=>{const v=Math.round(m);return v>=60?Math.floor(v/60)+' 小时 '+v%60+' 分钟':v+' 分钟';};
+ function bins(){
+  const [a,b]=period;
+  if(mode==='year')return Array.from({length:12},(_,i)=>{const n=ymd(yr(a),i);return {label:(i+1)+'月',minutes:n>b?null:total(vector([n,Math.min(b,nextMonth(n)-1)]))};});
+  if(mode==='day'){
+   const weights=Array.from({length:24},(_,i)=>i<6||i>22?0:2+((i*3+a)%9)),sum=total(weights),used=total(vector(period));
+   return weights.map((v,i)=>({label:String((i+4)%24).padStart(2,'0'),minutes:used*v/sum}));
+  }
+  return Array.from({length:len(period)},(_,i)=>({label:String(dayOf(a+i)),minutes:total(vector([a+i,a+i]))}));
+ }
+ function promptPicker(target){
+  const r=target==='comparison'?(comparison||period):period;
+  const start=Math.max(r[0],first(r[1]));
+  picker={target,month:first(start),start:iso(start),end:iso(r[1]),second:false,error:''};
+ }
+ function valid(p){const a=num(p.start),b=num(p.end);if(!Number.isInteger(a)||!Number.isInteger(b))return '请选择完整的起止日期。';if(b<a)return '结束日期不能早于开始日期。';if(month(a)!==month(b)||b-a+1>31)return '起止日期须在同一个自然月内，最多 31 天。';if(b>today)return '只能选择今天或更早的日期。';return '';}
+ function calendar(){
+  if(!picker)return '';if(picker.target==='year')return '<section class="pd-picker" aria-label="选择年份"><strong>选择年份</strong><div class="pd-short"><select aria-label="年份" id="pd-year">'+Array.from({length:yr(today)-1969},(_,i)=>yr(today)-i).map(y=>'<option '+(y===yr(period[0])?'selected':'')+'>'+y+'</option>').join('')+'</select><button class="pd-primary" data-cal="apply-year">查看全年</button><button data-cal="cancel">取消</button></div></section>';const p=picker,m=p.month,offset=(dt(m).getUTCDay()+6)%7,days=nextMonth(m)-m;
+  const cells=Array.from({length:offset},()=>'<i></i>').join('')+Array.from({length:days},(_,i)=>{const n=m+i,s=iso(n),cl=s===p.start||s===p.end?'cap':s>p.start&&s<p.end?'inside':'';
+   return '<button data-cal="pick" data-n="'+n+'" data-style-id="cal-day-'+s+'" class="'+cl+'" aria-label="'+s+'" '+(n>today?'disabled':'')+'>'+dayOf(n)+'</button>';}).join('');
+  return '<section class="pd-picker" id="pd-picker" aria-label="日期选择"><div class="pd-top"><strong>'+(p.target==='comparison'?'选择对比区间':'选择统计区间')+'</strong><button data-cal="cancel" aria-label="关闭日历">关闭</button></div><div class="pd-short"><button data-cal="today">今天</button><button data-cal="yesterday">昨天</button></div><div class="pd-month"><button data-cal="back-month" aria-label="上个月">‹</button><strong>'+yr(m)+' 年 '+(dt(m).getUTCMonth()+1)+' 月</strong><button data-cal="next-month" aria-label="下个月" '+(nextMonth(m)>today?'disabled':'')+'>›</button></div><div class="pd-grid">'+[...'一二三四五六日'].map(x=>'<small>'+x+'</small>').join('')+cells+'</div><div class="pd-inputs"><label>开始日期<input type="date" data-edge="start" max="'+iso(today)+'" value="'+p.start+'"></label><label>结束日期<input type="date" data-edge="end" max="'+iso(today)+'" value="'+p.end+'"></label></div><p class="pd-help" role="status">'+(p.error||(p.second?'再点结束日，或直接应用为单日。':'选同月起止日，最多 31 天。'))+'</p><div class="pd-end"><button data-cal="cancel">取消</button><button class="pd-primary" data-cal="apply">应用区间</button></div></section>';
+ }
+ function draw(){
+  const v=vector(period),sum=total(v),series=bins(),max=Math.max(1,...series.map(x=>x.minutes||0));
+  const compare=comparison?total(vector(comparison)):null,delta=comparison?sum/len(period)-compare/len(comparison):null;
+  const barUnit=mode==='day'?'时':mode==='year'?'月':'日';
+  const bars=series.map((s,i)=>{const display=series.length<=12||i%Math.ceil(series.length/8)===0||i===series.length-1;return '<div class="pd-col" title="'+s.label+(barUnit==='月'?'':barUnit)+' · '+(s.minutes===null?'尚未到达':dur(s.minutes))+'"><div class="pd-track"><i style="height:'+((s.minutes||0)*100/max)+'%"></i></div><small>'+(display?s.label:'&nbsp;')+'</small></div>';}).join('');
+  const presetButtons=Object.entries(modes).map(([k,v])=>'<button data-cal="mode" data-mode="'+k+'" aria-pressed="'+(mode===k)+'" data-style-id="pd-'+k+'">'+v+'</button>').join('');
+  const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>'<div class="pd-app"><span>'+apps[i][0]+'</span><small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small><b>'+dur(m)+'</b></div>').join('');
+  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div><button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button></nav><div class="pd-main"><header class="pd-header"><div><small class="pd-kicker">ZTIME　/　使用概览</small><h1 id="pd-heading">仪表盘</h1></div><span class="pd-badge">示例数据</span></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" data-cal="dates">'+(mode==='year'?yr(period[0])+' 年　▾':label(period)+'　▾')+'</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+calendar()+
+  '<section class="pd-summary"><div><small>设备累计</small><h2>'+dur(sum)+'</h2><p>'+label(period)+' · '+len(period)+' 个统计日</p></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
+  (comparison?'<p class="pd-comp-label">'+label(comparison)+'</p><p>对比期累计　'+dur(compare)+'</p><strong>日均'+(Math.abs(delta)<0.5?'持平':(delta>0?'增加 ':'减少 ')+dur(Math.abs(delta)))+'</strong><p>本期日均 '+dur(sum/len(period))+' · 对比期日均 '+dur(compare/len(comparison))+'</p>':'<p>'+(mode==='year'?'比较上年同期的使用情况。':'可选另一月份的一段日期，比较日均用时。')+'</p>')+
+  '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
+  root.querySelectorAll('input[data-edge]').forEach(input=>input.onchange=()=>{picker[input.dataset.edge]=input.value;picker.error=valid(picker);if(input.dataset.edge==='start'&&Number.isInteger(num(input.value)))picker.month=first(num(input.value));draw();});
+  onChange();
+ }
+ function choose(m,n){mode=m;period=span(m,n);comparison=null;picker=null;}
+ function act(button){
+  const a=button.dataset.cal;if(!a)return false;
+  if(a==='mode'){const m=button.dataset.mode;if(m==='custom')promptPicker('period');else choose(m,Math.min(period[1],today));}
+  if(a==='dates'){if(mode==='year')picker={target:'year'};else promptPicker('period');}
+  if(a==='prev'||a==='next'){
+   const k=a==='prev'?-1:1,n=k<0?period[0]-1:period[1]+1;
+   if(mode==='custom'){const m=first(n);const limit=nextMonth(m)-1;const start=k<0?Math.max(m,n-len(period)+1):n;period=[start,Math.min(k<0?n:start+len(period)-1,limit,today)];comparison=null;picker=null;}
+   else choose(mode,n);
+  }
+  if(a==='apply-year')choose('year',ymd(+root.querySelector('#pd-year').value,0));
+  if(a==='compare'){if(mode==='year'){const year=yr(period[0])-1,e=dt(period[1]);const m=e.getUTCMonth();comparison=[ymd(year,0),Math.min(ymd(year,m,e.getUTCDate()),ymd(year,m+1)-1)];}else promptPicker('comparison');}
+  if(a==='clear'){comparison=null;picker=null;}
+  if(a==='scope')scope=button.dataset.scope;
+  if(a==='today'||a==='yesterday'){const n=today-(a==='yesterday'?1:0);picker.start=picker.end=iso(n);picker.month=first(n);picker.second=false;picker.error='';}
+  if(a==='cancel')picker=null;
+  if(a==='back-month'||a==='next-month'){picker.month=a==='back-month'?first(picker.month-1):nextMonth(picker.month);}
+  if(a==='pick'){const s=iso(+button.dataset.n);if(!picker.second){picker.start=picker.end=s;picker.second=true;picker.error='';}
+   else if(s.slice(0,7)!==picker.start.slice(0,7)){picker.error='结束日必须与开始日在同一个月。';}
+   else{[picker.start,picker.end]=[picker.start,s].sort();picker.second=false;picker.error='';}}
+  if(a==='apply'){const p=picker;p.error=p.error||valid(p);if(!p.error){const r=[num(p.start),num(p.end)];if(p.target==='comparison')comparison=r;else{period=r;mode=len(r)===1?'day':'custom';comparison=null;}picker=null;}}
+  draw();return true;
+ }
+ const describeState=()=>'仪表盘 · '+modes[mode]+' '+label(period)+'｜'+[mode,...period,scope,...(comparison||['','']),picker?.target||'',picker?.month||'',picker?.start||'',picker?.end||'',picker?.second?1:0].join(',');
+ function restore(flow){
+  const [m,a,b,sc,c,e,t,mo,start,end,second]=(flow.split('｜')[1]||'').split(',');
+  const sane=v=>/^-?\d{1,6}$/.test(v)&&+v>=ymd(1900,0)&&+v<=today;
+  if(!Object.hasOwn(modes,m)||!sane(a)||!sane(b)||+b<+a||+b-+a>366||!['all','phone','pc'].includes(sc))return;
+  mode=m;period=[+a,+b];scope=sc;comparison=sane(c)&&sane(e)&&+e>=+c&&+e-+c<=366?[+c,+e]:null;picker=null;
+  if(t==='year')picker={target:t};
+  else if(['period','comparison'].includes(t)&&sane(mo)&&[start,end].every(x=>/^(?:\d{4}-\d{2}-\d{2})?$/.test(x)))picker={target:t,month:first(+mo),start,end,second:second==='1',error:''};
+  draw();
+ }
+ draw();return {root,act,describeState,restore,open(){promptPicker('period');draw();}};
+}
