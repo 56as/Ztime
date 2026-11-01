@@ -32,6 +32,7 @@ function handleStyleDemo(d,el){
   case 'refresh':notice(d,'已更新示例视图');break;
   case 'save':{
    const hint=d.querySelector('[data-save-hint]');if(hint)hint.textContent='示例起点：'+d.querySelector('[data-style-id=day-start]').value;
+    if(d.body.dataset.reviewDevice==='mobile' && d.getElementById('timeZone'))mobileZone=d.getElementById('timeZone').value;
    notice(d,'示例设置已保存');break;
   }
   case 'export':notice(d,'示例：'+button.textContent.trim().replace(/\s+/g,' ')+'（不会下载真实记录）');break;
@@ -65,8 +66,25 @@ const desktopV2='desktop-v2';
 const secondDraftPrefix='电脑版第二版 · ';
 const secondDraftNote=note=>note.flow?.startsWith(secondDraftPrefix)===true;
 const currentDraft=()=>frame.dataset.feature===desktopV2;
-const dashboardRoute=()=>currentDraft() && device.value==='desktop'?desktopV2:'dashboard';
+const dashboardRoute=()=>device.value==='desktop'?desktopV2:'dashboard';
 const isDashboard = f=>['dashboard','calendar','layout',desktopV2].includes(f);
+
+let mobileZone='Asia/Hong_Kong';
+function populateTimeZones(d){
+  const select=d.getElementById('timeZone');
+  const common=new Map([['Asia/Hong_Kong','香港'],['Asia/Shanghai','上海（北京时间）'],['Asia/Taipei','台北'],['Asia/Singapore','新加坡'],['Asia/Tokyo','东京'],['Europe/London','伦敦'],['America/New_York','纽约'],['UTC','协调世界时']]);
+  select.replaceChildren();
+  for(const [title,zones] of [
+    ['常用时区',common],
+    ['其他时区',(Intl.supportedValuesOf?.('timeZone')??[]).filter(id=>!common.has(id)).map(id=>[id,id])]
+  ]){
+    const group=d.createElement('optgroup');
+    group.label=title;
+    for(const [id,label] of zones)group.append(new Option(label,id));
+    select.append(group);
+  }
+  select.value=mobileZone;
+}
 
 function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2');
@@ -150,6 +168,7 @@ function allowLeave() {
   return !changed || confirm('放弃尚未保存的修改？');
 }
 function showBoard(key, feature = "") {
+  if (/^mobile-(home|devices|settings)$/.test(key) && !['calendar','layout'].includes(feature)) feature='dashboard';
   const [mode, ...parts] = key.split('-');
   const id = parts.join('-');
   page.querySelector('[data-context]')?.remove();
@@ -247,9 +266,20 @@ function reveal(el){
   const state=el?.closest('#design-report-preview,#design-connection');
   if(state)state.hidden=false;
 }
+// Keep mobile annotations attached to their replacement controls on the current boards.
+const mobileAnnotationTargets={
+  'mobile-home':{'[data-action=edit]':'[data-cal=layout]','[data-widget=header]':'.pd-summary'},
+  'mobile-devices':{'#app > div:nth-of-type(1) > main:nth-of-type(1) > section:nth-of-type(1) > p:nth-of-type(1)':'.devices-view > section[aria-live]'},
+  'mobile-settings':{
+    '#app > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > fieldset:nth-of-type(1)':'#theme',
+    '#app > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(4)':'#mobile-version'
+  }
+};
 function targetFor(note) {
   if(secondDraftNote(note)!==currentDraft())return null;
   try {
+    const replacement=mobileAnnotationTargets[note.board]?.[note.selector];
+    if(replacement)return doc().querySelector(replacement);
     const el=doc().querySelector(note.selector);
     if(!el && note.flow?.startsWith('仪表盘 · ') && note.label==='ZTIME / 使用概览')return doc().getElementById('pd-heading');
     return el;
@@ -300,8 +330,10 @@ function pins() {
 }
 function renderList() {
   $('notes').replaceChildren();
-  $('count').textContent = notes.filter(n => !n.resolved).length;
-  for (const n of [...notes].reverse()) {
+  const visibleNotes=notes.filter(n=>n.board.startsWith(device.value+'-') &&
+    (device.value!=='mobile' || !/^mobile-(week|home-edit|home-detail)/.test(n.board) || n.board===board()));
+  $('count').textContent = visibleNotes.filter(n => !n.resolved).length;
+  for (const n of visibleNotes.reverse()) {
     const card = document.createElement('article');
     const label = document.createElement('small'), text = document.createElement('p');
     label.textContent = '#' + n.id + '　' + (n.kind||'UI')+' · '+describe(n.board) + (n.resolved ? ' · 已处理' : '');
@@ -361,6 +393,7 @@ frame.onload = () => {
     }
   }
   if(feature===desktopV2)applySecondDesktopDraft(d,page.value);
+  if(frame.dataset.loaded==='mobile-settings')populateTimeZones(d);
   const anchor=feature==='extension'?d.getElementById('extension-settings'):feature==='report'?d.getElementById('design-report-preview'):feature==='data'?d.getElementById('design-settings-data'):null;
   if(anchor){anchor.hidden=false;anchor.scrollIntoView({block:'center'});}
   const css = d.createElement('style');
@@ -425,7 +458,7 @@ frame.onload = () => {
   },true);
   d.addEventListener('scroll', pins, true);
   frame.contentWindow.addEventListener('resize',pins);
-  pins();
+  renderList();
   if (jumpTo && jumpTo.board === frame.dataset.loaded) { const n=jumpTo; jumpTo=null; locate(n); }
 };
 $('annotate').onclick = () => {
@@ -447,9 +480,9 @@ $('editor').onsubmit=async e=>{
   $('editor').querySelector('.primary').disabled=true;
   try {await save({...draft,...(trial?{trial}:{}),text,kind:$('kind').value});} finally {$('editor').querySelector('.primary').disabled=false;}
 };
-device.onchange=()=>changeBoard(page.value.startsWith('pair-')?device.value+'-devices':board(),'',isDashboard(frame.dataset.feature)?(currentDraft()?dashboardRoute():frame.dataset.feature):'');
-page.onchange=()=>changeBoard(board(),'',isDashboard(frame.dataset.feature)&&['home','devices','settings'].includes(page.value)?dashboardRoute():'');
-$('flow').onclick=()=>changeBoard('desktop-pair-invite');
+device.onchange=()=>changeBoard(device.value+'-'+(['home','devices','settings'].includes(page.value)?page.value:'devices'),'',dashboardRoute());
+page.onchange=()=>changeBoard(board(),'',dashboardRoute());
+$('flow').onclick=()=>changeBoard(device.value==='mobile'?'mobile-pair-scan':'desktop-pair-invite');
 new ResizeObserver(resize).observe($('stage'));
 $('trial').onclick=()=>{if(!allowLeave())return;const enable=!picking||!trialMode;clearEditor();trialMode=true;setPicking(enable);status(enable?'点选画板中要改的文字。':'');};
 $('trial-copy').oninput=$('trial-size').oninput=previewTrial;
@@ -459,13 +492,20 @@ document.querySelector('.quick').onclick=e=>{
 };
 function routeFromHash(){
  const [key,requested='']=location.hash.slice(1).split('/');
+ if(!key)return ['desktop-home',desktopV2];
+ if(key==='mobile-home-edit')return ['mobile-home','layout'];
+ if(/^mobile-(home|devices|settings)$/.test(key))return [key,['calendar','layout'].includes(requested)?requested:'dashboard'];
  const valid=/^((desktop|mobile)-((home|week)(-edit|-detail-(writer|browser|reader|notes))?|devices|settings)|desktop-pair-(invite|request)|mobile-pair-(scan|confirm|wait|success|refused|timeout))$/;
  if(requested===desktopV2 && /^desktop-(home|devices|settings)$/.test(key))return [key,desktopV2];
  return [valid.test(key)?key:'desktop-home',['report','extension','data','controls','dashboard','calendar','layout'].includes(requested)?requested:(key?'':'dashboard')];
 }
 window.addEventListener('hashchange',()=>{
  const [key,feature]=routeFromHash();
- if(key===board() && feature===frame.dataset.feature)return;
+ if(key===board() && feature===frame.dataset.feature){
+   const hash='#'+key+(feature?'/'+feature:'');
+   if(location.hash!==hash)history.replaceState(null,'',hash);
+   return;
+ }
  changeBoard(key,'',feature);
 });
 showBoard(...routeFromHash());

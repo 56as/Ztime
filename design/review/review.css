@@ -4,3 +4,5 @@
 .quick{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px;font-size:13px}
 .quick a{color:#285640}.toolbar #trial{margin-left:0}#trial[aria-pressed=true]{background:#305344;color:white}
 #trial-size{width:100%;font:inherit}#trial-fields[hidden]{display:none}
+
+.quick .entry-group{display:inline-flex;align-items:center;gap:10px}.entry-group b{color:#53645b;font-weight:600}
