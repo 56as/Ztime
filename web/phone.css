@@ -10,19 +10,25 @@
 .phone-ui main {padding:12px 14px calc(66px + env(safe-area-inset-bottom))}
 .phone-ui .page-header.topbar {margin-bottom:8px}
 .phone-ui .page-heading h1 {margin:0;font-size:26px}
+.phone-ui .dashboard-view .page-heading h1 {font-size:24px}
 .phone-ui .page-header .statusbar {margin-top:2px}
 .phone-ui .page-header .actions {width:auto;gap:6px}
 .phone-ui .page-header .page-heading {flex:1}
 .phone-ui .panel,.phone-ui .period-card {padding:10px 14px;margin-bottom:8px}
 .phone-ui .panel h2 {margin-bottom:8px}
 .phone-ui .page-header [data-tool] {height:32px;min-height:32px;min-width:32px;padding:0 6px}
-.phone-ui .actions [data-tool=refresh] {width:32px}
+.phone-ui .page-header .actions .refresh-control {
+  box-sizing:border-box;width:32px;min-width:32px;height:32px;min-height:32px;padding:0;
+}
 .phone-ui .actions [data-tool=layout] {background:color-mix(in srgb,#876ab9 14%,var(--surface));color:color-mix(in srgb,#876ab9 58%,var(--text));border:1px solid color-mix(in srgb,#876ab9 35%,var(--line))}
 .phone-ui .pd-controls {flex-wrap:nowrap;gap:6px;margin-bottom:8px}
+.phone-ui .pd-controls > :is(.pd-modes,.pd-range) {
+  box-sizing:border-box;height:max(38px,2.4em);align-items:stretch;
+}
 .phone-ui .pd-controls .pd-modes {gap:1px}
-.phone-ui .pd-controls .pd-modes button {min-width:clamp(32px,10vw,40px);padding:8px 4px}
+.phone-ui .pd-controls .pd-modes button {min-width:clamp(32px,10vw,40px);padding:0 4px}
 .phone-ui .pd-range {min-width:0;gap:0}
-.phone-ui .pd-range button {white-space:nowrap;padding:8px 5px;font-size:13px}
+.phone-ui .pd-range button {white-space:nowrap;padding:0 5px;font-size:13px}
 .phone-ui .period-total {display:grid;grid-template-columns:max-content;justify-content:start;gap:5px}
 .phone-ui .total-value {gap:4px}
 .phone-ui .total-value :is(small,h2) {color:var(--text);font-family:inherit;font-size:18px;font-weight:600;line-height:1.4;letter-spacing:normal}
