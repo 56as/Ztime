@@ -1,3 +1,4 @@
+import {reportData,reportSvg,reportCsv,graphicExport} from './report-view.js';
 import {weekReport} from './shared/week-report.js';
 import {ACCENT_COLORS as accentColors,validAppearance} from './shared/appearance.js';
 import {completeLayout,defaultsFor,layoutKey} from './shared/layout.js';
@@ -32,21 +33,26 @@ function changesList(w){const changes=state.data.week.changes.filter(a=>(!w.devi
 function home(){return dashboard.render();}
 function weekPage(){return dashboard.render();}
 function previewWeekReport(){
- const report=weekReport(state.data);
+ const snapshot=state.data, report=weekReport(snapshot);
  const dialog=document.querySelector('#dialog'),content=document.querySelector('#dialogContent');
- content.innerHTML='<header><h2>周报预览</h2><button class="dialog-close" aria-label="关闭">×</button></header><pre class="report-text"></pre><button class="primary" data-save-report>保存文本</button>';
- content.querySelector('pre').textContent=report.content;
+ const model=native?null:reportData(snapshot),sheet=model?reportSvg(model):'';
+ const formats=native?[['txt','保存文本']]:[['txt','文本'],['csv','CSV'],['pdf','PDF'],['png','PNG 图片']];
+ const actions=formats.map(([key,label])=>`<button data-save-report="${key}">${label}</button>`).join('');
+ const body=native?'<pre class="report-text"></pre>':`<div class="report-image">${sheet}</div><details><summary>查看文字明细</summary><pre class="report-text"></pre></details>`;
+ content.innerHTML=`<header><h2>周报预览</h2><button class="dialog-close" aria-label="关闭">×</button></header>${native?body:''}<div class="row report-formats" aria-label="导出格式">${actions}</div>${native?'':body}<p class="small" role="status" data-report-notice></p>`;
+ const fullText=report.content+(model?'\r\n本周观察与提示\r\n'+[...model.observations,...model.notes].join('\r\n')+'\r\n':'');
+ content.querySelector('pre').textContent=fullText;
  content.querySelector('.dialog-close').onclick=()=>dialog.close();
- content.querySelector('[data-save-report]').onclick=async event=>{
-  const button=event.currentTarget;button.disabled=true;
-  try {
-   if(native)await api('/api/week-report','POST',report);
-   else {
-    const url=URL.createObjectURL(new Blob(['\uFEFF',report.content],{type:'text/plain;charset=utf-8'}));
-    const a=document.createElement('a');a.href=url;a.download=report.filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ for(const button of content.querySelectorAll('[data-save-report]'))button.onclick=async()=>{
+  const format=button.dataset.saveReport;button.disabled=true;
+  try{
+   if(native){await api('/api/week-report','POST',report);dialog.close();}
+   else{
+    const blob=format==='txt'?new Blob(['\uFEFF',fullText],{type:'text/plain;charset=utf-8'}):format==='csv'?new Blob(['\uFEFF',reportCsv(model)],{type:'text/csv;charset=utf-8'}):await graphicExport(sheet,format);
+    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=report.filename.replace(/\.txt$/,'.'+format);a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);content.querySelector('[data-report-notice]').textContent='已发起下载：'+a.download;
    }
-   dialog.close();
-  }catch(e){toast(e.message);}finally{button.disabled=false;}
+  }catch(e){content.querySelector('[data-report-notice]').textContent='导出失败：'+e.message;}finally{button.disabled=false;}
  };
  dialog.showModal();
 }
