@@ -27,6 +27,18 @@ try{
   await page.locator('.period-total').waitFor();
   assert.equal(await page.locator('.page-header .statusbar').innerText(),'正在记录 · Editor <Example>');
   assert.deepEqual(await page.locator('[data-mode]').allTextContents(),['日','周','月','年']);
+  for(const [width,height] of [[820,620],[1280,824]]) {
+    await page.setViewportSize({width,height});
+    const firstScreen=await page.locator('.default-pair').evaluate(grid=>{
+      const trend=grid.querySelector('.trend-card').getBoundingClientRect();
+      const rank=grid.querySelector('.ranking-card').getBoundingClientRect();
+      const controls=document.querySelector('.pd-controls').getBoundingClientRect();
+      const summary=document.querySelector('.period-total').getBoundingClientRect();
+      return document.scrollingElement.scrollHeight===innerHeight && rank.top>trend.bottom &&
+        rank.width===trend.width && rank.bottom>innerHeight-32 && controls.bottom===summary.top;
+    });
+    assert.ok(firstScreen,'Default cards fill one desktop window');
+  }
   await click('[data-mode=week]');
   const bars=page.locator('.rank-track i');
   await bars.first().waitFor();
@@ -67,8 +79,22 @@ try{
   const refreshed=page.waitForResponse(r=>r.url().includes('/api/period?'));
   await click('[data-tool=refresh]');await refreshed;await page.waitForFunction(()=>document.querySelector('.rank-scroll')?.scrollTop>0);
   await scroll.locator('[data-rank]').last().click();await page.locator('#dialog[open]').waitFor();await page.keyboard.press('Escape');
-  await click('[data-page=devices]');await click('[data-action=pair]');await page.locator('.qr').waitFor();
+  await click('[data-page=devices]');
+  await page.getByRole('heading',{name:'浏览器识别'}).waitFor();
+  assert.ok(await page.evaluate(()=>document.scrollingElement.scrollHeight===innerHeight));
+  await click('[data-action=pair]');await page.locator('.qr').waitFor();
   await click('[data-page=settings]');await page.locator('#theme').selectOption('dark');
+  const grid=page.locator('.settings-grid');
+  assert.equal(await page.getByRole('heading',{name:'浏览器识别'}).count(),0);
+  assert.ok(await grid.evaluate(el=>{
+    const [rules,appearance,data]=Array.from(el.children,c=>c.getBoundingClientRect());
+    const csv=el.querySelector('[data-export=csv]').getBoundingClientRect();
+    const del=el.querySelector('[data-action=delete-data]').getBoundingClientRect();
+    return appearance.top===rules.top && Math.abs(rules.width-appearance.width)<1 &&
+      data.top>=rules.bottom && data.left===rules.left && del.left>=csv.right && del.top===csv.top &&
+      el.querySelector('#timeZone').getBoundingClientRect().width<=135;
+  }));
+  await click('[data-action=delete-data]');await page.locator('#dialog[open] [data-cancel]').click();
   await page.locator('#timeZone').selectOption('Europe/Paris');await click('[data-action=save-settings]');
   await page.waitForFunction(()=>document.querySelector('#timeZone')?.value==='Europe/Paris');
   assert.equal(service.store.get('settings').timeZone,'Europe/Paris');

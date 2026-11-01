@@ -78,3 +78,29 @@
 }
 
 @media(min-width:701px){.desk-ui .pd-bottom{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}}
+
+@media (min-width:701px) {
+  .desk-ui .devices-view {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:12px;padding-block:clamp(16px,3vh,28px)}
+  .desk-ui .devices-view > :is(.page-header,.banner,.current-devices,.sync-status,.error-box),.desk-ui .devices-view > .panel:has(.pair-grid) {grid-column:1/-1}
+  .desk-ui .devices-view > .panel {min-width:0;padding:14px 18px;margin:0}
+  .desk-ui .devices-view > .page-header {margin:0}
+  .desk-ui .devices-view .device {padding:8px 0}
+  .desk-ui .devices-view .panel h2 {margin-bottom:8px}
+  .desk-ui .devices-view .section-head h2 {margin:0}
+}
+.desk-ui .settings-view .fixed-setting .field {grid-template-columns:minmax(60px,max-content) minmax(0,132px)}
+.desk-ui .fixed-setting .field :is(label,select) {font:500 14px/normal system-ui,"Microsoft YaHei",sans-serif;color:var(--text);letter-spacing:normal}
+.desk-ui .fixed-setting .field select {height:36px;padding:0 10px;background-color:var(--bg)}
+.desk-ui .fixed-setting #dayStart,.desk-ui .fixed-setting #timeZone {width:100%}
+.desk-ui .settings-view .record-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:255px;gap:8px}
+.desk-ui .settings-view .record-actions button {min-width:0;min-height:36px;padding:4px 6px}
+.desk-ui .settings-view .record-actions + .field {max-width:255px;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.desk-ui .settings-view .record-actions + .field #theme {width:100%;min-width:0}
+.desk-ui .settings-view [data-action=save-settings] {display:block;margin-inline-start:auto}
+.desk-ui .settings-grid .data-settings {align-self:start;height:auto;padding:14px 18px}
+.desk-ui .data-settings h2 {margin-bottom:10px}
+.desk-ui .data-settings .row {display:flex;flex-wrap:wrap;gap:8px}
+@media (min-width:820px) {
+  .desk-ui .settings-grid {grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+  .desk-ui .data-settings .row button {padding-inline:8px}
+}
