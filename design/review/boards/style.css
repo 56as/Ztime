@@ -234,22 +234,32 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 [data-review-device=mobile].unified .nav .icon {display:none}
 [data-review-device=mobile] .pd-main {padding:12px 14px calc(66px + env(safe-area-inset-bottom))}
 [data-review-device=mobile] #period-dashboard .pd-tools button {height:32px;min-width:32px;padding:0 6px}
+[data-review-device=mobile] #period-dashboard .pd-tools [data-cal=refresh],
+[data-review-device=mobile].unified .page-header .actions [data-action=refresh] {
+  display:inline-grid;place-items:center;box-sizing:border-box;
+  width:32px;min-width:32px;height:32px;min-height:32px;padding:0;
+  border:1px solid #b7cee9;border-radius:9px;background:#e6f0ff;color:#18599c;
+}
 [data-review-device=mobile] #period-dashboard [data-cal=layout] {background:#efebfc;border:1px solid #cfc3ec;color:#51417c}
 [data-review-device=mobile] #period-dashboard [data-cal=refresh] {background:#e6f0ff;color:#18599c}
 [data-review-device=mobile] .pd-controls {flex-wrap:nowrap;gap:6px}
-[data-review-device=mobile] #period-dashboard .pd-modes button {min-width:clamp(33px,10vw,40px);padding:8px 5px}
+[data-review-device=mobile] .pd-controls > :is(.pd-modes,.pd-range) {
+  box-sizing:border-box;height:max(38px,2.4em);align-items:stretch;
+}
+[data-review-device=mobile] .pd-controls .pd-range {font-size:inherit}
+[data-review-device=mobile] #period-dashboard .pd-modes button {min-width:clamp(33px,10vw,40px);padding:0 5px}
 [data-review-device=mobile] .pd-summary :is(small,h2) {
   font-family:inherit;font-size:18px;font-weight:600;line-height:1.4;letter-spacing:normal;color:#191919;
 }
 [data-review-device=mobile] .pd-header,[data-review-device=mobile] .pd-controls {margin-bottom:8px}
-[data-review-device=mobile] #period-dashboard h1 {font-size:26px;margin:0}
+[data-review-device=mobile] #period-dashboard h1 {font-size:24px;margin:0}
 [data-review-device=mobile] .pd-summary {
   display:grid;grid-template-columns:max-content;justify-content:start;gap:5px;padding:9px 14px;margin-bottom:8px;
 }
 [data-review-device=mobile] .pd-summary > div:first-child {gap:4px}
 [data-review-device=mobile] #period-dashboard .pd-scope button {flex:auto;color:#191919;padding:3px 8px}
 [data-review-device=mobile] .pd-range {min-width:0;gap:0}
-[data-review-device=mobile] #period-dashboard .pd-range button {padding:8px 5px;white-space:nowrap}
+[data-review-device=mobile] #period-dashboard .pd-range button {padding:0 5px;font-size:13px;white-space:nowrap}
 [data-review-device=mobile] .pd-bottom {gap:8px}
 [data-review-device=mobile] .pd-bottom .pd-card {padding:10px 14px}
 [data-review-device=mobile] .usage-chart {margin-top:8px}
@@ -297,6 +307,7 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 [data-review-device=mobile].unified .panel {padding:11px 14px;margin-bottom:8px}
 [data-review-device=mobile].unified .panel h2 {margin-bottom:8px}
 [data-review-device=mobile].unified .devices-view .section-head h2 {margin:0}
+[data-review-device=mobile].unified .devices-view > section[aria-live] {border-top:1px solid var(--line)}
 [data-review-device=mobile] .devices-view .device {padding:8px 0;gap:8px}
 [data-review-device=mobile] .devices-view .device-icon {padding:8px}
 [data-review-device=mobile] .devices-view details {margin-top:8px}
