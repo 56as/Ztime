@@ -331,7 +331,7 @@ function targetFor(note) {
   try {
     if(secondDraftNote(note) && note.id===37){
       const card=doc().querySelector('[data-card-key=compare]');
-      return card?.hidden?doc().querySelector('[data-cal=layout-toggle][data-key=compare]')||doc().querySelector('[data-cal=layout]'):card;
+      return card?.hidden?doc().querySelector('[data-cal=layout-toggle][data-key=compare]'):card;
     }
     const replacement=mobileAnnotationTargets[note.board]?.[note.selector];
     if(replacement)return doc().querySelector(replacement);
@@ -378,7 +378,8 @@ function pins() {
     const pin = doc().createElement('button');
     pin.className = 'review-pin';
     pin.style.left = box.left + box.width*note.x + 'px';
-    pin.style.top = box.top + box.height*note.y + 'px';
+    // Keep toolbar actions clickable while their feedback remains open.
+    pin.style.top = (currentDraft() && el.closest('.pd-tools button')?box.top-7:box.top + box.height*note.y) + 'px';
     pin.textContent = note.id; pin.title = '#' + note.id + ' ' + note.text;
     pin.onclick = () => locate(note);
     layer.append(pin);
