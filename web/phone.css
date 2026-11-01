@@ -1,0 +1,91 @@
+/* Android WebView only. The bottom bar stays clear of system navigation. */
+.phone-ui .app-shell {display:block}
+.phone-ui .sidebar {
+  position:fixed;inset:auto 0 0;z-index:20;width:100%;background:var(--surface);
+  padding:6px 14px calc(6px + env(safe-area-inset-bottom));border:0;border-top:1px solid var(--line);
+}
+.phone-ui .brand,.phone-ui .nav .icon {display:none}
+.phone-ui .nav {display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.phone-ui .nav button {display:grid;place-items:center;text-align:center;min-height:44px;padding:6px;font-size:14px}
+.phone-ui main {padding:12px 14px calc(66px + env(safe-area-inset-bottom))}
+.phone-ui .page-header.topbar {margin-bottom:8px}
+.phone-ui .page-heading h1 {margin:0;font-size:26px}
+.phone-ui .page-header .statusbar {margin-top:2px}
+.phone-ui .page-header .actions {width:auto;gap:6px}
+.phone-ui .page-header .page-heading {flex:1}
+.phone-ui .panel,.phone-ui .period-card {padding:10px 14px;margin-bottom:8px}
+.phone-ui .panel h2 {margin-bottom:8px}
+.phone-ui .page-header [data-tool] {height:32px;min-height:32px;min-width:32px;padding:0 6px}
+.phone-ui .actions [data-tool=refresh] {width:32px}
+.phone-ui .actions [data-tool=layout] {background:color-mix(in srgb,#876ab9 14%,var(--surface));color:color-mix(in srgb,#876ab9 58%,var(--text));border:1px solid color-mix(in srgb,#876ab9 35%,var(--line))}
+.phone-ui .pd-controls {flex-wrap:nowrap;gap:6px;margin-bottom:8px}
+.phone-ui .pd-controls .pd-modes {gap:1px}
+.phone-ui .pd-controls .pd-modes button {min-width:clamp(32px,10vw,40px);padding:8px 4px}
+.phone-ui .pd-range {min-width:0;gap:0}
+.phone-ui .pd-range button {white-space:nowrap;padding:8px 5px;font-size:13px}
+.phone-ui .period-total {display:grid;grid-template-columns:max-content;justify-content:start;gap:5px}
+.phone-ui .total-value {gap:4px}
+.phone-ui .total-value :is(small,h2) {color:var(--text);font-family:inherit;font-size:18px;font-weight:600;line-height:1.4;letter-spacing:normal}
+.phone-ui .period-total .pd-modes button {flex:auto;color:var(--text);padding:3px 8px}
+.phone-ui .pd-bottom {display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.phone-ui .pd-bottom .period-card {margin:0;min-width:0}
+.phone-ui .usage-chart {margin-top:8px}
+.phone-ui .usage-chart :is(svg,.usage-y) {height:clamp(75px,calc(27dvh - 55px),150px)}
+.phone-ui .dashboard-view:has(.default-pair):not(:has(.point-detail > *, .banner)) {
+  height:max(100dvh,500px);display:flex;flex-direction:column;
+}
+.phone-ui #period-view:has(.default-pair):not(:has(.point-detail > *)) {
+  flex:1;min-height:0;display:grid;grid-template-rows:auto auto auto minmax(0,1fr);
+}
+.phone-ui .default-pair:not(:has(.point-detail > *)) {align-items:stretch;grid-template-rows:min-content minmax(0,1fr)}
+.phone-ui .default-pair:not(:has(.point-detail > *)):has(> .ranking-card:first-child) {grid-template-rows:minmax(0,1fr) min-content}
+.phone-ui .default-pair:not(:has(.point-detail > *)) .ranking-card {display:flex;flex-direction:column;min-height:0}
+.phone-ui .rank-scroll {max-height:196px}
+.phone-ui .default-pair:not(:has(.point-detail > *)) .rank-scroll {max-height:none;min-height:0}
+.phone-ui .ranking-card .app-row {gap:4px 8px;padding:7px 0;border-bottom:1px solid var(--line)}
+.phone-ui .point-plot {position:relative}
+.phone-ui .point-plot input {position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:crosshair}
+.phone-ui .point-plot:focus-within {outline:2px solid var(--accent)}
+.phone-ui .point-detail {margin-top:8px;font-size:12px;color:var(--muted)}
+.phone-ui .point-detail:empty {display:none}
+.phone-ui .point-detail div,.phone-ui .point-detail li {display:flex;justify-content:space-between;gap:8px}
+.phone-ui .point-detail div {color:var(--text)}
+.phone-ui .point-detail ul {list-style:none;margin:6px 0 0;padding:0}
+.phone-ui .point-detail li {padding:3px 0}
+
+.phone-ui .devices-view .panel {border-top:1px solid var(--line)}
+.phone-ui .devices-view .current-devices {border-top:3px solid var(--accent)}
+.phone-ui .devices-view .section-head h2 {margin:0}
+.phone-ui .devices-view .device {padding:8px 0;gap:8px}
+.phone-ui .devices-view .device-icon {padding:8px}
+.phone-ui .devices-view details {margin-top:8px}
+.phone-ui .sync-status p {margin:3px 0}
+.phone-ui .settings-grid {grid-template-columns:minmax(0,1fr);gap:8px}
+.phone-ui .settings-grid .panel {margin:0}
+.phone-ui .settings-grid .fixed-setting {border-top:1px solid var(--line)}
+.phone-ui .settings-grid .stat-rules {display:grid;grid-template-columns:1fr auto;align-items:center;border-top:3px solid var(--accent)}
+.phone-ui .stat-rules h2 {margin:0}
+.phone-ui .stat-rules [data-action=save-settings] {grid-column:2;grid-row:1}
+.phone-ui .settings-view .field {display:grid;grid-template-columns:minmax(5em,1fr) minmax(0,1.4fr);align-items:center;gap:12px;margin:6px 0;grid-column:1/-1}
+.phone-ui .settings-view .field :is(label,select) {font-family:inherit;font-size:15px;font-weight:500;color:var(--text)}
+.phone-ui .settings-view select {width:100%;min-width:0;height:36px;min-height:36px;padding:0 10px;border:1px solid var(--line);background:var(--bg)}
+.phone-ui .record-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.phone-ui .record-actions button {min-height:36px;padding:4px 8px}
+.phone-ui .record-actions [data-action=pause] {grid-column:1/-1}
+.phone-ui .risk-block {border:0;padding:0;margin-top:12px}
+.phone-ui .phone-version {margin-top:8px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-height:620px) {
+  .phone-ui main {padding-top:8px}
+  .phone-ui .page-header.topbar {margin-bottom:5px}
+  .phone-ui .panel {padding:8px 12px}
+  .phone-ui .devices-view .section-head {margin-bottom:4px}
+  .phone-ui .devices-view .device {padding-block:4px}
+  .phone-ui .devices-view details {margin-top:4px}
+  .phone-ui .settings-grid {gap:6px}
+  .phone-ui .settings-view .field {margin-block:3px}
+  .phone-ui .settings-section button {min-height:32px;padding-block:4px}
+  .phone-ui .settings-view select {height:32px;min-height:32px}
+  .phone-ui .data-settings {display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+  .phone-ui .data-settings h2 {flex-basis:100%;margin:0}
+  .phone-ui .data-settings .risk-block {margin:0}
+}

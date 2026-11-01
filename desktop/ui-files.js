@@ -9,6 +9,8 @@ const paths=[
  'web/controls.css',
  'web/period.css',
  'web/period-view.js',
+ 'web/phone-usage.js',
+ 'web/phone.css',
  'web/recording-status.js',
  'web/desktop-insights.js',
  'web/desktop-insights.css',

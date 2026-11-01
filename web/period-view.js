@@ -1,13 +1,15 @@
 import {recordingStatus} from './recording-status.js';
 import {desktopTitles,desktopLayout} from './shared/desktop-card-layout.js';
 import {usageArea,shareChart} from './desktop-insights.js';
+import {bindPhoneUsage} from './phone-usage.js';
 import {refreshControl} from './refresh-control.js';
 import {cardTitles,defaultCardLayout,validCardLayout} from './shared/period-layout.js';
 import {dateKey} from './shared/time.js';
 import {periodStats} from './shared/period.js';
 
 // Keep the selection when moving between dashboard, devices and settings.
-export function createPeriodView({api, escape, duration, details, report, onError}) {
+export function createPeriodView({api, escape, duration, details, report, refreshPhone, onError}) {
+ let selectedPoint=null, pointPeriod='';
  let desktop=false, rankOffset=0, rankPeriod='';
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
  let today;
@@ -40,7 +42,7 @@ export function createPeriodView({api, escape, duration, details, report, onErro
  function layoutPanel() {
    const rows=draft.map(({key,visible},index)=>{
      const name=(desktop?desktopTitles:cardTitles)[key];
-     return `<div class="layout-row"><b>${name}</b><button data-shift="-1" data-key="${key}" aria-label="上移${name}" ${index===0?'disabled':''}>↑</button><button data-shift="1" data-key="${key}" aria-label="下移${name}" ${index===draft.length-1?'disabled':''}>↓</button><button data-toggle="${key}" aria-pressed="${visible}">${desktop?(visible?'已添加':'添加'):(visible?'显示':'隐藏')}</button></div>`;
+     return `<div class="layout-row"><b>${name}</b><button data-shift="-1" data-key="${key}" aria-label="上移${name}" ${index===0?'disabled':''}>↑</button><button data-shift="1" data-key="${key}" aria-label="下移${name}" ${index===draft.length-1?'disabled':''}>↓</button><button data-toggle="${key}" aria-pressed="${visible}">${visible?'已添加':'添加'}</button></div>`;
    }).join('');
    return `<section class="pd-picker"><h2>仪表盘布局</h2><p>调整卡片顺序和显示状态。</p>${rows}<div class="pd-end"><button data-cal="cancel">取消</button><button data-save class="pd-primary">保存布局</button></div><p class="layout-error" role="status"></p></section>`;
  }
@@ -131,37 +133,40 @@ export function createPeriodView({api, escape, duration, details, report, onErro
   followToday=period[1]===today;
   update();return true;
  }
- function renderChart(bins) {
-   const max=Math.max(60_000,...bins.map(b=>b.duration || 0));
-   const step=bins.length<=12?1:Math.ceil(bins.length/8);
-   return `<div class="pd-plot"><div class="pd-axis"><span>${(max/3_600_000).toFixed(1)}</span><span>0</span></div><div class="pd-bars">${bins.map((b,i)=>
-     `<div class="pd-col" title="${b.label} · ${b.duration===null?'尚未到达':duration(b.duration,true)}"><div class="pd-track"><i style="height:${100*(b.duration||0)/max}%"></i></div><small>${i%step===0 || i===bins.length-1?b.label:'&nbsp;'}</small></div>`).join('')}</div></div>`;
- }
  function renderComparison() {
-   let body=mode==='year'?'比较上年同期的使用情况。':'选择另一段日期，按统计日数比较日均用时。';
+   let body=!desktop?'':mode==='year'?'比较上年同期的使用情况。':'选择另一段日期，按统计日数比较日均用时。';
    if(prior && comparison) {
      const current=result.total/result.days, previous=prior.total/prior.days;
      const difference=Math.abs(current-previous);
      body=`${label(comparison)}<br>对比期累计　${duration(prior.total,true)}<br>本期日均 ${duration(current,true)} · 对比期日均 ${duration(previous,true)}<br><strong>${difference<60_000?'日均基本持平':'日均'+(current>previous?'增加 ':'减少 ')+duration(difference,true)}</strong>`;
    }
-   return `<section class="period-card"><h2>期间对比</h2><p>${body}</p><button data-cal="compare">${mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期'}</button> ${comparison?'<button data-cal="clear">清除对比</button>':''}</section>`;
+   return `<section class="period-card"><h2>期间对比</h2>${body?'<p>'+body+'</p>':''}<button data-cal="compare">${mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期'}</button> ${comparison?'<button data-cal="clear">清除对比</button>':''}</section>`;
  }
  function paint() {
    const modesHtml=Object.entries(modes).map(([key,name])=>`<button data-cal="mode" data-mode="${key}" aria-pressed="${mode===key}">${name}</button>`).join('');
    const scopeHtml=[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([key,name])=>`<button data-cal="scope" data-scope="${key}" aria-pressed="${scope===key}">${name}</button>`).join('');
    const header=`<header class="topbar page-header"><div class="page-heading"><h1>仪表盘</h1>${desktop?recordingStatus(snapshot.collector,escape):''}</div><div class="actions"><button data-tool="layout" aria-haspopup="dialog">布局</button>${mode==='week'?'<button data-tool="report">导出周报</button>':''}${refreshControl('data-tool="refresh"')}</div></header>`;
-   const controls=`<div class="pd-controls"><div class="pd-modes">${modesHtml}</div><div class="pd-range"><button aria-label="上一期间" data-cal="prev">‹</button><button data-cal="dates" aria-haspopup="dialog">${mode==='year'?yr(period[0])+' 年':label(period)}　▾</button><button aria-label="下一期间" data-cal="next" ${period[1]>=today?'disabled':''}>›</button></div></div>`;
-   const ranking=(desktop?result?.apps:result?.apps.slice(0,20))?.map((a,index)=>`<button class="app-row" data-rank="${index}"><span class="app-name">${escape(a.name)}</span><small>${a.platform==='android'?'手机':'电脑'}</small><strong>${duration(a.duration,true)}</strong><span class="rank-track" aria-hidden="true"><i style="width:${100*a.duration/result.apps[0].duration}%"></i></span></button>`).join('');
+   const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
+   const dateText=!desktop && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
+   const controls=`<div class="pd-controls"><div class="pd-modes">${modesHtml}</div><div class="pd-range"><button aria-label="上一期间" data-cal="prev">‹</button><button data-cal="dates" aria-haspopup="dialog" aria-label="${fullDate}">${dateText} ▾</button><button aria-label="下一期间" data-cal="next" ${period[1]>=today?'disabled':''}>›</button></div></div>`;
+   const ranking=result?.apps.map((a,index)=>`<button class="app-row" data-rank="${index}"><span class="app-name">${escape(a.name)}</span><small>${a.platform==='android'?'手机':'电脑'}</small><strong>${duration(a.duration,true)}</strong><span class="rank-track" aria-hidden="true"><i style="width:${100*a.duration/result.apps[0].duration}%"></i></span></button>`).join('');
    const cards=result?{
-     trend:`<section class="period-card trend-card"><div class="pd-top"><h2>${desktop?'使用时间':mode==='year'?'全年趋势':mode==='day'?'分时用时':'每日趋势'}</h2><small>单位：小时</small></div>${desktop?usageArea(result.bins.map(b=>b.start>=result.end?{...b,duration:null}:b),ms=>duration(ms,true)):renderChart(result.bins)}</section>`,
-     ranking:`<section class="period-card"><h2>应用排行</h2>${desktop && ranking?'<div class="rank-scroll" tabindex="0" role="region" aria-label="应用排行">'+ranking+'</div>':ranking||'<p>所选期间暂无使用记录</p>'}</section>`,
+     trend:`<section class="period-card trend-card"><div class="pd-top"><h2>使用时间</h2><small>单位：小时</small></div>${usageArea(result.bins.map(b=>b.start>=result.end?{...b,duration:null}:b),ms=>duration(ms,true))}</section>`,
+     ranking:`<section class="period-card ranking-card"><h2>应用排行</h2>${ranking?'<div class="rank-scroll" tabindex="0" role="region" aria-label="应用排行">'+ranking+'</div>':ranking||'<p>所选期间暂无使用记录</p>'}</section>`,
      compare:renderComparison(),
      ...(desktop?Object.fromEntries(['devices','focus'].map(key=>[key,'<section class="period-card"><h2>'+desktopTitles[key]+'</h2>'+shareChart(key,result.apps,ms=>duration(ms,true))+'</section>'])):{})
    }:{};
-   const summary=result?`<section class="period-card period-total"><div class="total-value"><small>设备累计</small><h2>${duration(result.total,true)}</h2></div><div class="pd-modes">${scopeHtml}</div></section><div class="pd-bottom">${layout.filter(card=>card.visible).map(card=>cards[card.key]).join('')}</div>`:'<p role="status">正在读取所选期间…</p>';
+   const visibleCards=layout.filter(card=>card.visible);
+   const defaultPair=!desktop && visibleCards.length===2 && visibleCards.every(c=>['trend','ranking'].includes(c.key));
+   const summary=result?`<section class="period-card period-total"><div class="total-value"><small>设备累计</small><h2>${duration(result.total,true)}</h2></div><div class="pd-modes">${scopeHtml}</div></section><div class="pd-bottom${defaultPair?' default-pair':''}">${visibleCards.map(card=>cards[card.key]).join('')}</div>`:'<p role="status">正在读取所选期间…</p>';
    const previousList=host.querySelector('.rank-scroll');
    if(previousList?.isConnected && previousList.clientHeight)rankOffset=previousList.scrollTop;
    host.innerHTML=header+controls+summary;
+   if(!desktop && result){
+     const key=JSON.stringify([period,mode,scope]);
+     if(pointPeriod!==key){selectedPoint=null;pointPeriod=key;}
+     bindPhoneUsage(host,{result,snapshot,scope:queryScope(),mode,selected:selectedPoint,onSelect:i=>{selectedPoint=i;},escape,duration});
+   }
    const scroll=host.querySelector('.rank-scroll');
    if(scroll){
      const key=JSON.stringify([period,scope]);if(rankPeriod!==key){rankOffset=0;rankPeriod=key;}
@@ -179,7 +184,7 @@ export function createPeriodView({api, escape, duration, details, report, onErro
          openerSelector='[data-tool=layout]';draft=structuredClone(layout);drawModal();
        }
        else if(button.dataset.tool==='report')await report(iso(period[1]));
-       else if(button.dataset.tool==='refresh')await update(true);
+       else if(button.dataset.tool==='refresh')await (desktop?update(true):refreshPhone());
        else act(button);
      } catch(error){onError(error.message);}
    };

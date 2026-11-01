@@ -1,4 +1,4 @@
-export const cardTitles = {trend:'用时趋势', ranking:'应用排行', compare:'期间对比'};
+export const cardTitles = {trend:'使用时间', ranking:'应用排行', compare:'期间对比'};
 
 export function validCardLayout(rows) {
   return Array.isArray(rows) && rows.length === Object.keys(cardTitles).length &&
@@ -7,5 +7,5 @@ export function validCardLayout(rows) {
 }
 
 export function defaultCardLayout() {
-  return Object.keys(cardTitles).map(key => ({key,visible:true}));
+  return Object.keys(cardTitles).map(key => ({key,visible:key!=='compare'}));
 }
