@@ -23,3 +23,19 @@ test('export uses the displayed comparison, device overlap and sync coverage, wi
   d.peers[0].last_sync=0;assert.match(weekReport(d).content,/尚未完成同步/);
  }finally{db.close();}
 });
+
+import {reportData} from '../shared/report-model.js';
+import {reportCsv} from '../shared/report-csv.js';
+
+test('report analysis and CSV can run without a page, using only weekly aggregates',()=>{
+ const store=new Store(':memory:');
+ try{
+  const now=Date.parse('2026-10-31T08:00:00Z');
+  store.write({id:'row',deviceId:store.device.id,appId:'notes',appName:'=笔记',start:now-120000,end:now,site:'private.example'});
+  const {week,settings}=store.summary(undefined,now), model=reportData({week,settings,peers:[{last_sync:0}]});
+  assert.equal(model.total,120000);assert.equal(model.delta,120000);
+  assert.match(model.notes.join(' '),/可能不完整/);
+  assert.match(reportCsv(model),/"'=笔记","windows","2","0","2"/);
+  assert.doesNotMatch(reportCsv(model),/private\.example/);
+ }finally{store.close();}
+});

@@ -1,9 +1,5 @@
+import {reportDuration as duration} from './report-format.js';
 const clean = value => String(value).replace(/[\r\n\t\u0000-\u001f]/g,' ').trim();
-function duration(ms) {
-  const minutes=Math.floor(ms/60000);
-  if(ms>0 && !minutes)return '不足 1 分钟';
-  return minutes>=60 ? Math.floor(minutes/60)+' 小时 '+minutes%60+' 分钟' : minutes+' 分钟';
-}
 function change(ms) {
   return ms===0?'持平':(ms>0?'增加 ':'减少 ')+duration(Math.abs(ms));
 }
