@@ -209,3 +209,45 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desk-ui .fixed-setting #theme{width:fit-content;max-width:100%;min-width:7em;justify-self:start}
 .desk-ui .fixed-setting #timeZone{width:100%;min-width:0}
 /* @generated desk-preview:end */
+
+/* The phone boards share one bottom tab bar. */
+[data-review-device=mobile] .pd-nav,
+[data-review-device=mobile].unified .sidebar {
+  position:fixed;inset:auto 0 0;z-index:20;width:100%;background:var(--surface);
+  padding:6px 14px calc(6px + env(safe-area-inset-bottom));
+  border:0;border-top:1px solid var(--line);
+}
+[data-review-device=mobile] .pd-nav,
+[data-review-device=mobile].unified .nav {display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+[data-review-device=mobile] #period-dashboard .pd-nav button,
+[data-review-device=mobile].unified .nav button {
+  display:grid;place-items:center;text-align:center;min-height:44px;font-size:14px;padding:6px;border-radius:10px;
+}
+[data-review-device=mobile].unified .nav .icon {display:none}
+[data-review-device=mobile] .pd-main {padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+[data-review-device=mobile] #period-dashboard .pd-tools button {height:40px;min-width:40px}
+[data-review-device=mobile] #period-dashboard [data-cal=layout] {padding:0 14px;background:#efebfc;border:1px solid #cfc3ec;color:#51417c}
+[data-review-device=mobile] #period-dashboard [data-cal=refresh] {background:#e6f0ff;color:#18599c}
+[data-review-device=mobile] .pd-controls {flex-wrap:nowrap;gap:6px}
+[data-review-device=mobile] #period-dashboard .pd-modes button {min-width:30px;padding:8px 5px}
+[data-review-device=mobile] .pd-range {min-width:0;gap:0}
+[data-review-device=mobile] #period-dashboard .pd-range button {padding:8px 5px;white-space:nowrap}
+[data-review-device=mobile] .pd-bottom {gap:14px}
+[data-review-device=mobile] .pd-app {display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 8px}
+[data-review-device=mobile] .rank-track {grid-column:1/-1}
+[data-review-device=mobile] .rank-scroll {max-height:196px}
+.point-plot {position:relative}
+.point-plot input {position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:crosshair}
+.point-plot:focus-within {outline:2px solid var(--accent);outline-offset:2px}
+.point-detail {margin-top:10px;padding-top:10px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+.point-total,.point-detail li {display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.point-total {color:var(--text);font-size:13px}
+.point-detail ul {list-style:none;margin:6px 0 0;padding:0}
+.point-detail li {padding:3px 0}
+.point-detail li b {font-weight:500}
+[data-review-device=mobile] #design-settings-data h2 {margin-bottom:10px}
+[data-review-device=mobile] #design-settings-data .risk-block {
+  display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
+  padding-top:10px;margin-top:12px;
+}
+[data-review-device=mobile] .risk-block .style-confirm {flex-basis:100%}

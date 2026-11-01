@@ -322,14 +322,20 @@ const mobileAnnotationTargets={
   'mobile-home':{'[data-action=edit]':'[data-cal=layout]','[data-widget=header]':'.pd-summary'},
   'mobile-devices':{'#app > div:nth-of-type(1) > main:nth-of-type(1) > section:nth-of-type(1) > p:nth-of-type(1)':'.devices-view > section[aria-live]'},
   'mobile-settings':{
+    '#design-settings-data > p:nth-of-type(1)':'#design-settings-data > h2',
+    '#design-settings-data > section:nth-of-type(1) > p:nth-of-type(1)':'#design-settings-data [data-action=delete-data]',
     '#app > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > fieldset:nth-of-type(1)':'#theme',
     '#app > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(4)':'#mobile-version'
   }
 };
+function comparisonNote(note){
+  return (secondDraftNote(note) && note.id===37) ||
+    (note.board==='mobile-home' && [48,49].includes(note.id));
+}
 function targetFor(note) {
   if(secondDraftNote(note)!==currentDraft())return null;
   try {
-    if(secondDraftNote(note) && note.id===37){
+    if(comparisonNote(note)){
       const card=doc().querySelector('[data-card-key=compare]');
       return card?.hidden?doc().querySelector('[data-cal=layout-toggle][data-key=compare]'):card;
     }
@@ -352,7 +358,7 @@ function locate(note) {
     return;
   }
   if(dashboardNote)periodView.restore(flow);
-  if(v2 && note.id===37 && doc().querySelector('[data-card-key=compare]')?.hidden)periodView.open('layout');
+  if(comparisonNote(note) && doc().querySelector('[data-card-key=compare]')?.hidden)periodView.open('layout');
   const el = targetFor(note);
   if (el) {
     reveal(el);
@@ -368,6 +374,7 @@ function pins() {
   const layer = doc()?.getElementById('review-pins');
   if (!layer) return;
   layer.replaceChildren();
+  const phoneNav=device.value==='mobile' && doc().querySelector('#period-dashboard:not([hidden]) .pd-nav, .unified .sidebar');
   for (const note of notes.filter(n => n.board === frame.dataset.loaded && !n.resolved)) {
     const el = targetFor(note);
     if (!el) continue;
@@ -379,7 +386,11 @@ function pins() {
     pin.className = 'review-pin';
     pin.style.left = box.left + box.width*note.x + 'px';
     // Keep toolbar actions clickable while their feedback remains open.
-    pin.style.top = (currentDraft() && el.closest('.pd-tools button')?box.top-7:box.top + box.height*note.y) + 'px';
+    const above=currentDraft() && el.closest('.pd-tools button') ||
+      device.value==='mobile' && el.matches('button,select,.pd-nav,.pd-controls');
+    const y=above?box.top-8:box.top + box.height*note.y;
+    if(phoneNav && !phoneNav.contains(el) && y+12>phoneNav.getBoundingClientRect().top)continue;
+    pin.style.top = y + 'px';
     pin.textContent = note.id; pin.title = '#' + note.id + ' ' + note.text;
     pin.onclick = () => locate(note);
     layer.append(pin);
@@ -587,13 +598,64 @@ function mountPeriodDashboard(d,onChange){
  const root=d.createElement('section');root.id='period-dashboard';root.hidden=true;d.body.append(root);
  let mode='day',period=[today,today],comparison=null,scope='all',picker=null;
  const desktop=currentDraft();
+ const mobile=d.body.dataset.reviewDevice==='mobile';
  const apps=[['浏览器','pc'],['阅读','phone'],['编辑器','pc'],['笔记','phone']];
- if(desktop)apps.push(['邮件','pc'],['日历','phone'],['终端','pc'],['相册','phone'],['音乐','pc'],['地图','phone']);
+ if(desktop || mobile)apps.push(['邮件','pc'],['日历','phone'],['终端','pc'],['相册','phone'],['音乐','pc'],['地图','phone']);
  const base=(n,i)=>{const q=Math.abs((n*(19+i*8)+Math.floor(n/7)*(i+11))%167);if(i>=4)return 2+q%14;return [40,19,35,10][i]+q%[95,45,85,35][i];};
  const vector=r=>{const totals=apps.map(()=>0);for(let n=r[0];n<=r[1];n++)for(let i=0;i<apps.length;i++)if(scope==='all'||scope===apps[i][1])totals[i]+=base(n,i);return totals;};
  const total=v=>v.reduce((a,b)=>a+b,0),dur=m=>{const v=Math.round(m);return v>=60?Math.floor(v/60)+' 小时 '+v%60+' 分钟':v+' 分钟';};
+ function hourlyUsage(day){
+   const totals=vector([day,day]);
+   return Array.from({length:24},(_,hour)=>{
+     // Spread whole minutes across each app's sample hours without losing the daily total.
+     const values=totals.map((minutes,i)=>{
+       const slot=hour-(3+(day+i*3)%11),length=6+i%4;
+       if(slot<0 || slot>=length)return 0;
+       return Math.floor((slot+1)*minutes/length)-Math.floor(slot*minutes/length);
+     });
+     const clock=h=>String((h+4)%24).padStart(2,'0');
+     return {label:clock(hour),detail:clock(hour)+':00–'+clock(hour+1)+':00',values,minutes:total(values)};
+   });
+ }
+ let pointIndex=null;
+ function enablePointDetails(card,series){
+   const svg=card.querySelector('.usage-chart svg');
+   const plot=d.createElement('div');
+   plot.className='point-plot';
+   svg.before(plot);plot.append(svg);
+   const slider=d.createElement('input');
+   slider.type='range';slider.min=0;slider.max=series.length-1;slider.value=pointIndex??0;
+   slider.setAttribute('aria-label','查看时间点的应用与用时');
+   slider.dataset.styleNative='';
+   plot.append(slider);
+   const detail=d.createElement('div');detail.className='point-detail';detail.id='point-detail';
+   card.append(detail);
+   function inspect(index){
+     pointIndex=index;
+     const bin=series[index];
+     svg.querySelectorAll('circle').forEach((circle,i)=>circle.setAttribute('r',i===index?'5':'2.3'));
+     slider.setAttribute('aria-valuetext',bin.detail+' · '+(bin.minutes===null?'尚未到达':dur(bin.minutes)));
+     const rows=(bin.values||[]).map((minutes,i)=>({minutes,i})).filter(r=>r.minutes).sort((a,b)=>b.minutes-a.minutes);
+     detail.innerHTML='<div class="point-total"><strong>'+bin.detail+'</strong><b>'+(bin.minutes===null?'尚未到达':dur(bin.minutes))+'</b></div>'+
+       (rows.length?'<ul>'+rows.map(({minutes,i})=>'<li><span>'+apps[i][0]+' <small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small></span><b>'+dur(minutes)+'</b></li>').join('')+'</ul>':bin.minutes===0?'<p>这段时间没有使用记录。</p>':'');
+   }
+   slider.oninput=slider.onclick=()=>{if(!picking){inspect(Number(slider.value));onChange();}};
+   if(pointIndex!==null && series[pointIndex])inspect(pointIndex);
+   else detail.textContent='点按图表，查看该时段的应用和用时。';
+ }
  function bins(){
   const [a,b]=period;
+  if(mobile){
+    if(mode==='day')return hourlyUsage(a);
+    const count=mode==='year'?12:len(period);
+    return Array.from({length:count},(_,i)=>{
+      const start=mode==='year'?ymd(yr(a),i):a+i;
+      const end=mode==='year'?Math.min(b,nextMonth(start)-1):start;
+      const values=start>b?null:vector([start,end]);
+      return {label:mode==='year'?(i+1)+'月':String(dayOf(start)),detail:mode==='year'?month(start):stamp(start),
+        values,minutes:values?total(values):null};
+    });
+  }
   if(mode==='year')return Array.from({length:12},(_,i)=>{const n=ymd(yr(a),i);return {label:(i+1)+'月',minutes:n>b?null:total(vector([n,Math.min(b,nextMonth(n)-1)]))};});
   if(mode==='day'){
    const weights=Array.from({length:24},(_,i)=>i<6||i>22?0:2+((i*3+a)%9)),sum=total(weights),used=total(vector(period));
@@ -602,8 +664,8 @@ function mountPeriodDashboard(d,onChange){
   return Array.from({length:len(period)},(_,i)=>({label:String(dayOf(a+i)),minutes:total(vector([a+i,a+i]))}));
  }
  const layoutKey='review-dashboard-layout-'+device.value+(currentDraft()?'-v2':'');
- const modules=desktop?desktopTitles:{trend:'用时趋势',ranking:'应用排行',compare:'期间对比'};
- let layout=desktop?desktopLayout():Object.keys(modules).map(key=>({key,visible:true}));
+ const modules=desktop?desktopTitles:{trend:mobile?'使用时间':'用时趋势',ranking:'应用排行',compare:'期间对比'};
+ let layout=desktop?desktopLayout():Object.keys(modules).map(key=>({key,visible:!mobile||key!=='compare'}));
  try{
    const saved=JSON.parse(sessionStorage.getItem(layoutKey));
    if(desktop)layout=desktopLayout(saved);
@@ -614,22 +676,25 @@ function mountPeriodDashboard(d,onChange){
  function layoutPanel(){
    const rows=layoutDraft.map(({key,visible},i)=>{
      const name=modules[key];
-     return `<div class="pd-module-row"><b>${name}</b><button data-cal="layout-up" data-key="${key}" aria-label="上移${name}" ${i===0?'disabled':''}>↑</button><button data-cal="layout-down" data-key="${key}" aria-label="下移${name}" ${i===layoutDraft.length-1?'disabled':''}>↓</button><button data-cal="layout-toggle" data-key="${key}" aria-pressed="${visible}">${desktop?(visible?'已添加':'添加'):(visible?'显示':'隐藏')}</button></div>`;
+     return `<div class="pd-module-row"><b>${name}</b><button data-cal="layout-up" data-key="${key}" aria-label="上移${name}" ${i===0?'disabled':''}>↑</button><button data-cal="layout-down" data-key="${key}" aria-label="下移${name}" ${i===layoutDraft.length-1?'disabled':''}>↓</button><button data-cal="layout-toggle" data-key="${key}" aria-pressed="${visible}">${desktop||mobile?(visible?'已添加':'添加'):(visible?'显示':'隐藏')}</button></div>`;
    }).join('');
    return '<section class="pd-picker"><h3>仪表盘布局</h3><p class="pd-help">调整卡片顺序和显示状态。</p>'+rows+'<div class="pd-end"><button data-cal="cancel">取消</button><button class="pd-primary" data-cal="layout-save">保存布局</button></div></section>';
  }
- function applyLayout(){
+ function applyLayout(series){
    const grid=root.querySelector('.pd-bottom');
    const trend=grid.previousElementSibling;
    grid.prepend(trend);
    const [ranking,compare]=[...grid.children].slice(1);
    const cards={trend,ranking,compare};
-   if(desktop){
-     const appTotals=vector(period).map((m,i)=>({duration:m,platform:apps[i][1]==='pc'?'windows':'android'})).sort((a,b)=>b.duration-a.duration);
+   if(desktop || mobile){
      trend.querySelector('h3').textContent='使用时间';
-     trend.querySelector('.pd-plot').outerHTML=usageArea(bins().map(b=>({label:b.label,duration:b.minutes==null?null:b.minutes*60000})),ms=>dur(ms/60000));
+     trend.querySelector('.pd-plot').outerHTML=usageArea(series.map(b=>({label:b.label,duration:b.minutes==null?null:b.minutes*60000})),ms=>dur(ms/60000));
+     if(mobile)enablePointDetails(trend,series);
      const scroll=d.createElement('div');scroll.className='rank-scroll';scroll.tabIndex=0;scroll.setAttribute('aria-label','应用排行');scroll.setAttribute('role','region');
      scroll.append(...ranking.querySelectorAll('.pd-app'));ranking.append(scroll);
+   }
+   if(desktop){
+     const appTotals=vector(period).map((m,i)=>({duration:m,platform:apps[i][1]==='pc'?'windows':'android'})).sort((a,b)=>b.duration-a.duration);
      for(const key of ['devices','focus']){
        const card=d.createElement('section');card.className='pd-card';
        card.innerHTML='<h3>'+modules[key]+'</h3>'+shareChart(key,appTotals,ms=>dur(ms/60000));cards[key]=card;
@@ -670,12 +735,18 @@ function mountPeriodDashboard(d,onChange){
   const bars=series.map((s,i)=>{const display=series.length<=12||i%Math.ceil(series.length/8)===0||i===series.length-1;return '<div class="pd-col" title="'+s.label+(barUnit==='月'?'':barUnit)+' · '+(s.minutes===null?'尚未到达':dur(s.minutes))+'"><div class="pd-track"><i style="height:'+((s.minutes||0)*100/max)+'%"></i></div><small>'+(display?s.label:'&nbsp;')+'</small></div>';}).join('');
   const presetButtons=Object.entries({day:'日',week:'周',month:'月',year:'年'}).map(([k,v])=>'<button data-cal="mode" data-mode="'+k+'" aria-pressed="'+(mode===k)+'" data-style-id="pd-'+k+'">'+v+'</button>').join('');
   const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>'<div class="pd-app"><span>'+apps[i][0]+'</span><small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small><b>'+dur(m)+'</b><i class="rank-track"><i style="width:'+100*m/Math.max(...v)+'%"></i></i></div>').join('');
-  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div><button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button></nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">仪表盘</h1></div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates">'+(mode==='year'?yr(period[0])+' 年　▾':label(period)+'　▾')+'</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
+  const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
+  const dateText=mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
+  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div><button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button></nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">仪表盘</h1></div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
   '<section class="pd-summary"><div><small>设备累计</small><h2>'+dur(sum)+'</h2></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
   (comparison?'<p class="pd-comp-label">'+label(comparison)+'</p><p>对比期累计　'+dur(compare)+'</p><strong>日均'+(Math.abs(delta)<0.5?'持平':(delta>0?'增加 ':'减少 ')+dur(Math.abs(delta)))+'</strong><p>本期日均 '+dur(sum/len(period))+' · 对比期日均 '+dur(compare/len(comparison))+'</p>':'<p>'+(mode==='year'?'比较上年同期的使用情况。':'可选另一月份的一段日期，比较日均用时。')+'</p>')+
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
 
-  applyLayout();
+  if(mobile){
+    root.querySelector('.pd-brand').remove();
+    if(!comparison)root.querySelector('.pd-bottom > section:last-child > p')?.remove();
+  }
+  applyLayout(series);
   const content=layoutDraft?layoutPanel():calendar();
   if(content){
     const label=layoutDraft?'仪表盘布局':picker.target==='year'?'选择年份':picker.target==='comparison'?'选择对比区间':'选择统计区间';
@@ -696,6 +767,7 @@ function mountPeriodDashboard(d,onChange){
  function choose(m,n){mode=m;period=span(m,n);comparison=null;picker=null;}
  function act(button){
   const a=button.dataset.cal;if(!a)return false;
+  if(['mode','prev','next','apply-year','apply','scope'].includes(a))pointIndex=null;
   const wasOpen=!!picker || !!layoutDraft;
   if(['layout','dates','compare'].includes(a))returnFocus=a;
   if(a==='refresh'){notice(d,'已更新示例视图');return true;}
@@ -735,12 +807,13 @@ function mountPeriodDashboard(d,onChange){
   if(wasOpen && !picker && !layoutDraft)root.querySelector('[data-cal="'+returnFocus+'"]')?.focus({preventScroll:true});
   return true;
  }
- const describeState=()=>'仪表盘 · '+modes[mode]+' '+label(period)+'｜'+[mode,...period,scope,...(comparison||['','']),layoutDraft?'layout':picker?.target||'',picker?.month||'',picker?.start||'',picker?.end||'',picker?.second?1:0].join(',');
+ const describeState=()=>'仪表盘 · '+modes[mode]+' '+label(period)+'｜'+[mode,...period,scope,...(comparison||['','']),layoutDraft?'layout':picker?.target||'',picker?.month||'',picker?.start||'',picker?.end||'',picker?.second?1:0,...(mobile && pointIndex!==null?[pointIndex]:[])].join(',');
  function restore(flow){
-  const [m,a,b,sc,c,e,t,mo,start,end,second]=(flow.split('｜')[1]||'').split(',');
+  const [m,a,b,sc,c,e,t,mo,start,end,second,point]=(flow.split('｜')[1]||'').split(',');
   const sane=v=>/^-?\d{1,6}$/.test(v)&&+v>=ymd(1900,0)&&+v<=today;
   if(!Object.hasOwn(modes,m)||!sane(a)||!sane(b)||+b<+a||+b-+a>366||!['all','phone','pc'].includes(sc))return;
   mode=m;period=[+a,+b];scope=sc;comparison=sane(c)&&sane(e)&&+e>=+c&&+e-+c<=366?[+c,+e]:null;picker=null;
+  pointIndex=mobile && /^\d+$/.test(point) && +point<bins().length?+point:null;
   layoutDraft=t==='layout'?structuredClone(layout):null;
   if(t==='year')picker={target:t};
   else if(['period','comparison'].includes(t)&&sane(mo)&&[start,end].every(x=>/^(?:\d{4}-\d{2}-\d{2})?$/.test(x)))picker={target:t,month:first(+mo),start,end,second:second==='1',error:''};
