@@ -310,6 +310,7 @@ async function load() {
 frame.onload = () => {
   const d = doc();
   frame.dataset.loaded = d.location.pathname.split('/').pop().replace('.html','');
+  d.body.dataset.reviewDevice = device.value;
   originals=new Map();drawSync();applyTrials();
   const feature=frame.dataset.feature;
   showCatalog(d,feature==='controls');periodView=null;
@@ -330,7 +331,7 @@ frame.onload = () => {
         for(const card of d.querySelectorAll('.settings-grid > .panel')){
           const rank=priorities.indexOf(card.querySelector('h2')?.textContent);
           card.style.order=rank<0?priorities.length:rank;
-          card.classList.toggle('fixed-setting',rank===0||rank===1);
+          card.classList.toggle('fixed-setting',rank===0||(rank===1 && device.value==='desktop'));
         }
       }
       d.querySelectorAll('[data-page=week]').forEach(el=>el.remove());
