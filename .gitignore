@@ -22,3 +22,7 @@ docs/HANDOFF.md
 *.jks
 .env
 .env.*
+
+# Local design feedback
+design/review/review-notes.json
+design/review/review-notes.tmp

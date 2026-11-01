@@ -4,6 +4,8 @@
 
 ## 项目文档
 
+- [UI / UX 设计稿与本地评审入口](design/review/使用说明.md) · 看画板、试改文字和提交批注
+
 - [竞品调研报告](docs/COMPETITIVE-RESEARCH.md) · StayFree、Apple Screen Time、差异定位与验证计划
 - [产品开发文档](docs/PRODUCT-DEVELOPMENT.md) · 用户流程、统计口径、实现与验收
 - [Ztime 与 iOS Screen Time 对照调研](docs/SCREEN-TIME.md) · 已有功能、产品差异及 iOS 接入条件
