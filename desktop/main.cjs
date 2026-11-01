@@ -5,10 +5,13 @@ const dataDir=process.env.TIME_LEDGER_DATA_DIR||(app.isPackaged?path.join(path.d
 app.setPath('userData',dataDir);app.setPath('sessionData',path.join(dataDir,'chromium'));
 let service,window,tray,quitting=false;
 if(!app.requestSingleInstanceLock())app.quit();
-app.on('second-instance',()=>{window?.show();window?.focus();});
+app.on('second-instance',(_event,argv)=>{
+ if(argv.includes('--quit-for-update')){quitting=true;app.quit();return;}
+ window?.show();window?.focus();
+});
 app.whenReady().then(async()=>{
  const {createApp}=await import('./server.js');
- service=await createApp({dataDir,port:0,autostart:{get:()=>{const s=app.getLoginItemSettings({path:process.execPath,args:[]});return process.platform==='win32'?s.executableWillLaunchAtLogin:s.openAtLogin;},set:enabled=>app.setLoginItemSettings({openAtLogin:enabled,name:'Ztime',path:process.execPath,args:[]})}});
+ service=await createApp({dataDir,port:0,version:app.getVersion(),autostart:{get:()=>{const s=app.getLoginItemSettings({path:process.execPath,args:[]});return process.platform==='win32'?s.executableWillLaunchAtLogin:s.openAtLogin;},set:enabled=>app.setLoginItemSettings({openAtLogin:enabled,name:'Ztime',path:process.execPath,args:[]})}});
  const iconPath=path.resolve(__dirname,'../assets/icon.png');
  window=new BrowserWindow({width:1320,height:900,minWidth:820,minHeight:620,show:process.env.TIME_LEDGER_HEADLESS!=='1',icon:iconPath,title:'Ztime',backgroundColor:'#f7f8fa',webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
  window.setMenuBarVisibility(false);window.webContents.setWindowOpenHandler(()=>({action:'deny'}));

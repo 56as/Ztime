@@ -22,6 +22,7 @@ export async function createApp(options={}){
  const cookie=randomBytes(32).toString('hex');
  async function route(method,url,body={}){
   const u=new URL(url,'http://localhost');
+  if(method==='GET'&&u.pathname==='/api/version')return {version:options.version??null,quitForUpdate:!!options.version};
   if(method==='GET'&&u.pathname==='/api/period'){
    const params=u.searchParams, from=params.get('from'), to=params.get('to');
    const now=Date.now(), settings=store.get('settings'), bounds=periodBounds(from,to,settings,now);
