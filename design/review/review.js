@@ -145,6 +145,11 @@ const removedDesktopCopy={
 };
 function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2','desk-ui');
+  if(pageId!=='home'){
+    const version=d.createElement('small');
+    version.id='desktop-version';version.textContent='版本 0.2.14';
+    d.querySelector('.sidebar').append(version);
+  }
 
   for(const [selector] of removedDesktopCopy['desktop-'+pageId]||[])d.querySelector(selector)?.remove();
   if(pageId==='devices'){
@@ -165,9 +170,6 @@ function applySecondDesktopDraft(d,pageId){
   grid.querySelector('.accent-picker')?.remove();
   const about=[...grid.children].find(card=>card.querySelector('h2')?.textContent==='Ztime');
   about?.remove();
-  const version=d.createElement('small');
-  version.id='desktop-version';version.textContent='版本 0.2.14';
-  d.querySelector('.sidebar').append(version);
 }
 let flowTrail = '', trialMode = false, originals = new Map();
 // All synchronization here is simulated with the same two fixed example devices.
@@ -667,6 +669,35 @@ function mountPeriodDashboard(d,onChange){
    });
  }
  let pointIndex=null;
+ function enableDesktopPointDetails(card,series){
+   const svg=card.querySelector('.usage-chart svg');
+   // The chart keeps hourly data; only axis labels are spaced two hours apart.
+   if(mode==='day')card.querySelectorAll('.usage-x span').forEach((node,i)=>node.textContent=i%2===0?series[i].label:'');
+   svg.setAttribute('role','group');
+   svg.setAttribute('aria-label','使用时间，点击时间点查看应用明细');
+   const detail=d.createElement('section');detail.className='desktop-point-detail';detail.id='point-detail';detail.hidden=true;
+   detail.setAttribute('role','region');detail.setAttribute('aria-label','所选时段明细');detail.setAttribute('aria-live','polite');
+   card.append(detail);
+   const points=[...svg.querySelectorAll('g')];
+   const close=()=>{detail.hidden=true;pointIndex=null;points.forEach(g=>{g.setAttribute('aria-expanded','false');g.querySelector('circle').setAttribute('r','2.3');});onChange();};
+   function inspect(index){
+     const bin=series[index];pointIndex=index;detail.hidden=false;
+     points.forEach((g,i)=>{g.setAttribute('aria-expanded',String(i===index));g.querySelector('circle').setAttribute('r',i===index?'5':'2.3');});
+     const rows=(bin.values||[]).map((minutes,i)=>({minutes,i})).filter(r=>r.minutes).sort((a,b)=>b.minutes-a.minutes);
+     detail.innerHTML='<header><strong>'+html(bin.detail)+'</strong><button type="button" aria-label="关闭时段明细">×</button></header><div class="point-total"><span>累计用时</span><b>'+dur(bin.minutes)+'</b></div>'+
+       (rows.length?'<ul>'+rows.map(({minutes,i})=>'<li><span>'+html(apps[i][0])+' <small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small></span><b>'+dur(minutes)+'</b></li>').join('')+'</ul>':'<p>这段时间没有使用记录。</p>');
+     detail.querySelector('button').onclick=()=>{close();points[index]?.focus();};
+     onChange();
+   }
+   points.forEach((g,index)=>{
+     g.setAttribute('role','button');g.setAttribute('tabindex','0');g.setAttribute('aria-controls','point-detail');g.setAttribute('aria-expanded','false');
+     g.setAttribute('aria-label',series[index].detail+' · '+dur(series[index].minutes));
+     g.onclick=()=>{if(!picking)inspect(index);};
+     g.onkeydown=e=>{if(!picking && ['Enter',' '].includes(e.key)){e.preventDefault();inspect(index);}};
+   });
+   card.addEventListener('keydown',e=>{if(e.key==='Escape' && !detail.hidden){const index=pointIndex;close();points[index]?.focus();e.stopPropagation();}});
+   if(pointIndex!==null && series[pointIndex]?.minutes!==null)inspect(pointIndex);
+ }
  function enablePointDetails(card,series){
    const svg=card.querySelector('.usage-chart svg');
    const plot=d.createElement('div');
@@ -693,7 +724,7 @@ function mountPeriodDashboard(d,onChange){
  }
  function bins(){
   const [a,b]=period;
-  if(mobile){
+  if(mobile || desktop){
     if(mode==='day')return hourlyUsage(a);
     const count=mode==='year'?12:len(period);
     return Array.from({length:count},(_,i)=>{
@@ -738,6 +769,7 @@ function mountPeriodDashboard(d,onChange){
      trend.querySelector('h3').textContent='使用时间';
      trend.querySelector('.pd-plot').outerHTML=usageArea(series.map(b=>({label:b.label,duration:b.minutes==null?null:b.minutes*60000})),ms=>dur(ms/60000));
      if(mobile)enablePointDetails(trend,series);
+     if(desktop)enableDesktopPointDetails(trend,series);
      const scroll=d.createElement('div');scroll.className='rank-scroll';scroll.tabIndex=0;scroll.setAttribute('aria-label','应用排行');scroll.setAttribute('role','region');
      scroll.append(...ranking.querySelectorAll('.pd-app'));ranking.append(scroll);
    }
@@ -792,6 +824,10 @@ function mountPeriodDashboard(d,onChange){
   (comparison?'<p class="pd-comp-label">'+label(comparison)+'</p><p>对比期累计　'+dur(compare)+'</p><strong>日均'+(Math.abs(delta)<0.5?'持平':(delta>0?'增加 ':'减少 ')+dur(Math.abs(delta)))+'</strong><p>本期日均 '+dur(sum/len(period))+' · 对比期日均 '+dur(compare/len(comparison))+'</p>':'<p>'+(mode==='year'?'比较上年同期的使用情况。':'可选另一月份的一段日期，比较日均用时。')+'</p>')+
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
 
+  if(desktop){
+    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.14';
+    root.querySelector('.pd-nav').append(version);
+  }
   if(mobile){
     root.querySelector('.pd-brand').remove();
     if(!comparison)root.querySelector('.pd-bottom > section:last-child > p')?.remove();

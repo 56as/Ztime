@@ -174,6 +174,18 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .fixed-setting .field input,.desktop-v2 .fixed-setting .field select {min-width:0}
 .desktop-v2 .fixed-setting p {margin:8px 0}
 .desktop-v2 #desktop-version {margin-top:auto;padding:18px 12px 0;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.desktop-v2 .pd-nav {position:sticky;top:0;height:100dvh;padding-bottom:38px}
+.desktop-v2 .pd-trend {position:relative}
+.desktop-v2 .usage-chart g[role=button] {cursor:pointer;outline:none}
+.desktop-v2 .usage-chart g[role=button]:focus-visible circle {stroke:var(--text);stroke-width:3px}
+.desktop-v2 .desktop-point-detail {position:absolute;z-index:5;right:18px;top:48px;width:min(320px,calc(100% - 36px));max-height:calc(100% - 60px);overflow:auto;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px #18283c26;font-size:13px}
+.desktop-v2 .desktop-point-detail[hidden] {display:none}
+.desktop-v2 .desktop-point-detail header,.desktop-v2 .desktop-point-detail li,.desktop-v2 .desktop-point-detail .point-total {display:flex;align-items:center;justify-content:space-between;gap:12px}
+.desktop-v2 .desktop-point-detail header button {padding:0;width:26px;height:26px;font-size:19px;line-height:24px}
+.desktop-v2 .desktop-point-detail .point-total {margin:10px 0}
+.desktop-v2 .desktop-point-detail ul {list-style:none;margin:0;padding:0}
+.desktop-v2 .desktop-point-detail li {padding:6px 0;border-top:1px solid var(--line)}
+.desktop-v2 .desktop-point-detail small {color:var(--muted)}
 .desktop-v2 .pd-main {max-width:1160px;padding-top:32px}
 .desktop-v2 .pd-controls {background:white;border:1px solid #e1e6ee;border-radius:14px;padding:8px 12px}
 .desktop-v2 .pd-summary {padding:18px 22px}
