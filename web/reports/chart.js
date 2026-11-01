@@ -16,14 +16,14 @@ export function reportSvg(m){
  rect(36,166,688,116,'#e8eff8',12);text(58,200,'设备累计',17,muted);
  text(58,252,reportDuration(m.total),36,ink,true);text(423,246,weeklyComparison(m.delta),19,ink,true);
  text(36,335,'每日设备用时',26,ink,true);
- text(36,371,'每根柱为两端累计用时 · 单位：分钟',17,muted);
+ text(36,371,'每根柱为两端累计用时 · 单位：小时',17,muted);
  rect(479,354,13,13,blue,3);text(500,367,'Windows',16);
  rect(607,354,13,13,green,3);text(628,367,'Android',16);
  const limit=Math.max(1,...m.days.map(d=>deviceTotal(d.current))),floor=548;
  rect(36,floor,688,1,'#c2cdd9');
  m.days.forEach((d,i)=>{const x=57+i*96,hp=d.current.windows/limit*130,ha=d.current.android/limit*130;
   rect(x,floor-hp,40,hp,blue);rect(x,floor-hp-ha,40,ha,green);
-  text(x,floor-hp-ha-10,d.available?String(Math.round(deviceTotal(d.current)/60000)):'—',17,muted);
+  text(x,floor-hp-ha-10,d.available?(deviceTotal(d.current)>0 && deviceTotal(d.current)<36000?'<0.01':String(Math.round(deviceTotal(d.current)/36000)/100)):'—',17,muted);
   text(x,floor+30,d.label,16,muted);
  });
  rule(606);text(36,649,'本周观察',24,ink,true);
