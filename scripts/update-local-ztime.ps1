@@ -13,13 +13,19 @@ function MainProcess($program) {
         Select-Object -First 1
 }
 function ConnectClient($processId) {
-    $port=Get-NetTCPConnection -State Listen -OwningProcess $processId -ErrorAction SilentlyContinue |
-        Where-Object LocalAddress -eq '127.0.0.1' | Select-Object -First 1 -ExpandProperty LocalPort
-    if (!$port) {throw 'Client has no UI port yet'}
-    $url="http://127.0.0.1:$port"
-    $null=Invoke-WebRequest "$url/" -UseBasicParsing -SessionVariable session -TimeoutSec 4
-    $summary=Invoke-RestMethod "$url/api/summary" -WebSession $session -TimeoutSec 6
-    [pscustomobject]@{Url=$url;Session=$session;Paused=[bool]$summary.paused}
+    $ports=Get-NetTCPConnection -State Listen -OwningProcess $processId -ErrorAction SilentlyContinue |
+        Where-Object LocalAddress -eq '127.0.0.1' | Select-Object -ExpandProperty LocalPort
+    foreach ($port in $ports) {
+        try {
+            $url="http://127.0.0.1:$port"
+            $null=Invoke-WebRequest "$url/" -UseBasicParsing -SessionVariable session -TimeoutSec 4
+            $summary=Invoke-RestMethod "$url/api/summary" -WebSession $session -TimeoutSec 6
+            if ($null -ne $summary.paused -and $summary.device.id) {
+                return [pscustomobject]@{Url=$url;Session=$session;Paused=[bool]$summary.paused}
+            }
+        } catch {continue}
+    }
+    throw 'Client has no ready UI port'
 }
 function SetPaused($client,$value) {
     $null=Invoke-RestMethod "$($client.Url)/api/pause" -Method Post -WebSession $client.Session -ContentType 'application/json' -Body (@{paused=[bool]$value}|ConvertTo-Json)
