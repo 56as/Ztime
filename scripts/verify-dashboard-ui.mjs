@@ -8,7 +8,7 @@ import {createApp} from '../desktop/server.js';
 const require=createRequire(import.meta.url);
 const {chromium}=require(require.resolve('playwright',{paths:[process.cwd(),path.dirname(process.execPath)]}));
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ztime-dashboard-'));
-const service=await createApp({dataDir:dir,port:0,syncPort:0,collect:false});
+const service=await createApp({dataDir:dir,port:0,syncPort:0,collect:false,autostart:{get:()=>true,set:()=>{}}});
 let browser;
 try{
   const now=Date.now();
@@ -59,12 +59,20 @@ try{
   await click('[data-tool=layout]');await click('[data-toggle=ranking]');await click('[data-save]');
   await click('[data-tool=refresh]');
   const scroll=page.locator('.rank-scroll');await scroll.waitFor();
-  assert.ok(await scroll.locator('[data-rank]').count()>20);
+  await page.waitForFunction(()=>document.querySelectorAll('.rank-scroll [data-rank]').length>20);
   await scroll.evaluate(el=>{el.scrollTop=el.scrollHeight;el.dispatchEvent(new Event('scroll'));});
-  await click('[data-tool=refresh]');assert.ok(await scroll.evaluate(el=>el.scrollTop>0));
+  await page.waitForFunction(()=>document.querySelector('.rank-scroll')?.scrollTop>0);
+  const refreshed=page.waitForResponse(r=>r.url().includes('/api/period?'));
+  await click('[data-tool=refresh]');await refreshed;await page.waitForFunction(()=>document.querySelector('.rank-scroll')?.scrollTop>0);
   await scroll.locator('[data-rank]').last().click();await page.locator('#dialog[open]').waitFor();await page.keyboard.press('Escape');
   await click('[data-page=devices]');await click('[data-action=pair]');await page.locator('.qr').waitFor();
   await click('[data-page=settings]');await page.locator('#theme').selectOption('dark');
+  await page.locator('#timeZone').selectOption('Europe/Paris');await click('[data-action=save-settings]');
+  await page.waitForFunction(()=>document.querySelector('#timeZone')?.value==='Europe/Paris');
+  assert.equal(service.store.get('settings').timeZone,'Europe/Paris');
+  assert.deepEqual(await page.locator('.record-actions button').evaluateAll(els=>els.map(e=>e.offsetTop).map((y,i,ys)=>y===ys[0])),[true,true]);
+  assert.ok((await page.locator('#theme').boundingBox()).width<200);
+  assert.equal(await page.locator('.accent-picker').count(),0);assert.match(await page.locator('.sidebar-version').innerText(),/版本 \d/);
   assert.deepEqual(await page.locator('.settings-grid>.panel h2').allTextContents().then(xs=>xs.slice(0,2)),['统计规则','记录与外观']);
   for(const name of ['dashboard','devices','settings']){
     await click('[data-page='+name+']');

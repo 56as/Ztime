@@ -158,6 +158,8 @@ export function createPeriodView({api, escape, duration, details, report, onErro
      ...(desktop?Object.fromEntries(['devices','focus'].map(key=>[key,'<section class="period-card"><h2>'+desktopTitles[key]+'</h2>'+shareChart(key,result.apps,ms=>duration(ms,true))+'</section>'])):{})
    }:{};
    const summary=result?`<section class="period-card period-total"><div class="total-value"><small>设备累计</small><h2>${duration(result.total,true)}</h2></div><div class="pd-modes">${scopeHtml}</div></section><div class="pd-bottom">${layout.filter(card=>card.visible).map(card=>cards[card.key]).join('')}</div>`:'<p role="status">正在读取所选期间…</p>';
+   const previousList=host.querySelector('.rank-scroll');
+   if(previousList?.isConnected && previousList.clientHeight)rankOffset=previousList.scrollTop;
    host.innerHTML=header+controls+summary;
    const scroll=host.querySelector('.rank-scroll');
    if(scroll){

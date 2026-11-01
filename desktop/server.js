@@ -15,6 +15,7 @@ import { Store } from './store.js';
 import { Collector } from './collector.js';
 import { SyncServer, readJson, send, equalSecret } from './protocol.js';
 const root=fileURLToPath(new URL('../',import.meta.url));
+const sourceVersion=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version;
 export async function createApp(options={}){
  const dir=options.dataDir??process.env.TIME_LEDGER_DATA_DIR??path.join(root,'.data');fs.mkdirSync(dir,{recursive:true});
  const store=new Store(path.join(dir,'ledger.sqlite'));const browser=new BrowserBridge(store,options.browserPort);const collector=new Collector(store,(app,now)=>browser.hostFor(app,now));
@@ -31,7 +32,7 @@ export async function createApp(options={}){
    const rows=store.db.prepare('SELECT * FROM sessions WHERE deleted_at IS NULL AND start<? AND end>?').all(bounds.end,bounds.start).map(row=>store.decode(row));
    return periodStats(rows,store.devices(),settings,from,to,params.get('mode'),params.get('scope')||'all',now);
   }
-  if(method==='GET'&&u.pathname==='/api/summary')return {...store.summary(u.searchParams.get('date')||undefined,u.searchParams.has('weekDate')?Math.min(Date.now(),dayBounds(u.searchParams.get('weekDate'),store.get('settings')).end-1):Date.now()),periodLayout:store.get('periodLayout'),browser:browser.status(),autostart:options.autostart?.get()??null,sync:{port:sync.port,addresses:sync.addresses(),error:syncError}};
+  if(method==='GET'&&u.pathname==='/api/summary')return {...store.summary(u.searchParams.get('date')||undefined,u.searchParams.has('weekDate')?Math.min(Date.now(),dayBounds(u.searchParams.get('weekDate'),store.get('settings')).end-1):Date.now()),version:options.version??sourceVersion,periodLayout:store.get('periodLayout'),browser:browser.status(),autostart:options.autostart?.get()??null,sync:{port:sync.port,addresses:sync.addresses(),error:syncError}};
   if(method==='POST'&&u.pathname==='/api/browser')return browser.configure(body.enabled===true);
   if(method==='PUT'&&u.pathname==='/api/appearance'){if(!validAppearance(body))throw new Error('外观选项无效');store.set('appearance',{theme:body.theme,accentColor:body.accentColor});return {ok:true};}
   if(method==='POST'&&u.pathname==='/api/autostart'){if(!options.autostart)throw new Error('开机启动仅在桌面程序中设置');options.autostart.set(body.enabled===true);return {ok:true};}

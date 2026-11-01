@@ -48,3 +48,13 @@
 .layout-row b {margin-right:auto}.layout-row [aria-pressed=true]{background:var(--tint);color:var(--accent)}
 .layout-error:empty {display:none}.layout-error {color:var(--danger)}
 @media(max-width:700px){.unified .nav{grid-template-columns:repeat(3,1fr)}.pd-bottom .period-card{margin-bottom:14px}.unified .period-total h2{font-size:22px}}
+
+.desk-ui .sidebar-version {margin-top:auto;padding:18px 12px 0;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.desk-ui .fixed-setting {padding:18px 20px}
+.desk-ui .fixed-setting h2 {margin:0 0 14px}
+.desk-ui .fixed-setting .field {display:grid;grid-template-columns:74px minmax(0,1fr);align-items:center;gap:10px;margin:10px 0}
+.desk-ui .fixed-setting .field select {min-width:0}
+.desk-ui .devices-view .panel:not(.current-devices){border-top:1px solid var(--line)}
+.desk-ui .devices-view .current-devices {border-top:3px solid var(--accent)}
+.desk-ui .pd-controls {background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 12px}
+@media(min-width:701px){.desk-ui .pd-bottom{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}}
