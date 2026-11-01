@@ -1,3 +1,51 @@
+// All state lives in the current fixture document; no calls to the product or the notes API.
+const timers=new WeakMap();
+function notice(d,message){
+ let el=d.querySelector('.sample-toast');
+ if(!el){el=d.createElement('p');el.className='sample-toast';el.setAttribute('role','status');d.body.append(el);}
+ clearTimeout(timers.get(el));el.textContent=message;el.hidden=false;
+ timers.set(el,setTimeout(()=>{el.hidden=true;},2600));
+}
+function confirmDeletion(d,button){
+ const group=button.closest('.spec,.risk-block');if(!group)return;
+ const existing=group.querySelector('.style-confirm');if(existing){existing.querySelector('button').focus();return;}
+ const box=d.createElement('div');box.className='style-confirm';box.setAttribute('role','group');
+ box.setAttribute('aria-label','确认删除');
+ box.innerHTML='<p>确认删除所有记录？此操作无法撤销。</p><div class="row"><button data-style-demo="cancel">取消</button><button class="danger" data-style-demo="confirm">确认删除</button></div>';
+ group.append(box);box.querySelector('button').focus();
+}
+function handleStyleDemo(d,el){
+ const button=el.closest('button');if(!button)return false;
+ const scope=button.dataset.scope;
+ if(scope){
+  const card=button.closest('.spec'),[time,caption]=({all:['4 小时 30 分钟','两台设备累计'],phone:['1 小时 30 分钟','手机用时'],pc:['3 小时','电脑用时']})[scope];
+  card.querySelectorAll('[data-scope]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+  card.querySelector('[data-scope-time]').textContent=time;card.querySelector('[data-scope-caption]').textContent=caption;
+  card.querySelector('.mini-meter i').style.display=scope==='pc'?'none':'';
+  card.querySelector('.mini-meter b').style.display=scope==='phone'?'none':'';
+  return true;
+ }
+ const action=button.dataset.styleDemo||({refresh:'refresh','save-settings':'save','delete-data':'delete'})[button.dataset.action]||(button.dataset.export?'export':null);
+ if(!action)return false;
+ switch(action){
+  case 'refresh':notice(d,'已更新示例视图');break;
+  case 'save':{
+   const hint=d.querySelector('[data-save-hint]');if(hint)hint.textContent='示例起点：'+d.querySelector('[data-style-id=day-start]').value;
+   notice(d,'示例设置已保存');break;
+  }
+  case 'export':notice(d,'示例：'+button.textContent.trim().replace(/\s+/g,' ')+'（不会下载真实记录）');break;
+  case 'delete':confirmDeletion(d,button);break;
+  case 'confirm':case 'cancel':{
+   const box=button.closest('.style-confirm'),trigger=box.parentElement.querySelector('[data-style-demo=delete],[data-action=delete-data]');
+   box.remove();trigger?.focus();notice(d,action==='cancel'?'已取消':'删除流程演示结束，示例数据保留');break;
+  }
+  default:return false;
+ }
+ return true;
+}
+
+
+
 const $ = id => document.getElementById(id);
 const frame = $('frame'), device = $('device'), page = $('page');
 const titles = Object.fromEntries([...page.options].map(option => [option.value, option.text]));
@@ -56,7 +104,7 @@ function resize() {
   const height = Math.round(stage.clientHeight / scale);
   $('mount').style.width = width * scale + 'px';
   Object.assign(frame.style, {width: width + 'px', height: height + 'px', transform: 'scale(' + scale + ')'});
-  $('caption').textContent = describe(board()) + '　' + width + ' × ' + height + ' px';
+  $('caption').textContent = (frame.dataset.feature==='controls'?'控件样式':describe(board())) + '　' + width + ' × ' + height + ' px';
 }
 function setPicking(enabled) {
   picking = enabled;
@@ -87,8 +135,7 @@ function showBoard(key, feature = "") {
   if (!titles[id]) {const o=new Option(pageTitle(id),id);o.dataset.context='';page.add(o);}
   device.value = mode; page.value = id;
   $('sync-scenario').hidden=id!=='devices';
-  clearEditor(); resize();
-  frame.dataset.feature=feature;
+  clearEditor(); frame.dataset.feature=feature; resize();
   location.hash = feature?key+'/'+feature:key;
   frame.src = 'boards/' + key + '.html';
 }
@@ -112,7 +159,7 @@ function selectorFor(el) {
   const parts = [];
   while (el && el !== doc().body) {
     if (el.id) { parts.unshift('#' + CSS.escape(el.id)); break; }
-    const attr = ['data-widget','data-action','data-page','data-filter','data-title','data-app','data-export','data-accent'].find(k => el.hasAttribute(k));
+    const attr = ['data-style-id','data-widget','data-action','data-page','data-filter','data-title','data-app','data-export','data-accent'].find(k => el.hasAttribute(k));
     if (attr) {
       const match = '[' + attr + '=' + CSS.escape(el.getAttribute(attr)) + ']';
       if (doc().querySelectorAll(match).length === 1) { parts.unshift(match); break; }
@@ -167,7 +214,13 @@ function previewTrial(){
   el.textContent=$('trial-copy').value || originals.get(el).copy;
   el.style.fontSize=size>=8 && size<=80?size+'px':originals.get(el).size;
 }
+function showCatalog(d,visible){
+ const gallery=d.getElementById('design-control-gallery');if(!gallery)return;
+ gallery.hidden=!visible;d.body.classList.toggle('catalog',visible);
+ d.getElementById('app').hidden=visible;
+}
 function reveal(el){
+ if(el)showCatalog(el.ownerDocument,!!el.closest('#design-control-gallery'));
   const state=el?.closest('#design-report-preview,#design-connection');
   if(state)state.hidden=false;
 }
@@ -246,7 +299,8 @@ frame.onload = () => {
   frame.dataset.loaded = d.location.pathname.split('/').pop().replace('.html','');
   originals=new Map();drawSync();applyTrials();
   const feature=frame.dataset.feature;
-  const anchor=feature==='extension'?d.getElementById('extension-settings'):feature==='report'?d.getElementById('design-report-preview'):null;
+  showCatalog(d,feature==='controls');
+  const anchor=feature==='extension'?d.getElementById('extension-settings'):feature==='report'?d.getElementById('design-report-preview'):feature==='data'?d.getElementById('design-settings-data'):null;
   if(anchor){anchor.hidden=false;anchor.scrollIntoView({block:'center'});}
   const css = d.createElement('style');
   css.textContent = '.picking *{cursor:crosshair!important}[data-pointer-target]{outline:2px dashed #d56824!important;outline-offset:-2px}#review-pins{position:fixed;inset:0;z-index:99999;pointer-events:none;overflow:hidden}.review-pin{position:absolute;pointer-events:auto;transform:translate(-50%,-50%);border:2px solid white;border-radius:30px;background:#ac4616;color:white;font:600 12px/20px sans-serif;padding:0 5px;min-width:24px;height:24px}';
@@ -266,7 +320,9 @@ frame.onload = () => {
   d.addEventListener('click', e => {
     const el=e.target;
     if (el.closest('#review-pins')) return;
+    if(!picking && el.closest('[data-style-native], input[type=date], select'))return;
     e.preventDefault();
+    if (!picking && handleStyleDemo(d,el))return;
     if (!picking) {
       const nav=el.closest('[data-page]'), action=el.closest('[data-action]')?.dataset.action;
       const flow=el.closest('[data-flow]'), app=el.closest('[data-app]');
@@ -332,6 +388,15 @@ document.querySelector('.quick').onclick=e=>{
  const link=e.target.closest('a');if(!link)return;e.preventDefault();
  const [key,feature='']=link.hash.slice(1).split('/');changeBoard(key,link.textContent,feature);
 };
-const [first,requestedFeature='']=location.hash.slice(1).split('/');
-showBoard(/^((desktop|mobile)-((home|week)(-edit|-detail-(writer|browser|reader|notes))?|devices|settings)|desktop-pair-(invite|request)|mobile-pair-(scan|confirm|wait|success|refused|timeout))$/.test(first)?first:'desktop-home',['report','extension'].includes(requestedFeature)?requestedFeature:'');
+function routeFromHash(){
+ const [key,requested='']=location.hash.slice(1).split('/');
+ const valid=/^((desktop|mobile)-((home|week)(-edit|-detail-(writer|browser|reader|notes))?|devices|settings)|desktop-pair-(invite|request)|mobile-pair-(scan|confirm|wait|success|refused|timeout))$/;
+ return [valid.test(key)?key:'desktop-home',['report','extension','data','controls'].includes(requested)?requested:(key?'':'controls')];
+}
+window.addEventListener('hashchange',()=>{
+ const [key,feature]=routeFromHash();
+ if(key===board() && feature===frame.dataset.feature)return;
+ changeBoard(key,'',feature);
+});
+showBoard(...routeFromHash());
 load().catch(e=>status(e.message));
