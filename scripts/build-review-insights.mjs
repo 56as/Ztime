@@ -10,7 +10,7 @@ for(const [source,target,css] of [
  const end=css?'/* @generated desk-preview:end */':'// @generated desk-preview:end';
  const prev=read(target), start=prev.indexOf(begin), stop=prev.indexOf(end,start+begin.length);
  if(start<0||stop<0)throw Error('Missing review markers: '+target);
- const src=read(source).replace(/^export /gm,'').trimEnd();
+ const src=(css?read(source):read('shared/desktop-card-layout.js')+'\n'+read(source)).replace(/^export /gm,'').trimEnd();
  const next=prev.slice(0,start)+begin+'\n'+src+'\n'+prev.slice(stop);
  if(prev!==next){if(check)throw Error('Run node scripts/build-review-insights.mjs');fs.writeFileSync(target,next);}
 }

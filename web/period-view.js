@@ -1,3 +1,5 @@
+import {desktopTitles,desktopLayout} from './shared/desktop-card-layout.js';
+import {usageArea,shareChart} from './desktop-insights.js';
 import {refreshControl} from './refresh-control.js';
 import {cardTitles,defaultCardLayout,validCardLayout} from './shared/period-layout.js';
 import {dateKey} from './shared/time.js';
@@ -5,6 +7,7 @@ import {periodStats} from './shared/period.js';
 
 // Keep the selection when moving between dashboard, devices and settings.
 export function createPeriodView({api, escape, duration, details, report, onError}) {
+ let desktop=false, rankOffset=0, rankPeriod='';
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
  let today;
  const ymd=(y,m,day=1)=>Date.UTC(y,m,day)/DAY;
@@ -35,8 +38,8 @@ export function createPeriodView({api, escape, duration, details, report, onErro
 
  function layoutPanel() {
    const rows=draft.map(({key,visible},index)=>{
-     const name=cardTitles[key];
-     return `<div class="layout-row"><b>${name}</b><button data-shift="-1" data-key="${key}" aria-label="上移${name}" ${index===0?'disabled':''}>↑</button><button data-shift="1" data-key="${key}" aria-label="下移${name}" ${index===draft.length-1?'disabled':''}>↓</button><button data-toggle="${key}" aria-pressed="${visible}">${visible?'显示':'隐藏'}</button></div>`;
+     const name=(desktop?desktopTitles:cardTitles)[key];
+     return `<div class="layout-row"><b>${name}</b><button data-shift="-1" data-key="${key}" aria-label="上移${name}" ${index===0?'disabled':''}>↑</button><button data-shift="1" data-key="${key}" aria-label="下移${name}" ${index===draft.length-1?'disabled':''}>↓</button><button data-toggle="${key}" aria-pressed="${visible}">${desktop?(visible?'已添加':'添加'):(visible?'显示':'隐藏')}</button></div>`;
    }).join('');
    return `<section class="pd-picker"><h2>仪表盘布局</h2><p>调整卡片顺序和显示状态。</p>${rows}<div class="pd-end"><button data-cal="cancel">取消</button><button data-save class="pd-primary">保存布局</button></div><p class="layout-error" role="status"></p></section>`;
  }
@@ -147,14 +150,21 @@ export function createPeriodView({api, escape, duration, details, report, onErro
    const scopeHtml=[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([key,name])=>`<button data-cal="scope" data-scope="${key}" aria-pressed="${scope===key}">${name}</button>`).join('');
    const header=`<header class="topbar page-header"><div class="page-heading"><h1>仪表盘</h1></div><div class="actions"><button data-tool="layout" aria-haspopup="dialog">布局</button>${mode==='week'?'<button data-tool="report">导出周报</button>':''}${refreshControl('data-tool="refresh"')}</div></header>`;
    const controls=`<div class="pd-controls"><div class="pd-modes">${modesHtml}</div><div class="pd-range"><button aria-label="上一期间" data-cal="prev">‹</button><button data-cal="dates" aria-haspopup="dialog">${mode==='year'?yr(period[0])+' 年':label(period)}　▾</button><button aria-label="下一期间" data-cal="next" ${period[1]>=today?'disabled':''}>›</button></div></div>`;
-   const ranking=result?.apps.slice(0,20).map((a,index)=>`<button class="app-row" data-rank="${index}"><span class="app-name">${escape(a.name)}</span><small>${a.platform==='android'?'手机':'电脑'}</small><strong>${duration(a.duration,true)}</strong><span class="rank-track" aria-hidden="true"><i style="width:${100*a.duration/result.apps[0].duration}%"></i></span></button>`).join('');
+   const ranking=(desktop?result?.apps:result?.apps.slice(0,20))?.map((a,index)=>`<button class="app-row" data-rank="${index}"><span class="app-name">${escape(a.name)}</span><small>${a.platform==='android'?'手机':'电脑'}</small><strong>${duration(a.duration,true)}</strong><span class="rank-track" aria-hidden="true"><i style="width:${100*a.duration/result.apps[0].duration}%"></i></span></button>`).join('');
    const cards=result?{
-     trend:`<section class="period-card trend-card"><div class="pd-top"><h2>${mode==='year'?'全年趋势':mode==='day'?'分时用时':'每日趋势'}</h2><small>单位：小时</small></div>${renderChart(result.bins)}</section>`,
-     ranking:`<section class="period-card"><h2>应用排行</h2>${ranking || '<p>所选期间暂无使用记录</p>'}</section>`,
-     compare:renderComparison()
+     trend:`<section class="period-card trend-card"><div class="pd-top"><h2>${desktop?'使用时间':mode==='year'?'全年趋势':mode==='day'?'分时用时':'每日趋势'}</h2><small>单位：小时</small></div>${desktop?usageArea(result.bins.map(b=>b.start>=result.end?{...b,duration:null}:b),ms=>duration(ms,true)):renderChart(result.bins)}</section>`,
+     ranking:`<section class="period-card"><h2>应用排行</h2>${desktop && ranking?'<div class="rank-scroll" tabindex="0" role="region" aria-label="应用排行">'+ranking+'</div>':ranking||'<p>所选期间暂无使用记录</p>'}</section>`,
+     compare:renderComparison(),
+     ...(desktop?Object.fromEntries(['devices','focus'].map(key=>[key,'<section class="period-card"><h2>'+desktopTitles[key]+'</h2>'+shareChart(key,result.apps,ms=>duration(ms,true))+'</section>'])):{})
    }:{};
    const summary=result?`<section class="period-card period-total"><div class="total-value"><small>设备累计</small><h2>${duration(result.total,true)}</h2></div><div class="pd-modes">${scopeHtml}</div></section><div class="pd-bottom">${layout.filter(card=>card.visible).map(card=>cards[card.key]).join('')}</div>`:'<p role="status">正在读取所选期间…</p>';
    host.innerHTML=header+controls+summary;
+   const scroll=host.querySelector('.rank-scroll');
+   if(scroll){
+     const key=JSON.stringify([period,scope]);if(rankPeriod!==key){rankOffset=0;rankPeriod=key;}
+     scroll.scrollTop=rankOffset;
+     scroll.onscroll=()=>{if(scroll.isConnected)rankOffset=scroll.scrollTop;};
+   }
    host.onclick=async event=>{
      const button=event.target.closest('button');
      if(!button)return;
@@ -189,7 +199,8 @@ export function createPeriodView({api, escape, duration, details, report, onErro
    today=nextToday;
    if(!period || (rollover && followToday && mode!=='custom'))choose(mode,today);
    host=element;snapshot=data;
-   layout??=validCardLayout(data.periodLayout?.cards)?data.periodLayout.cards:defaultCardLayout();
+   desktop=!data.native;
+   layout??=desktop?desktopLayout(data.periodLayout?.cards):validCardLayout(data.periodLayout?.cards)?data.periodLayout.cards:defaultCardLayout();
    if(result)paint();
    update(true);
  }

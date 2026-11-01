@@ -1,11 +1,5 @@
 // Presentation shared by the Windows renderer and its example-data review board.
 const html=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export const desktopTitles={trend:'使用时间',ranking:'应用排行',compare:'期间对比',devices:'设备用时占比',focus:'应用集中度'};
-export function desktopLayout(saved){
- const defaults=Object.keys(desktopTitles).map(key=>({key,visible:['trend','ranking'].includes(key)}));
- if(!Array.isArray(saved) || saved.some(r=>!r || !Object.hasOwn(desktopTitles,r.key) || typeof r.visible!=='boolean') || new Set(saved.map(r=>r.key)).size!==saved.length)return defaults;
- return [...saved,...defaults.filter(row=>!saved.some(r=>r.key===row.key))];
-}
 export function usageArea(bins,format){
  if(!bins.length)return '<p>所选期间暂无使用记录</p>';
  const max=Math.max(60000,...bins.map(b=>b.duration||0)), width=640, height=126;

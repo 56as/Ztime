@@ -1,3 +1,4 @@
+import {validDesktopLayout} from '../shared/desktop-card-layout.js';
 import {validCardLayout} from '../shared/period-layout.js';
 import {periodBounds,periodStats} from '../shared/period.js';
 import {dayBounds} from '../shared/time.js';
@@ -36,7 +37,7 @@ export async function createApp(options={}){
   if(method==='POST'&&u.pathname==='/api/autostart'){if(!options.autostart)throw new Error('开机启动仅在桌面程序中设置');options.autostart.set(body.enabled===true);return {ok:true};}
   if(method==='POST'&&u.pathname==='/api/pause'){collector.pause(body.paused===true);return {ok:true};}
   if(method==='PUT'&&u.pathname==='/api/period-layout'){
-   if(!validCardLayout(body.cards))throw Error('仪表盘布局无效');
+   if(!validDesktopLayout(body.cards) && !validCardLayout(body.cards))throw Error('仪表盘布局无效');
    store.set('periodLayout',{cards:body.cards});return {ok:true};
   }
   if(method==='PUT'&&u.pathname==='/api/layout'){const key=validateLayout(body);store.set(key,{widgets:body.widgets});return {ok:true};}

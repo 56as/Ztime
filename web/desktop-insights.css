@@ -1,5 +1,5 @@
-.desk-ui [data-cal=layout],.desk-ui [data-tool=layout],.desk-ui [data-cal=refresh],.desk-ui .actions .refresh-control {height:36px;min-height:36px;box-sizing:border-box}
-.desk-ui [data-cal=layout],.desk-ui [data-tool=layout] {background:color-mix(in srgb,#6854bd 12%,var(--surface));color:color-mix(in srgb,#886de1 80%,var(--text));border:1px solid color-mix(in srgb,#886de1 36%,var(--line));padding:0 14px}
+.desk-ui .pd-tools [data-cal=layout],.desk-ui .page-header .actions [data-tool=layout],.desk-ui [data-cal=refresh],.desk-ui .actions .refresh-control {height:36px;min-height:36px;box-sizing:border-box}
+.desk-ui .pd-tools [data-cal=layout],.desk-ui .page-header .actions [data-tool=layout] {background:color-mix(in srgb,#6854bd 12%,var(--surface));color:color-mix(in srgb,#886de1 80%,var(--text));border:1px solid color-mix(in srgb,#886de1 36%,var(--line));padding:0 14px}
 .usage-chart {display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px;margin-top:18px;color:var(--accent)}
 .usage-chart svg {display:block;width:100%;height:144px;overflow:visible;background:repeating-linear-gradient(to top,transparent 0 35px,var(--line) 35px 36px)}
 .usage-y {display:flex;flex-direction:column;justify-content:space-between;height:144px}

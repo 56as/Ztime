@@ -21,3 +21,12 @@ test('day chart covers the DST fallback and respects the current time',()=>{
  assert.equal(stats.bins.length,25);assert.equal(stats.end,now);
  assert.throws(()=>periodBounds('2024-02-30','2024-03-01',settings,now));
 });
+
+import {desktopLayout,validDesktopLayout} from '../shared/desktop-card-layout.js';
+test('desktop layout upgrades an existing choice without overwriting order or enabled cards',()=>{
+ const saved=[{key:'compare',visible:true},{key:'trend',visible:false},{key:'ranking',visible:true}];
+ const next=desktopLayout(saved);
+ assert.deepEqual(next.slice(0,3),saved);assert.ok(next.slice(3).every(r=>!r.visible));
+ assert.deepEqual(desktopLayout().filter(r=>r.visible).map(r=>r.key),['trend','ranking']);
+ assert.ok(validDesktopLayout(next));assert.equal(validDesktopLayout([...next.slice(1),next[1]]),false);
+});
