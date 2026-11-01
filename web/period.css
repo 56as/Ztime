@@ -49,15 +49,17 @@
 .layout-error:empty {display:none}.layout-error {color:var(--danger)}
 @media(max-width:700px){.unified .nav{grid-template-columns:repeat(3,1fr)}.pd-bottom .period-card{margin-bottom:14px}.unified .period-total h2{font-size:22px}}
 
-.desk-ui .sidebar-version {margin-top:auto;padding:18px 12px 0;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.desk-ui .sidebar-version {margin-top:auto;padding:18px 12px 0;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
 .desk-ui .fixed-setting {padding:18px 20px}
 .desk-ui .fixed-setting h2 {margin:0 0 14px}
 .desk-ui .fixed-setting .field {display:grid;grid-template-columns:74px minmax(0,1fr);align-items:center;gap:10px;margin:10px 0}
 .desk-ui .fixed-setting .field select {min-width:0}
 .desk-ui .devices-view .panel:not(.current-devices){border-top:1px solid var(--line)}
 .desk-ui .devices-view .current-devices {border-top:3px solid var(--accent)}
-.desk-ui .dashboard-view {padding-block:clamp(12px,3vh,24px)}
-.desk-ui #period-view > .page-header {margin-bottom:14px}
+.desk-ui :is(.dashboard-view,.devices-view,.settings-view) {padding-block:clamp(12px,3vh,24px)}
+.desk-ui .page-header.topbar {margin-bottom:14px}
+.desk-ui :is(.pd-controls,.period-total) .pd-modes {height:36px;align-items:stretch}
+.desk-ui :is(.pd-controls,.period-total) .pd-modes button {min-height:0;height:28px;padding:0 12px;font-size:13px;line-height:28px}
 .desk-ui .pd-controls {background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--accent);border-bottom:0;border-radius:14px 14px 0 0;margin:0;padding:10px 14px 4px}
 .desk-ui .period-total {border-top:0;border-radius:0 0 14px 14px;padding:4px 14px 10px;margin-bottom:10px}
 .desk-ui .period-total .total-value :is(h2,small) {font:550 16px/1.4 system-ui,"Microsoft YaHei",sans-serif;color:var(--text);letter-spacing:normal}
@@ -83,10 +85,10 @@
 @media(min-width:701px){.desk-ui .pd-bottom{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}}
 
 @media (min-width:701px) {
-  .desk-ui .devices-view {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:12px;padding-block:clamp(16px,3vh,28px)}
+  .desk-ui .devices-view {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:14px}
   .desk-ui .devices-view > :is(.page-header,.banner,.current-devices,.sync-status,.error-box),.desk-ui .devices-view > .panel:has(.pair-grid) {grid-column:1/-1}
   .desk-ui .devices-view > .panel {min-width:0;padding:14px 18px;margin:0}
-  .desk-ui .devices-view > .page-header {margin:0}
+  .desk-ui .devices-view > .page-header.topbar {margin:0}
   .desk-ui .devices-view .device {padding:8px 0}
   .desk-ui .devices-view .panel h2 {margin-bottom:8px}
   .desk-ui .devices-view .section-head h2 {margin:0}
