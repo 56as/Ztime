@@ -62,10 +62,30 @@ public class MainActivity extends Activity {
         else if(method.equals("GET")&&p.equals("/api/sessions")){JSONArray result=new JSONArray(),all=db.sessions();for(int i=0;i<all.length()&&result.length()<500;i++){JSONObject s=all.getJSONObject(i);if(s.isNull("deletedAt")&&(u.getQueryParameter("appId")==null||s.getString("appId").equals(u.getQueryParameter("appId")))&&(u.getQueryParameter("deviceId")==null||s.getString("deviceId").equals(u.getQueryParameter("deviceId"))))result.put(s);}return result;}
         else if(method.equals("DELETE")&&p.equals("/api/session")){db.delete(body.getString("id"));resetActiveStart();}
         else if(method.equals("DELETE")&&p.equals("/api/data")){if(!body.optString("confirm").equals("删除"))throw new Exception("请确认删除");JSONArray all=db.sessions();for(int i=0;i<all.length();i++)db.delete(all.getJSONObject(i).getString("id"));resetActiveStart();}
+        else if(method.equals("POST")&&p.equals("/api/week-report")){
+            String filename=body.getString("filename"), report=body.getString("content");
+            if(!filename.matches("Ztime-周报-[0-9]{4}-[0-9]{2}-[0-9]{2}\\.txt") || report.length()>128000)throw new Exception("周报内容无效");
+            java.io.File pending=new java.io.File(getCacheDir(),"weekly-report.txt");
+            java.nio.file.Files.write(pending.toPath(),("\uFEFF"+report).getBytes(StandardCharsets.UTF_8));
+            runOnUiThread(()->startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("text/plain").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,filename),701));
+        }
         else if(method.equals("GET")&&p.equals("/api/export")){JSONArray sessions=db.sessions(),filtered=new JSONArray();for(int i=0;i<sessions.length();i++)if(sessions.getJSONObject(i).isNull("deletedAt"))filtered.put(sessions.getJSONObject(i));boolean csv="csv".equals(u.getQueryParameter("format"));String content;if(csv){StringBuilder b=new StringBuilder("\uFEFFid,device_id,app_id,app_name,start_utc,end_utc,duration_ms\r\n");for(int i=0;i<filtered.length();i++){JSONObject s=filtered.getJSONObject(i);List<String> values=Arrays.asList(s.getString("id"),s.getString("deviceId"),s.getString("appId"),s.getString("appName"),java.time.Instant.ofEpochMilli(s.getLong("start")).toString(),java.time.Instant.ofEpochMilli(s.getLong("end")).toString(),String.valueOf(s.getLong("end")-s.getLong("start")));for(int j=0;j<values.size();j++){String v=values.get(j);if(v.matches("^[=+@-].*"))v="'"+v;b.append('"').append(v.replace("\"","\"\"")).append('"');if(j<values.size()-1)b.append(',');}b.append("\r\n");}content=b.toString();}else content=new JSONObject().put("schemaVersion",1).put("settings",db.settings()).put("devices",db.devices()).put("sessions",filtered).toString(2);exportContent=content;String mime=csv?"text/csv":"application/json",filename="time-ledger."+(csv?"csv":"json");runOnUiThread(()->startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType(mime).addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,filename),700));return new JSONObject().put("saved",true);}
         else throw new Exception("接口不存在");
         return new JSONObject().put("ok",true);
     }
+    private void reportNotice(String message){runOnUiThread(()->web.evaluateJavascript("window.ledgerReportNotice("+JSONObject.quote(message)+")",null));}
     private void resetActiveStart()throws Exception{JSONObject s=db.object("captureState",new JSONObject());s.put("start",System.currentTimeMillis());db.put("captureState",s);db.put("captureCursor",System.currentTimeMillis());}
-    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){super.onActivityResult(requestCode,resultCode,data);if(requestCode==700){if(resultCode==RESULT_OK&&data!=null&&exportContent!=null){String text=exportContent;tasks.execute(()->{try(var out=getContentResolver().openOutputStream(data.getData())){if(out!=null)out.write(text.getBytes(StandardCharsets.UTF_8));}catch(Exception ignored){}});}return;}IntentResult result=IntentIntegrator.parseActivityResult(requestCode,resultCode,data);if(result!=null&&result.getContents()!=null)web.evaluateJavascript("window.ledgerPairUri("+JSONObject.quote(result.getContents())+")",null);}
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){super.onActivityResult(requestCode,resultCode,data);if(requestCode==701){
+        java.io.File pending=new java.io.File(getCacheDir(),"weekly-report.txt");
+        if(resultCode!=RESULT_OK||data==null||data.getData()==null){pending.delete();reportNotice("已取消保存");return;}
+        tasks.execute(()->{
+            try(var out=getContentResolver().openOutputStream(data.getData(),"wt")){
+                if(out==null)throw new java.io.IOException();
+                java.nio.file.Files.copy(pending.toPath(),out);
+            }catch(Exception e){reportNotice("周报保存失败，请重试");return;}
+            finally{pending.delete();}
+            reportNotice("周报已保存");
+        });
+        return;
+    }if(requestCode==700){if(resultCode==RESULT_OK&&data!=null&&exportContent!=null){String text=exportContent;tasks.execute(()->{try(var out=getContentResolver().openOutputStream(data.getData())){if(out!=null)out.write(text.getBytes(StandardCharsets.UTF_8));}catch(Exception ignored){}});}return;}IntentResult result=IntentIntegrator.parseActivityResult(requestCode,resultCode,data);if(result!=null&&result.getContents()!=null)web.evaluateJavascript("window.ledgerPairUri("+JSONObject.quote(result.getContents())+")",null);}
 }

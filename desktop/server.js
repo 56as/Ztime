@@ -56,7 +56,7 @@ export async function createApp(options={}){
     if(req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`)return send(res,403,{error:'请求来源不受信任'});
     return send(res,200,await route(req.method,req.url,req.method==='GET'?{}:await readJson(req)));
    }
-   const files={'/':'web/index.html','/app.js':'web/app.js','/dashboard.js':'web/dashboard.js','/style.css':'web/style.css','/brand-icon.png':'web/brand-icon.png','/shared/time.js':'shared/time.js','/shared/layout.js':'shared/layout.js','/shared/appearance.js':'shared/appearance.js','/shared/dashboard.js':'shared/dashboard.js'};
+   const files={'/':'web/index.html','/app.js':'web/app.js','/dashboard.js':'web/dashboard.js','/style.css':'web/style.css','/brand-icon.png':'web/brand-icon.png','/shared/week-report.js':'shared/week-report.js','/shared/time.js':'shared/time.js','/shared/layout.js':'shared/layout.js','/shared/appearance.js':'shared/appearance.js','/shared/dashboard.js':'shared/dashboard.js'};
    const file=files[u.pathname];if(!file){res.writeHead(404);return res.end();}
    const type=file.endsWith('.png')?'image/png':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html';
    res.writeHead(200,{'content-type':type+';charset=utf-8','set-cookie':`ledger=${cookie}; HttpOnly; SameSite=Strict; Path=/`,'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'"});res.end(fs.readFileSync(path.join(root,file)));
