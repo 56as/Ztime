@@ -132,9 +132,21 @@ function populateTimeZones(d){
   select.value=mobileZone;
 }
 
+// Former copy anchors remain navigable after the text has been removed from this draft.
+const removedDesktopCopy={
+  'desktop-settings':[
+    ['#extension-settings > p:nth-of-type(1)','#extension-settings h2'],
+    ['#design-settings-data > p:nth-of-type(1)','#design-settings-data h2'],
+    ['#design-settings-data > section:nth-of-type(1) > p:nth-of-type(1)','#design-settings-data .risk-block h3']
+  ],
+  'desktop-devices':[
+    ['#app > div:nth-of-type(1) > main:nth-of-type(1) > section:nth-of-type(1) > p:nth-of-type(1)','#lan-ready h2']
+  ]
+};
 function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2','desk-ui');
 
+  for(const [selector] of removedDesktopCopy['desktop-'+pageId]||[])d.querySelector(selector)?.remove();
   if(pageId!=='settings')return;
   const grid=d.querySelector('.settings-grid');
   const input=d.getElementById('timeZone');input.outerHTML=zoneSelect(desktopZone);
@@ -145,7 +157,7 @@ function applySecondDesktopDraft(d,pageId){
   const about=[...grid.children].find(card=>card.querySelector('h2')?.textContent==='Ztime');
   about?.remove();
   const version=d.createElement('small');
-  version.id='desktop-version';version.textContent='版本 0.2.10';
+  version.id='desktop-version';version.textContent='版本 0.2.11';
   d.querySelector('.sidebar').append(version);
 }
 let flowTrail = '', trialMode = false, originals = new Map();
@@ -339,6 +351,8 @@ function targetFor(note) {
       const card=doc().querySelector('[data-card-key=compare]');
       return card?.hidden?doc().querySelector('[data-cal=layout-toggle][data-key=compare]'):card;
     }
+    const moved=secondDraftNote(note) && removedDesktopCopy[note.board]?.find(([selector])=>selector===note.selector);
+    if(moved)return doc().querySelector(moved[1]);
     const replacement=mobileAnnotationTargets[note.board]?.[note.selector];
     if(replacement)return doc().querySelector(replacement);
     const el=doc().querySelector(note.selector);
@@ -598,6 +612,7 @@ function mountPeriodDashboard(d,onChange){
  const root=d.createElement('section');root.id='period-dashboard';root.hidden=true;d.body.append(root);
  let mode='day',period=[today,today],comparison=null,scope='all',picker=null;
  const desktop=currentDraft();
+ const recording=desktop?(d.querySelector('#app .statusbar')?.outerHTML||''):'';
  const mobile=d.body.dataset.reviewDevice==='mobile';
  const apps=[['浏览器','pc'],['阅读','phone'],['编辑器','pc'],['笔记','phone']];
  if(desktop || mobile)apps.push(['邮件','pc'],['日历','phone'],['终端','pc'],['相册','phone'],['音乐','pc'],['地图','phone']);
@@ -737,7 +752,7 @@ function mountPeriodDashboard(d,onChange){
   const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>'<div class="pd-app"><span>'+apps[i][0]+'</span><small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small><b>'+dur(m)+'</b><i class="rank-track"><i style="width:'+100*m/Math.max(...v)+'%"></i></i></div>').join('');
   const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
   const dateText=mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
-  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div><button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button></nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">仪表盘</h1></div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
+  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div><button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button></nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">仪表盘</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
   '<section class="pd-summary"><div><small>设备累计</small><h2>'+dur(sum)+'</h2></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
   (comparison?'<p class="pd-comp-label">'+label(comparison)+'</p><p>对比期累计　'+dur(compare)+'</p><strong>日均'+(Math.abs(delta)<0.5?'持平':(delta>0?'增加 ':'减少 ')+dur(Math.abs(delta)))+'</strong><p>本期日均 '+dur(sum/len(period))+' · 对比期日均 '+dur(compare/len(comparison))+'</p>':'<p>'+(mode==='year'?'比较上年同期的使用情况。':'可选另一月份的一段日期，比较日均用时。')+'</p>')+
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
