@@ -39,6 +39,10 @@ try{
     });
     assert.ok(firstScreen,'Default cards fill one desktop window');
   }
+  assert.ok(await page.locator('.period-total').evaluate(el=>
+    el.querySelector('.pd-modes').getBoundingClientRect().right<=el.querySelector('.total-value').getBoundingClientRect().left));
+  await click('[data-scope=pc]');await page.locator('.total-value small').filter({hasText:'电脑累计'}).waitFor();
+  await click('[data-scope=all]');await page.locator('.total-value small').filter({hasText:'设备累计'}).waitFor();
   await click('[data-mode=week]');
   const bars=page.locator('.rank-track i');
   await bars.first().waitFor();
@@ -74,7 +78,8 @@ try{
   await click('[data-tool=refresh]');
   const scroll=page.locator('.rank-scroll');await scroll.waitFor();
   await page.waitForFunction(()=>document.querySelectorAll('.rank-scroll [data-rank]').length>20);
-  await scroll.evaluate(el=>{el.scrollTop=el.scrollHeight;el.dispatchEvent(new Event('scroll'));});
+  assert.equal(await scroll.evaluate(el=>getComputedStyle(el).scrollbarWidth),'none');
+  await scroll.hover();await page.mouse.wheel(0,480);
   await page.waitForFunction(()=>document.querySelector('.rank-scroll')?.scrollTop>0);
   const refreshed=page.waitForResponse(r=>r.url().includes('/api/period?'));
   await click('[data-tool=refresh]');await refreshed;await page.waitForFunction(()=>document.querySelector('.rank-scroll')?.scrollTop>0);

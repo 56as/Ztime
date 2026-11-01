@@ -61,6 +61,9 @@
 .desk-ui .pd-controls {background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--accent);border-bottom:0;border-radius:14px 14px 0 0;margin:0;padding:10px 14px 4px}
 .desk-ui .period-total {border-top:0;border-radius:0 0 14px 14px;padding:4px 14px 10px;margin-bottom:10px}
 .desk-ui .period-total .total-value :is(h2,small) {font:550 16px/1.4 system-ui,"Microsoft YaHei",sans-serif;color:var(--text);letter-spacing:normal}
+.desk-ui .period-total .pd-modes {order:-1}
+.desk-ui .period-total .total-value {margin-inline-start:auto}
+.desk-ui .rank-scroll {scrollbar-width:none;scrollbar-gutter:auto;padding-right:0}
 .desk-ui .pd-bottom {gap:12px}
 .desk-ui .pd-bottom .period-card {padding:16px 18px}
 @media (min-width:701px) {
