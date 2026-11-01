@@ -3,6 +3,7 @@ const timers=new WeakMap();
 function notice(d,message){
  let el=d.querySelector('.sample-toast');
  if(!el){el=d.createElement('p');el.className='sample-toast';el.setAttribute('role','status');d.body.append(el);}
+ if(el.parentElement!==d.body)d.body.append(el);
  clearTimeout(timers.get(el));el.textContent=message;el.hidden=false;
  timers.set(el,setTimeout(()=>{el.hidden=true;},2600));
 }
@@ -59,7 +60,8 @@ function pageTitle(id) {
   return titles[id];
 }
 let periodView=null;
-const isDashboard = f=>['dashboard','calendar'].includes(f);
+const refreshGlyph='<svg class="review-refresh-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 7v5h-5 M19.4 11a7.4 7.4 0 1 0-2 6.5"/></svg>';
+const isDashboard = f=>['dashboard','calendar','layout'].includes(f);
 let flowTrail = '', trialMode = false, originals = new Map();
 // All synchronization here is simulated with the same two fixed example devices.
 const syncDemo = {state:'ready', initiator:null, lastSuccess:null, hasChanges:true};
@@ -228,14 +230,19 @@ function reveal(el){
   if(state)state.hidden=false;
 }
 function targetFor(note) {
-  try { return doc().querySelector(note.selector); } catch { return null; }
+  try {
+    const el=doc().querySelector(note.selector);
+    if(!el && note.flow?.startsWith('仪表盘 · ') && note.label==='ZTIME / 使用概览')return doc().getElementById('pd-heading');
+    return el;
+  } catch { return null; }
 }
 function locate(note) {
   if (!allowLeave()) return;
   const dashboardNote=note.flow?.startsWith('仪表盘 · ');
-  if (board() !== note.board || frame.dataset.loaded !== note.board || (dashboardNote && !periodView)) {
+  const unifiedPage=note.flow?.includes('仪表盘') && /-(devices|settings)$/.test(note.board);
+  if (board() !== note.board || frame.dataset.loaded !== note.board || (dashboardNote && !periodView) || (unifiedPage && !isDashboard(frame.dataset.feature))) {
     jumpTo = note;
-    showBoard(note.board,dashboardNote?'dashboard':'');
+    showBoard(note.board,dashboardNote||unifiedPage?'dashboard':'');
     return;
   }
   if(dashboardNote)periodView.restore(note.flow);
@@ -306,14 +313,26 @@ frame.onload = () => {
   originals=new Map();drawSync();applyTrials();
   const feature=frame.dataset.feature;
   showCatalog(d,feature==='controls');periodView=null;
+  for(const button of d.querySelectorAll('[data-action=refresh],[data-style-demo=refresh]')){
+    button.querySelector('svg')?.remove();
+    button.insertAdjacentHTML('afterbegin',refreshGlyph);
+  }
   if(isDashboard(feature)){
     if(page.value==='home'){
       periodView=mountPeriodDashboard(d,()=>{applyTrials();pins();});
       periodView.root.hidden=false;d.getElementById('app').hidden=true;
-      if(feature==='calendar')periodView.open();
+      if(feature==='calendar'||feature==='layout')periodView.open(feature);
     }else{
       d.body.classList.add('unified');
       d.querySelector('main')?.classList.add(page.value+'-view');
+      if(page.value==='settings'){
+        const priorities=['统计规则','记录与外观','浏览器识别','我的数据','Ztime'];
+        for(const card of d.querySelectorAll('.settings-grid > .panel')){
+          const rank=priorities.indexOf(card.querySelector('h2')?.textContent);
+          card.style.order=rank<0?priorities.length:rank;
+          card.classList.toggle('fixed-setting',rank===0||rank===1);
+        }
+      }
       d.querySelectorAll('[data-page=week]').forEach(el=>el.hidden=true);
       d.querySelectorAll('[data-page=home]').forEach(el=>{for(const n of el.childNodes)if(n.nodeType===3)n.textContent='仪表盘';});
     }
@@ -342,8 +361,10 @@ frame.onload = () => {
     e.preventDefault();
     if(!picking && el.closest('#period-dashboard') && el.closest('[data-cal]')){
       if(!allowLeave())return;if(draft)clearEditor();
-      const trigger=el.closest('[data-cal]');periodView.act(trigger);
-      if(trigger.dataset.cal==='compare')periodView.root.querySelector('.pd-picker')?.scrollIntoView({block:'center'});
+      const trigger=el.closest('[data-cal]');
+      if(trigger.dataset.cal==='dismiss' && el!==trigger)return;
+      periodView.act(trigger);
+
       return;
     }
     if (!picking && handleStyleDemo(d,el))return;
@@ -415,7 +436,7 @@ document.querySelector('.quick').onclick=e=>{
 function routeFromHash(){
  const [key,requested='']=location.hash.slice(1).split('/');
  const valid=/^((desktop|mobile)-((home|week)(-edit|-detail-(writer|browser|reader|notes))?|devices|settings)|desktop-pair-(invite|request)|mobile-pair-(scan|confirm|wait|success|refused|timeout))$/;
- return [valid.test(key)?key:'desktop-home',['report','extension','data','controls','dashboard','calendar'].includes(requested)?requested:(key?'':'dashboard')];
+ return [valid.test(key)?key:'desktop-home',['report','extension','data','controls','dashboard','calendar','layout'].includes(requested)?requested:(key?'':'dashboard')];
 }
 window.addEventListener('hashchange',()=>{
  const [key,feature]=routeFromHash();
@@ -456,6 +477,43 @@ function mountPeriodDashboard(d,onChange){
   }
   return Array.from({length:len(period)},(_,i)=>({label:String(dayOf(a+i)),minutes:total(vector([a+i,a+i]))}));
  }
+ const layoutKey='review-dashboard-layout-'+device.value;
+ const modules={trend:'用时趋势',ranking:'应用排行',compare:'期间对比'};
+ let layout=Object.keys(modules).map(key=>({key,visible:true}));
+ try{
+   const saved=JSON.parse(sessionStorage.getItem(layoutKey));
+   if(Array.isArray(saved) && saved.length===layout.length && new Set(saved.map(r=>r.key)).size===layout.length &&
+      saved.every(row=>Object.hasOwn(modules,row.key)&&typeof row.visible==='boolean'))layout=saved;
+ }catch{/* Use the default design when no saved preference exists. */}
+ let layoutDraft=null,returnFocus='dates';
+ function layoutPanel(){
+   const rows=layoutDraft.map(({key,visible},i)=>{
+     const name=modules[key];
+     return `<div class="pd-module-row"><b>${name}</b><button data-cal="layout-up" data-key="${key}" aria-label="上移${name}" ${i===0?'disabled':''}>↑</button><button data-cal="layout-down" data-key="${key}" aria-label="下移${name}" ${i===layoutDraft.length-1?'disabled':''}>↓</button><button data-cal="layout-toggle" data-key="${key}" aria-pressed="${visible}">${visible?'显示':'隐藏'}</button></div>`;
+   }).join('');
+   return '<section class="pd-picker"><h3>仪表盘布局</h3><p class="pd-help">调整卡片顺序和显示状态。</p>'+rows+'<div class="pd-end"><button data-cal="cancel">取消</button><button class="pd-primary" data-cal="layout-save">保存布局</button></div></section>';
+ }
+ function applyLayout(){
+   const grid=root.querySelector('.pd-bottom');
+   const trend=grid.previousElementSibling;
+   grid.prepend(trend);
+   const [ranking,compare]=[...grid.children].slice(1);
+   const cards={trend,ranking,compare};
+   for(const entry of layout){
+     const card=cards[entry.key];
+     card.hidden=!entry.visible;
+     card.classList.toggle('pd-trend',entry.key==='trend');
+     grid.append(card);
+   }
+ }
+ root.addEventListener('keydown',e=>{
+   if(!picker && !layoutDraft)return;
+   if(e.key==='Escape'){e.preventDefault();act({dataset:{cal:'cancel'}});return;}
+   if(e.key!=='Tab')return;
+   const focusable=[...root.querySelectorAll('.pd-modal button:not(:disabled),.pd-modal input,.pd-modal select')];
+   const next=e.shiftKey?focusable.at(-1):focusable[0],edge=e.shiftKey?focusable[0]:focusable.at(-1);
+   if(d.activeElement===edge){e.preventDefault();next.focus();}
+ });
  function promptPicker(target){
   const r=target==='comparison'?(comparison||period):period;
   const start=Math.max(r[0],first(r[1]));
@@ -469,22 +527,56 @@ function mountPeriodDashboard(d,onChange){
   return '<section class="pd-picker" id="pd-picker" aria-label="日期选择"><div class="pd-top"><strong>'+(p.target==='comparison'?'选择对比区间':'选择统计区间')+'</strong><button data-cal="cancel" aria-label="关闭日历">关闭</button></div><div class="pd-short"><button data-cal="today">今天</button><button data-cal="yesterday">昨天</button></div><div class="pd-month"><button data-cal="back-month" aria-label="上个月">‹</button><strong>'+yr(m)+' 年 '+(dt(m).getUTCMonth()+1)+' 月</strong><button data-cal="next-month" aria-label="下个月" '+(nextMonth(m)>today?'disabled':'')+'>›</button></div><div class="pd-grid">'+[...'一二三四五六日'].map(x=>'<small>'+x+'</small>').join('')+cells+'</div><div class="pd-inputs"><label>开始日期<input type="date" data-edge="start" max="'+iso(today)+'" value="'+p.start+'"></label><label>结束日期<input type="date" data-edge="end" max="'+iso(today)+'" value="'+p.end+'"></label></div><p class="pd-help" role="status">'+(p.error||(p.second?'再点结束日，或直接应用为单日。':'选同月起止日，最多 31 天。'))+'</p><div class="pd-end"><button data-cal="cancel">取消</button><button class="pd-primary" data-cal="apply">应用区间</button></div></section>';
  }
  function draw(){
+  const focused=d.activeElement?.closest('.pd-modal')?selectorFor(d.activeElement):null;
   const v=vector(period),sum=total(v),series=bins(),max=Math.max(1,...series.map(x=>x.minutes||0));
   const compare=comparison?total(vector(comparison)):null,delta=comparison?sum/len(period)-compare/len(comparison):null;
   const barUnit=mode==='day'?'时':mode==='year'?'月':'日';
   const bars=series.map((s,i)=>{const display=series.length<=12||i%Math.ceil(series.length/8)===0||i===series.length-1;return '<div class="pd-col" title="'+s.label+(barUnit==='月'?'':barUnit)+' · '+(s.minutes===null?'尚未到达':dur(s.minutes))+'"><div class="pd-track"><i style="height:'+((s.minutes||0)*100/max)+'%"></i></div><small>'+(display?s.label:'&nbsp;')+'</small></div>';}).join('');
-  const presetButtons=Object.entries(modes).map(([k,v])=>'<button data-cal="mode" data-mode="'+k+'" aria-pressed="'+(mode===k)+'" data-style-id="pd-'+k+'">'+v+'</button>').join('');
+  const presetButtons=Object.entries({day:'日',week:'周',month:'月',year:'年'}).map(([k,v])=>'<button data-cal="mode" data-mode="'+k+'" aria-pressed="'+(mode===k)+'" data-style-id="pd-'+k+'">'+v+'</button>').join('');
   const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>'<div class="pd-app"><span>'+apps[i][0]+'</span><small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small><b>'+dur(m)+'</b></div>').join('');
-  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div><button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button></nav><div class="pd-main"><header class="pd-header"><div><small class="pd-kicker">ZTIME　/　使用概览</small><h1 id="pd-heading">仪表盘</h1></div><span class="pd-badge">示例数据</span></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" data-cal="dates">'+(mode==='year'?yr(period[0])+' 年　▾':label(period)+'　▾')+'</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+calendar()+
-  '<section class="pd-summary"><div><small>设备累计</small><h2>'+dur(sum)+'</h2><p>'+label(period)+' · '+len(period)+' 个统计日</p></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
+  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div><button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button></nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">仪表盘</h1></div><div class="pd-tools"><button data-cal="refresh">'+refreshGlyph+'更新</button><button data-cal="layout" aria-haspopup="dialog">布局</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates">'+(mode==='year'?yr(period[0])+' 年　▾':label(period)+'　▾')+'</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
+  '<section class="pd-summary"><div><small>设备累计</small><h2>'+dur(sum)+'</h2></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
   (comparison?'<p class="pd-comp-label">'+label(comparison)+'</p><p>对比期累计　'+dur(compare)+'</p><strong>日均'+(Math.abs(delta)<0.5?'持平':(delta>0?'增加 ':'减少 ')+dur(Math.abs(delta)))+'</strong><p>本期日均 '+dur(sum/len(period))+' · 对比期日均 '+dur(compare/len(comparison))+'</p>':'<p>'+(mode==='year'?'比较上年同期的使用情况。':'可选另一月份的一段日期，比较日均用时。')+'</p>')+
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
-  root.querySelectorAll('input[data-edge]').forEach(input=>input.onchange=()=>{picker[input.dataset.edge]=input.value;picker.error=valid(picker);if(input.dataset.edge==='start'&&Number.isInteger(num(input.value)))picker.month=first(num(input.value));draw();});
+
+  applyLayout();
+  const content=layoutDraft?layoutPanel():calendar();
+  if(content){
+    const label=layoutDraft?'仪表盘布局':picker.target==='year'?'选择年份':picker.target==='comparison'?'选择对比区间':'选择统计区间';
+    root.firstElementChild.inert=true;
+    root.insertAdjacentHTML('beforeend','<div class="pd-scrim" data-cal="dismiss"><div class="pd-modal" role="dialog" aria-modal="true" aria-label="'+label+'">'+content+'</div></div>');
+    // Dialog fields are created after the dashboard. Delegate edits to the current draft.
+    const modal=root.querySelector('.pd-modal');
+    (focused && modal.querySelector(focused) || modal.querySelector('button,select'))?.focus({preventScroll:true});
+    modal.querySelectorAll('input[data-edge]').forEach(input=>input.onchange=()=>{
+      picker[input.dataset.edge]=input.value;
+      picker.error=valid(picker);
+      if(input.dataset.edge==='start' && Number.isInteger(num(input.value)))picker.month=first(num(input.value));
+      draw();
+    });
+  }
   onChange();
  }
  function choose(m,n){mode=m;period=span(m,n);comparison=null;picker=null;}
  function act(button){
   const a=button.dataset.cal;if(!a)return false;
+  const wasOpen=!!picker || !!layoutDraft;
+  if(['layout','dates','compare'].includes(a))returnFocus=a;
+  if(a==='refresh'){notice(d,'已更新示例视图');return true;}
+  if(a==='layout')layoutDraft=structuredClone(layout);
+  if(a==='layout-toggle')layoutDraft.find(row=>row.key===button.dataset.key).visible=!layoutDraft.find(row=>row.key===button.dataset.key).visible;
+  if(a==='layout-up'||a==='layout-down'){
+    const i=layoutDraft.findIndex(row=>row.key===button.dataset.key);
+    const j=i+(a==='layout-up'?-1:1);
+    if(j>=0 && j<layoutDraft.length)[layoutDraft[i],layoutDraft[j]]=[layoutDraft[j],layoutDraft[i]];
+  }
+  if(a==='layout-save'){
+    layout=layoutDraft;
+    sessionStorage.setItem(layoutKey,JSON.stringify(layout));
+    layoutDraft=null;
+  }
+  if(a==='cancel'||a==='dismiss'){picker=null;layoutDraft=null;}
+
   if(a==='mode'){const m=button.dataset.mode;if(m==='custom')promptPicker('period');else choose(m,Math.min(period[1],today));}
   if(a==='dates'){if(mode==='year')picker={target:'year'};else promptPicker('period');}
   if(a==='prev'||a==='next'){
@@ -503,17 +595,20 @@ function mountPeriodDashboard(d,onChange){
    else if(s.slice(0,7)!==picker.start.slice(0,7)){picker.error='结束日必须与开始日在同一个月。';}
    else{[picker.start,picker.end]=[picker.start,s].sort();picker.second=false;picker.error='';}}
   if(a==='apply'){const p=picker;p.error=p.error||valid(p);if(!p.error){const r=[num(p.start),num(p.end)];if(p.target==='comparison')comparison=r;else{period=r;mode=len(r)===1?'day':'custom';comparison=null;}picker=null;}}
-  draw();return true;
+  draw();
+  if(wasOpen && !picker && !layoutDraft)root.querySelector('[data-cal="'+returnFocus+'"]')?.focus({preventScroll:true});
+  return true;
  }
- const describeState=()=>'仪表盘 · '+modes[mode]+' '+label(period)+'｜'+[mode,...period,scope,...(comparison||['','']),picker?.target||'',picker?.month||'',picker?.start||'',picker?.end||'',picker?.second?1:0].join(',');
+ const describeState=()=>'仪表盘 · '+modes[mode]+' '+label(period)+'｜'+[mode,...period,scope,...(comparison||['','']),layoutDraft?'layout':picker?.target||'',picker?.month||'',picker?.start||'',picker?.end||'',picker?.second?1:0].join(',');
  function restore(flow){
   const [m,a,b,sc,c,e,t,mo,start,end,second]=(flow.split('｜')[1]||'').split(',');
   const sane=v=>/^-?\d{1,6}$/.test(v)&&+v>=ymd(1900,0)&&+v<=today;
   if(!Object.hasOwn(modes,m)||!sane(a)||!sane(b)||+b<+a||+b-+a>366||!['all','phone','pc'].includes(sc))return;
   mode=m;period=[+a,+b];scope=sc;comparison=sane(c)&&sane(e)&&+e>=+c&&+e-+c<=366?[+c,+e]:null;picker=null;
+  layoutDraft=t==='layout'?structuredClone(layout):null;
   if(t==='year')picker={target:t};
   else if(['period','comparison'].includes(t)&&sane(mo)&&[start,end].every(x=>/^(?:\d{4}-\d{2}-\d{2})?$/.test(x)))picker={target:t,month:first(+mo),start,end,second:second==='1',error:''};
   draw();
  }
- draw();return {root,act,describeState,restore,open(){promptPicker('period');draw();}};
+ draw();return {root,act,describeState,restore,open(feature){if(feature==='layout'){returnFocus='layout';layoutDraft=structuredClone(layout);}else{promptPicker('period');returnFocus='dates';}draw();}};
 }

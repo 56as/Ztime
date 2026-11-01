@@ -130,12 +130,28 @@ button:disabled{opacity:.46;cursor:default}
 .unified main {max-width:1160px;width:100%;margin:0 auto;padding:36px clamp(20px,4vw,56px) 56px;min-width:0}
 .unified .page-header.topbar {background:transparent;border:0;box-shadow:none;padding:0;margin:0 0 22px}
 .unified .page-heading h1 {font-size:32px;letter-spacing:-.04em}
-.unified .page-heading::before {display:block;content:"ZTIME　/　使用概览";font-size:11px;font-weight:650;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
-.unified .devices-view .page-heading::before {content:"ZTIME　/　设备连接"}
-.unified .settings-view .page-heading::before {content:"ZTIME　/　偏好设置"}
 .unified .panel,.unified .period-card {background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 24px;margin:0 0 14px;box-shadow:none}
 .unified .devices-view .panel:first-of-type,.unified .period-total {border-top:3px solid var(--accent)}
 .unified .settings-grid {gap:14px}
 .unified .settings-grid .panel {margin:0}
 .unified .panel h2,.unified .period-card h2 {font-size:17px;letter-spacing:0}
 @media(max-width:700px){.unified main{padding:20px 14px 92px}.unified .panel,.unified .period-card{padding:16px}.unified .page-heading h1{font-size:28px}}
+
+/* Review revision: toolbar, summary, and dialogs share the same hierarchy. */
+.pd-tools {display:flex;align-items:center;gap:6px}
+.review-refresh-icon {width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+[data-action=refresh], [data-style-demo=refresh], #period-dashboard [data-cal=refresh] {display:inline-flex;align-items:center;justify-content:center;gap:6px;color:#18599c;background:#e6f0ff;border:1px solid #b7cee9;border-radius:9px}
+#period-dashboard [data-cal=layout] {background:white;border:1px solid #ced8e4}
+#period-dashboard .pd-modes button {min-width:42px;padding:5px 12px}
+.pd-summary>div:first-child {display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.pd-summary small {font-size:16px;font-weight:550;color:#42536b}
+.pd-summary h2 {font-size:24px;margin:0;letter-spacing:-.02em}
+.pd-bottom {align-items:start}.pd-bottom .pd-trend {grid-column:1/-1}
+.pd-bottom .pd-card {min-width:0;margin:0}.pd-bottom [hidden]{display:none}
+body:has(.pd-scrim) {overflow:hidden}
+.pd-scrim {position:fixed;inset:0;z-index:99;display:grid;place-items:center;padding:12px;background:#19293f57}
+.pd-modal {width:min(416px,100%);min-width:0;max-height:100%;overflow:auto;border-radius:16px;background:white;box-shadow:0 16px 60px #17283f38;overscroll-behavior:contain}
+.pd-modal .pd-picker {margin:0;border:none;padding:20px}.pd-modal .pd-end{margin-top:14px}
+.pd-module-row {display:flex;align-items:center;gap:5px;padding:10px 0;border-bottom:1px solid #e8ecf1}.pd-module-row b{margin-right:auto}
+.unified .settings-grid .fixed-setting {border-top:3px solid var(--accent)}
+@media(max-width:700px){#period-dashboard .pd-modes{flex:none}.pd-summary h2{font-size:22px}.pd-modal .pd-picker{padding:16px}}
