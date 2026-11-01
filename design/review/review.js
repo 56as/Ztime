@@ -274,6 +274,8 @@ frame.onload = () => {
       else if (el.closest('[data-close]')) changeBoard(board().split('-detail-')[0],'关闭明细');
       else if (app && ['home','week'].includes(page.value)) changeBoard(board()+'-detail-'+app.dataset.app,'点应用排行');
       else if (nav) changeBoard(device.value+'-'+nav.dataset.page,nav.textContent.trim());
+      else if (el.closest('[data-demo-format]')) d.querySelector('[data-demo-status]').textContent='示例：正式版将保存 '+el.closest('[data-demo-format]').dataset.demoFormat+' 格式的本地文件。';
+      else if (el.closest('summary')) { const box=el.closest('details');box.open=!box.open; }
       else if (action==='design-extension') d.getElementById('design-connection').hidden=false;
       else if (action==='design-report' || action==='design-report-close') d.getElementById('design-report-preview').hidden=action==='design-report-close';
       else if (action==='edit') changeBoard(board()+'-edit','编辑布局');
