@@ -11,7 +11,7 @@ export function makeDashboard(ctx) {
  const palette=['var(--accent)','#5ac8fa','#5856d6','#ff9f0a','#34c759','#af52de','#ff6482','#64d2ff','#a2845e','#8e8e93','#b8bcc4'];
  function actions(editable=true) {
   if(state.edit)return `<button data-action="refresh">更新</button><button data-action="cancel-edit">取消</button><button data-action="save-layout" class="primary">完成</button>`;
-  return `${state.page==='home'?`<input type="date" id="selectedDate" value="${esc(state.data.date)}" aria-label="选择统计日期">`:''}<button data-action="refresh">${icon('refresh')} 更新</button>${editable?`<button data-action="edit">${icon('edit')} 编辑</button>`:''}`;
+  return `${isWeek()?'<button data-action="week-report">导出周报</button>':''}${state.page==='home'?`<input type="date" id="selectedDate" value="${esc(state.data.date)}" aria-label="选择统计日期">`:''}<button data-action="refresh">${icon('refresh')} 更新</button>${editable?`<button data-action="edit">${icon('edit')} 编辑</button>`:''}`;
  }
  function status(){const d=state.data;const label={active:'正在记录',paused:'已暂停',locked:'屏幕已锁定',sleeping:'电脑休眠',starting:'正在启动记录',error:'采集暂不可用',stopped:'采集已停止',unsupported:'此系统暂不支持采集',unknown:'暂时无法识别前台窗口',permission:'需要应用使用权限',ready:'已读取系统使用记录'}[d.collector?.state]||'等待记录';return `<div class="statusbar"><span class="state"><span class="dot ${['active','ready'].includes(d.collector?.state)?'':'off'}"></span>${label}${isWeek()?' · 截至 '+esc(stamp(d.week.end)):d.collector?.appName?' · '+esc(d.collector.appName):''}</span></div>`;}
  function simpleHeader(){return `<header class="topbar page-header"><div class="page-heading"><h1>${state.page==='devices'?'设备':'设置'}</h1>${status()}</div><div class="actions">${actions(false)}</div></header>`;}

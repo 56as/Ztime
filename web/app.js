@@ -30,10 +30,7 @@ function weekChart(){const w=state.data.week,values=[w.current.totals.android,w.
 function weekly(view='numbers'){if(view==='bar')return weekChart();const w=state.data.week;return `<div class="week-columns">${[['android','手机'],['windows','电脑']].map(([k,n])=>`<div><span class="small">${n} · 本周同期</span><div class="week-number">${duration(w.current.totals[k],true)}</div><div class="week-previous">上周同期 ${duration(w.previous.totals[k],true)}</div><div class="small">${w.current.totals[k]>=w.previous.totals[k]?'增加':'减少'} ${duration(Math.abs(w.current.totals[k]-w.previous.totals[k]),true)}</div></div>`).join('')}</div><p class="small">截至 ${esc(stamp(w.end))}</p>`;}
 function changesList(w){const changes=state.data.week.changes.filter(a=>(!w.device||w.device==='all'||a.platform===w.device)&&a.change!==0&&(!w.direction||w.direction==='all'||(w.direction==='increase'?a.change>0:a.change<0))).slice(0,w.count||5);if(!changes.length)return empty('暂无变化','积累记录后，显示比上周同期增加或减少最多的应用。');return `<div class="app-list">${changes.map(a=>`<div class="app-row"><span class="app-avatar">${esc(a.name.slice(0,1))}</span><span class="app-name">${esc(a.name)}<span class="app-platform">${a.platform==='android'?'手机':'电脑'}</span></span><span class="change-value">${a.change>=0?'+':'−'}${duration(Math.abs(a.change),true)}${a.previous===0?' · 上期无记录':''}</span></div>`).join('')}</div>`;}
 function home(){return dashboard.render();}
-function weekPage(){
- const toolbar=state.edit?'':'<div class="report-actions"><button data-action="week-report">导出周报</button></div>';
- return toolbar+dashboard.render();
-}
+function weekPage(){return dashboard.render();}
 function previewWeekReport(){
  const report=weekReport(state.data);
  const dialog=document.querySelector('#dialog'),content=document.querySelector('#dialogContent');
