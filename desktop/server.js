@@ -26,8 +26,14 @@ export async function createApp(options={}){
   if(method==='POST'&&u.pathname==='/api/settings/resolve'){store.resolveSettings(body.choice);return {ok:true};}
   if(method==='POST'&&u.pathname==='/api/pair')return sync.createInvite(body.host);
   if(method==='POST'&&u.pathname==='/api/pair/approve'){sync.approve(body.id,body.accept===true);return {ok:true};}
-  if(method==='POST'&&u.pathname==='/api/sync')return {ok:true,message:'等待已配对手机连接。也可以在手机端点击“立即同步”。'};
-  if(method==='DELETE'&&u.pathname==='/api/peer'){store.db.prepare('DELETE FROM peers WHERE id=?').run(body.id);return {ok:true};}
+  if(method==='POST'&&u.pathname==='/api/sync')return sync.requestSync();
+  if(method==='DELETE'&&u.pathname==='/api/peer'){sync.cancelPeer(body.id);store.db.prepare('DELETE FROM peers WHERE id=?').run(body.id);return {ok:true};}
+  if(method==='GET'&&u.pathname==='/api/sessions'&&u.searchParams.has('start')){
+   const params=u.searchParams,start=Number(params.get('start')),end=Number(params.get('end'));
+   if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||end<=start)throw new Error('时间范围无效');
+   return store.db.prepare('SELECT * FROM sessions WHERE device_id=? AND app_id=? AND deleted_at IS NULL AND start<? AND end>? ORDER BY start DESC')
+    .all(params.get('deviceId'),params.get('appId'),end,start).map(row=>store.decode(row));
+  }
   if(method==='GET'&&u.pathname==='/api/sessions')return store.sessions().filter(s=>!s.deletedAt&&(!u.searchParams.get('appId')||s.appId===u.searchParams.get('appId'))&&(!u.searchParams.get('deviceId')||s.deviceId===u.searchParams.get('deviceId'))).slice(0,500);
   if(method==='DELETE'&&u.pathname==='/api/session'){store.markDeleted(body.id);collector.active=null;return {ok:true};}
   if(method==='DELETE'&&u.pathname==='/api/data'){if(body.confirm!=='删除')throw new Error('请输入“删除”确认');store.transaction(()=>{for(const s of store.sessions())store.markDeleted(s.id);});collector.active=null;return {ok:true};}

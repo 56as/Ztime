@@ -13,7 +13,7 @@ export function equalSecret(a,b){return typeof a==='string'&&typeof b==='string'
 export async function readJson(req){let size=0;const parts=[];for await(const p of req){size+=p.length;if(size>2_000_000)throw new Error('请求数据过大');parts.push(p);}return JSON.parse(Buffer.concat(parts).toString('utf8')||'{}');}
 export function send(res,status,data){res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(data));}
 export class SyncServer {
- constructor(store,dir){this.store=store;this.dir=dir;this.invite=null;this.attempts=new Map();}
+ constructor(store,dir){this.store=store;this.dir=dir;this.invite=null;this.attempts=new Map();this.jobs=new Map();this.waiters=new Map();}
  async start(port=40327){
   const certPath=path.join(this.dir,'tls.json');let tls;
   if(fs.existsSync(certPath))tls=JSON.parse(fs.readFileSync(certPath,'utf8'));
@@ -26,6 +26,38 @@ export class SyncServer {
  addresses(){return Object.values(os.networkInterfaces()).flat().filter(i=>i&&i.family==='IPv4'&&!i.internal).map(i=>i.address).filter(a=>/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(a)).sort((a,b)=>(a.startsWith('192.168.')?0:a.startsWith('10.')?1:2)-(b.startsWith('192.168.')?0:b.startsWith('10.')?1:2));}
  async createInvite(selected){if(!this.port)throw new Error('局域网同步服务未启动');this.store.db.prepare('DELETE FROM requests WHERE created_at<?').run(Date.now()-300000);this.invite={code:String(randomInt(100000,1000000)),expires:Date.now()+300000};const addresses=this.addresses();if(!addresses.length)throw new Error('未发现局域网地址，请连接 Wi-Fi 后重试');const host=addresses.includes(selected)?selected:addresses[0];const uri=`timeledger://pair?host=${host}&port=${this.port}&pin=${this.pin}&code=${this.invite.code}`;return {...this.invite,host,addresses,port:this.port,pin:this.pin,uri,qr:await QRCode.toDataURL(uri,{width:240,margin:2})};}
  rateLimit(address){const now=Date.now();const list=(this.attempts.get(address)||[]).filter(t=>now-t<60000);if(list.length>=8)return false;list.push(now);this.attempts.set(address,list);if(this.attempts.size>1000)this.attempts.clear();return true;}
+ // A paired phone holds a short authenticated HTTPS request while it is in the foreground.
+ // The phone still initiates every network connection and verifies the pinned desktop certificate.
+ requestPeer(id, timeoutMs){
+  const existing=this.jobs.get(id);
+  if(existing)return existing.promise;
+  const requestId=randomUUID();
+  let resolve;
+  const promise=new Promise(done=>{resolve=done;});
+  const finish=status=>{clearTimeout(timer);this.jobs.delete(id);resolve(status);};
+  const timer=setTimeout(()=>finish('offline'),timeoutMs);
+  this.jobs.set(id,{requestId,promise,finish});
+  this.waiters.get(id)?.(requestId);
+  return promise;
+ }
+ async requestSync(timeoutMs=45000){
+  if(!this.port)throw new Error('局域网同步服务未启动');
+  const peers=this.store.db.prepare('SELECT id,name FROM peers').all();
+  if(!peers.length)throw new Error('请先用手机扫码配对');
+  const results=await Promise.all(peers.map(p=>this.requestPeer(p.id,timeoutMs)));
+  const missing=peers.filter((_,i)=>results[i]==='offline');
+  if(missing.length)throw new Error('已确认 '+(peers.length-missing.length)+'/'+peers.length+' 台，未收到确认：'+missing.map(p=>p.name).join('、')+'。请确认手机可响应、两端均已更新，再重试。');
+  return {ok:true,message:results.every(r=>r==='current')?'已是最新':'同步完成'};
+ }
+ waitForRequest(id,res){
+  this.waiters.get(id)?.('');
+  const finish=requestId=>{cleanup();send(res,200,{requestId});};
+  const cleanup=()=>{clearTimeout(timer);res.off('close',cleanup);if(this.waiters.get(id)===finish)this.waiters.delete(id);};
+  const timer=setTimeout(()=>finish(''),10000);
+  this.waiters.set(id,finish);res.once('close',cleanup);
+  const job=this.jobs.get(id);if(job)finish(job.requestId);
+ }
+ cancelPeer(id){this.waiters.get(id)?.('');this.jobs.get(id)?.finish('offline');}
  async handle(req,res){try{
   if(req.method!=='POST')return send(res,405,{error:'不支持的方法'});
   const body=await readJson(req);
@@ -44,15 +76,24 @@ export class SyncServer {
   }
   const token=(req.headers.authorization??'').replace(/^Bearer /,'');const peer=this.store.db.prepare('SELECT * FROM peers WHERE token_hash=?').get(hash(token));
   if(!peer)return send(res,401,{error:'请先配对设备'});
-  if(req.url!=='/v1/sync')return send(res,404,{error:'接口不存在'});
   if(body.device?.id!==peer.id||body.device.platform!=='android')return send(res,403,{error:'设备来源不符'});
+  if(req.url==='/v1/sync/wait')return this.waitForRequest(peer.id,res);
+  if(req.url==='/v1/sync/complete'){
+   const job=this.jobs.get(peer.id);
+   if(job&&body.requestId===job.requestId)job.finish(body.changed?'complete':'current');
+   this.store.db.prepare('UPDATE peers SET last_sync=? WHERE id=?').run(Date.now(),peer.id);
+   return send(res,200,{ok:true});
+  }
+  if(req.url!=='/v1/sync')return send(res,404,{error:'接口不存在'});
+  const cursor=Number(body.cursor??0);
+  if(!Number.isSafeInteger(cursor)||cursor<0)return send(res,400,{error:'同步游标无效'});
   this.store.db.prepare("UPDATE requests SET token=NULL,status='delivered' WHERE device_id=? AND status='approved'").run(peer.id);
+  const settingsBefore=this.store.get('settings').revision;
   this.store.upsertDevice(body.device);const imported=this.store.importChanges(body.changes??[],peer.id);if(body.settings)this.store.receiveSettings(body.settings);
-  const cursor=Number(body.cursor??0);if(!Number.isSafeInteger(cursor)||cursor<0)return send(res,400,{error:'同步游标无效'});
-  const changes=this.store.changes(cursor);const next=changes.at(-1)?.seq??cursor;
-  this.store.db.prepare('UPDATE peers SET last_sync=? WHERE id=?').run(Date.now(),peer.id);
-  return send(res,200,{device:this.store.device,changes,cursor:next,hasMore:changes.length===1000,ack:body.changes?.at(-1)?.seq??0,settings:this.store.get('settings'),imported});
+  const changes=this.store.changes(cursor,1000,peer.id);const next=changes.at(-1)?.seq??cursor;
+  if(!body.confirmSync)this.store.db.prepare('UPDATE peers SET last_sync=? WHERE id=?').run(Date.now(),peer.id);
+  return send(res,200,{confirmSync:true,settingsChanged:settingsBefore!==this.store.get('settings').revision,requestId:this.jobs.get(peer.id)?.requestId??'',device:this.store.device,changes,cursor:next,hasMore:changes.length===1000,ack:body.changes?.at(-1)?.seq??0,settings:this.store.get('settings'),imported});
  }catch(e){if(!res.headersSent)send(res,400,{error:e.message});else res.end();}}
- approve(id,accept){const r=this.store.db.prepare('SELECT * FROM requests WHERE id=?').get(id);if(!r||r.status!=='pending'||Date.now()-r.created_at>300000)throw new Error('配对请求已失效');if(!accept){this.store.db.prepare("UPDATE requests SET status='rejected' WHERE id=?").run(id);return;}const token=secret();this.store.db.prepare('INSERT INTO peers VALUES(?,?,?,?,0) ON CONFLICT(id) DO UPDATE SET token_hash=excluded.token_hash,name=excluded.name').run(r.device_id,hash(token),r.name,Date.now());this.store.db.prepare("UPDATE requests SET status='approved',token=? WHERE id=?").run(token,id);this.invite=null;}
- close(){this.server?.close();try{this.discovery?.close();}catch{}}
+ approve(id,accept){const r=this.store.db.prepare('SELECT * FROM requests WHERE id=?').get(id);if(!r||r.status!=='pending'||Date.now()-r.created_at>300000)throw new Error('配对请求已失效');if(!accept){this.store.db.prepare("UPDATE requests SET status='rejected' WHERE id=?").run(id);return;}this.cancelPeer(r.device_id);const token=secret();this.store.db.prepare('INSERT INTO peers VALUES(?,?,?,?,0) ON CONFLICT(id) DO UPDATE SET token_hash=excluded.token_hash,name=excluded.name').run(r.device_id,hash(token),r.name,Date.now());this.store.db.prepare("UPDATE requests SET status='approved',token=? WHERE id=?").run(token,id);this.invite=null;}
+ close(){for(const id of new Set([...this.jobs.keys(),...this.waiters.keys()]))this.cancelPeer(id);this.server?.close();try{this.discovery?.close();}catch{}}
 }

@@ -19,7 +19,65 @@ public class SyncClient {
         SSLContext tls=SSLContext.getInstance("TLS");tls.init(null,trust,new SecureRandom());HttpsURLConnection c=(HttpsURLConnection)new URL("https://"+host+":"+peer.getInt("port")+route).openConnection();c.setSSLSocketFactory(tls.getSocketFactory());c.setHostnameVerifier((name,session)->name.equals(host));c.setConnectTimeout(8000);c.setReadTimeout(15000);c.setInstanceFollowRedirects(false);c.setRequestMethod("POST");c.setDoOutput(true);c.setRequestProperty("Content-Type","application/json");if(peer.has("token"))c.setRequestProperty("Authorization","Bearer "+peer.getString("token"));
         try{byte[] payload=body.toString().getBytes(StandardCharsets.UTF_8);try(var out=c.getOutputStream()){out.write(payload);}int status=c.getResponseCode();var stream=status<400?c.getInputStream():c.getErrorStream();if(stream==null)throw new Exception("连接失败："+status);byte[] bytes;try(stream;var buffer=new ByteArrayOutputStream()){byte[] chunk=new byte[8192];int n;while((n=stream.read(chunk))!=-1){buffer.write(chunk,0,n);if(buffer.size()>2_000_000)throw new Exception("同步响应过大");}bytes=buffer.toByteArray();}JSONObject result=new JSONObject(new String(bytes,StandardCharsets.UTF_8));if(status>=400)throw new Exception(result.optString("error","连接失败"));return result;}catch(java.net.SocketTimeoutException e){java.net.SocketTimeoutException error=new java.net.SocketTimeoutException("连接电脑超时（"+host+":"+peer.getInt("port")+"）。请检查电脑防火墙、同一 Wi-Fi 下的设备互访，并重新生成配对二维码。");error.initCause(e);throw error;}finally{c.disconnect();}
     }
-    public static synchronized void pair(LedgerDb db,String uri)throws Exception {JSONObject peer=connection(uri);JSONObject request=post(peer,"/v1/pair",new JSONObject().put("code",peer.getString("code")).put("device",db.device()));for(int i=0;i<40;i++){Thread.sleep(1500);JSONObject status=post(peer,"/v1/pair/status",new JSONObject().put("id",request.getString("id")).put("pollSecret",request.getString("pollSecret")));if("rejected".equals(status.optString("status")))throw new Exception("电脑拒绝了配对请求");if("approved".equals(status.optString("status"))){peer.put("token",status.getString("token"));peer.put("device",status.getJSONObject("device"));peer.remove("code");db.put("peer",peer);db.put("pullCursor",0);db.put("pushCursor",0);db.upsertDevice(status.getJSONObject("device"));db.put("syncError","");return;}}throw new Exception("等待确认超时，请在电脑端允许后重试");}
+    public static synchronized void pair(LedgerDb db,String uri)throws Exception {JSONObject peer=connection(uri);JSONObject request=post(peer,"/v1/pair",new JSONObject().put("code",peer.getString("code")).put("device",db.device()));for(int i=0;i<40;i++){Thread.sleep(1500);JSONObject status=post(peer,"/v1/pair/status",new JSONObject().put("id",request.getString("id")).put("pollSecret",request.getString("pollSecret")));if("rejected".equals(status.optString("status")))throw new Exception("电脑拒绝了配对请求");if("approved".equals(status.optString("status"))){peer.put("token",status.getString("token"));peer.put("device",status.getJSONObject("device"));peer.remove("code");db.put("peer",peer);db.put("lastSync",0);db.put("pullCursor",0);db.put("pushCursor",0);db.upsertDevice(status.getJSONObject("device"));db.put("syncError","");return;}}throw new Exception("等待确认超时，请在电脑端允许后重试");}
     private static JSONObject discover(JSONObject peer)throws Exception {String nonce=UUID.randomUUID().toString();byte[] query=new JSONObject().put("service","time-ledger").put("type","discover").put("nonce",nonce).toString().getBytes(StandardCharsets.UTF_8);try(DatagramSocket socket=new DatagramSocket()){socket.setBroadcast(true);socket.setSoTimeout(1500);socket.send(new DatagramPacket(query,query.length,InetAddress.getByName("255.255.255.255"),40328));long end=System.currentTimeMillis()+2000;while(System.currentTimeMillis()<end){DatagramPacket reply=new DatagramPacket(new byte[2048],2048);socket.receive(reply);JSONObject value=new JSONObject(new String(reply.getData(),0,reply.getLength(),StandardCharsets.UTF_8));if(value.optString("service").equals("time-ledger")&&value.optString("nonce").equals(nonce)&&value.optString("deviceId").equals(peer.getJSONObject("device").getString("id"))&&value.optString("pin").equals(peer.getString("pin"))){JSONObject found=new JSONObject(peer.toString());found.put("host",reply.getAddress().getHostAddress()).put("port",value.getInt("port"));return found;}}}throw new Exception("未找到已配对电脑，请检查同一 Wi-Fi 与电脑程序");}
-    public static synchronized void sync(LedgerDb db)throws Exception {JSONObject peer=db.object("peer",null);if(peer==null)throw new Exception("请先配对电脑");for(int i=0;i<30;i++){long push=Long.parseLong(db.get("pushCursor","0"));JSONArray changes=db.changes(push);JSONObject body=new JSONObject().put("device",db.device()).put("changes",changes).put("cursor",Long.parseLong(db.get("pullCursor","0"))).put("settings",db.settings());JSONObject result;try{result=post(peer,"/v1/sync",body);}catch(java.io.IOException e){peer=discover(peer);result=post(peer,"/v1/sync",body);db.put("peer",peer);}db.receive(result);db.put("lastSync",System.currentTimeMillis());db.put("syncError","");if(!result.optBoolean("hasMore")&&changes.length()<1000)return;}}
+    private static volatile String listeningToken = "";
+
+    public static synchronized void unpair(LedgerDb db) {
+        listeningToken = "";
+        db.put("peer", "null");
+        db.put("lastSync", 0);
+        db.put("syncError", "");
+    }
+
+    public static void waitForDesktop(android.content.Context context, LedgerDb db) throws Exception {
+        JSONObject peer = db.object("peer", null);
+        if (peer == null || !peer.getString("token").equals(listeningToken)) return;
+        JSONObject reply = post(peer, "/v1/sync/wait", new JSONObject().put("device", db.device()));
+        if (reply.optString("requestId").isEmpty()) return;
+        synchronized (SyncClient.class) {
+            JSONObject current = db.object("peer", null);
+            if (current == null || !current.getString("token").equals(peer.getString("token"))) return;
+            UsageCollector.collect(context, db);
+            sync(db);
+        }
+    }
+
+    public static synchronized boolean sync(LedgerDb db) throws Exception {
+        JSONObject peer = db.object("peer", null);
+        if (peer == null) throw new Exception("请先配对电脑");
+        boolean changed = false;
+        for (int page = 0; page < 30; page++) {
+            JSONArray changes = db.changes(Long.parseLong(db.get("pushCursor", "0")), peer.getJSONObject("device").getString("id"));
+            JSONObject settings = db.settings();
+            JSONObject body = new JSONObject().put("device", db.device()).put("changes", changes)
+                .put("cursor", Long.parseLong(db.get("pullCursor", "0")))
+                .put("settings", settings).put("confirmSync", true);
+            JSONObject result;
+            try {
+                result = post(peer, "/v1/sync", body);
+            } catch (java.io.IOException firstFailure) {
+                peer = discover(peer);
+                result = post(peer, "/v1/sync", body);
+                db.put("peer", peer);
+            }
+            db.receive(result);
+            boolean confirm = result.optBoolean("confirmSync");
+            listeningToken = confirm ? peer.getString("token") : "";
+            changed |= changes.length() > 0 || result.getJSONArray("changes").length() > 0
+                || result.optBoolean("settingsChanged")
+                || !settings.optString("revision").equals(db.settings().optString("revision"))
+                || db.object("settingsConflict", null) != null;
+            if (!result.optBoolean("hasMore") && changes.length() < 1000) {
+                if (confirm) {
+                    post(peer, "/v1/sync/complete", new JSONObject().put("device", db.device())
+                        .put("requestId", result.optString("requestId")).put("changed", changed));
+                }
+                db.put("lastSync", System.currentTimeMillis());
+                db.put("syncError", "");
+                return changed;
+            }
+        }
+        throw new Exception("本次已保存部分记录，还有数据待同步，请继续同步");
+    }
 }

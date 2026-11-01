@@ -14,7 +14,7 @@ import java.util.concurrent.*;
 import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity {
-    private WebView web;private LedgerDb db;private final ScheduledExecutorService tasks=Executors.newScheduledThreadPool(3);private ScheduledFuture<?> foreground;private String exportContent;
+    private WebView web;private LedgerDb db;private final ScheduledExecutorService tasks=Executors.newScheduledThreadPool(3);private ScheduledFuture<?> foreground,desktopRequests;private String exportContent;
     @Override public void onCreate(Bundle saved){super.onCreate(saved);db=new LedgerDb(this);web=new WebView(this);android.widget.FrameLayout frame=new android.widget.FrameLayout(this);frame.addView(web,new android.widget.FrameLayout.LayoutParams(-1,-1));frame.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets.consumeSystemWindowInsets();});setContentView(frame);web.getSettings().setJavaScriptEnabled(true);web.getSettings().setDomStorageEnabled(true);web.getSettings().setAllowFileAccess(false);web.getSettings().setAllowContentAccess(false);web.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);web.addJavascriptInterface(new Bridge(),"TimeLedgerNative");
         web.setWebChromeClient(new WebChromeClient(){
             @Override public boolean onJsAlert(WebView v,String url,String message,JsResult r){new AlertDialog.Builder(MainActivity.this).setMessage(message).setPositiveButton("确定",(d,w)->r.confirm()).setOnCancelListener(d->r.cancel()).show();return true;}
@@ -25,8 +25,12 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient(){@Override public WebResourceResponse shouldInterceptRequest(WebView view,WebResourceRequest r){WebResourceResponse result=loader.shouldInterceptRequest(r.getUrl());return result!=null?result:new WebResourceResponse("text/plain","UTF-8",403,"Blocked",Collections.emptyMap(),new java.io.ByteArrayInputStream(new byte[0]));}@Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){return !r.getUrl().toString().startsWith("https://appassets.androidplatform.net/assets/web/");}});
         web.loadUrl("https://appassets.androidplatform.net/assets/web/index.html");SyncWorker.schedule(this);
     }
-    @Override protected void onResume(){super.onResume();foreground=tasks.scheduleWithFixedDelay(()->{try{UsageCollector.collect(this,db);if(db.object("peer",null)!=null)SyncClient.sync(db);}catch(Exception e){db.put("syncError",e.getMessage()==null?"等待连接":e.getMessage());}},0,30,TimeUnit.SECONDS);}
-    @Override protected void onPause(){if(foreground!=null)foreground.cancel(false);super.onPause();}
+    @Override protected void onResume(){super.onResume();
+        desktopRequests=tasks.scheduleWithFixedDelay(()->{
+            try{SyncClient.waitForDesktop(this,db);}catch(Exception ignored){/* Regular sync handles reconnection and discovery. */}
+        },0,2,TimeUnit.SECONDS);
+        foreground=tasks.scheduleWithFixedDelay(()->{try{UsageCollector.collect(this,db);if(db.object("peer",null)!=null)SyncClient.sync(db);}catch(Exception e){db.put("syncError",e.getMessage()==null?"等待连接":e.getMessage());}},0,30,TimeUnit.SECONDS);}
+    @Override protected void onPause(){if(desktopRequests!=null)desktopRequests.cancel(true);if(foreground!=null)foreground.cancel(false);super.onPause();}
     @Override protected void onDestroy(){tasks.shutdownNow();web.removeJavascriptInterface("TimeLedgerNative");web.destroy();super.onDestroy();}
     @Override public void onBackPressed(){web.evaluateJavascript("window.ledgerBack ? window.ledgerBack() : false",result->{if(!"true".equals(result))moveTaskToBack(true);});}
     public class Bridge {
@@ -48,8 +52,13 @@ public class MainActivity extends Activity {
         else if(method.equals("POST")&&p.equals("/api/battery"))runOnUiThread(()->startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName()))));
         else if(method.equals("POST")&&p.equals("/api/scan"))runOnUiThread(()->new IntentIntegrator(this).setDesiredBarcodeFormats(IntentIntegrator.QR_CODE).setPrompt("扫描电脑上的配对二维码").setBeepEnabled(false).setOrientationLocked(false).initiateScan());
         else if(method.equals("POST")&&p.equals("/api/connect")){UsageCollector.collect(this,db);SyncClient.pair(db,body.getString("uri"));tasks.execute(()->{try{SyncClient.sync(db);}catch(Exception e){db.put("syncError",e.getMessage()==null?"同步失败":e.getMessage());}});}
-        else if(method.equals("POST")&&p.equals("/api/sync")){UsageCollector.collect(this,db);SyncClient.sync(db);return new JSONObject().put("ok",true).put("message","同步完成");}
-        else if(method.equals("DELETE")&&p.equals("/api/peer")){db.put("peer","null");db.put("lastSync",0);}
+        else if(method.equals("POST")&&p.equals("/api/sync")){UsageCollector.collect(this,db);boolean changed=SyncClient.sync(db);return new JSONObject().put("ok",true).put("message",changed?"同步完成":"已是最新");}
+        else if(method.equals("DELETE")&&p.equals("/api/peer")){SyncClient.unpair(db);}
+        else if(method.equals("GET")&&p.equals("/api/sessions")&&u.getQueryParameter("start")!=null){
+            long start=Long.parseLong(u.getQueryParameter("start")),end=Long.parseLong(u.getQueryParameter("end"));
+            if(end<=start)throw new Exception("时间范围无效");
+            return db.periodSessions(u.getQueryParameter("deviceId"),u.getQueryParameter("appId"),start,end);
+        }
         else if(method.equals("GET")&&p.equals("/api/sessions")){JSONArray result=new JSONArray(),all=db.sessions();for(int i=0;i<all.length()&&result.length()<500;i++){JSONObject s=all.getJSONObject(i);if(s.isNull("deletedAt")&&(u.getQueryParameter("appId")==null||s.getString("appId").equals(u.getQueryParameter("appId")))&&(u.getQueryParameter("deviceId")==null||s.getString("deviceId").equals(u.getQueryParameter("deviceId"))))result.put(s);}return result;}
         else if(method.equals("DELETE")&&p.equals("/api/session")){db.delete(body.getString("id"));resetActiveStart();}
         else if(method.equals("DELETE")&&p.equals("/api/data")){if(!body.optString("confirm").equals("删除"))throw new Exception("请确认删除");JSONArray all=db.sessions();for(int i=0;i<all.length();i++)db.delete(all.getJSONObject(i).getString("id"));resetActiveStart();}

@@ -6,7 +6,7 @@ program=dist/'TimeLedger-windows-x64'
 with zipfile.ZipFile(dist/'Ztime-windows-x64.zip','w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
  for p in program.rglob('*'):
   relative=p.relative_to(program)
-  if 'data' in relative.parts:continue
+  if 'data' in relative.parts or relative.as_posix()=='resources/app/node_modules/selfsigned/README.md':continue
   if p.is_file():z.write(p,Path(program.name)/relative)
 files=subprocess.check_output(['git','-c','safe.directory='+str(root),'ls-files','--cached','--others','--exclude-standard','-z'],cwd=root).decode('utf-8').split('\0')
 with zipfile.ZipFile(dist/'Ztime-source.zip','w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
