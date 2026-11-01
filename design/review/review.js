@@ -312,6 +312,8 @@ frame.onload = () => {
       periodView.root.hidden=false;d.getElementById('app').hidden=true;
       if(feature==='calendar')periodView.open();
     }else{
+      d.body.classList.add('unified');
+      d.querySelector('main')?.classList.add(page.value+'-view');
       d.querySelectorAll('[data-page=week]').forEach(el=>el.hidden=true);
       d.querySelectorAll('[data-page=home]').forEach(el=>{for(const n of el.childNodes)if(n.nodeType===3)n.textContent='仪表盘';});
     }

@@ -123,3 +123,19 @@ button:disabled{opacity:.46;cursor:default}
 .pd-picker{max-width:440px;border-color:#bfd5ed;box-shadow:0 5px 20px #223b5b0a}.pd-picker .pd-top{margin-bottom:10px}.pd-month{margin:10px 0}.pd-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;gap:3px}.pd-grid small{color:#647389;padding:4px}.pd-grid button{min-width:0}#period-dashboard .pd-grid .cap,#period-dashboard button.pd-primary{background:var(--pd-blue);color:white}#period-dashboard .pd-grid .inside{background:var(--pd-tint);color:#235c99}
 .pd-inputs{display:flex;gap:10px;margin-top:14px}.pd-inputs label{flex:1;min-width:0}.pd-inputs input{width:100%;min-width:0}.pd-end{justify-content:flex-end}.pd-short{flex-wrap:wrap;margin:8px 0}#period-dashboard .pd-short button{color:var(--pd-blue);background:var(--pd-tint);font-size:13px}#period-dashboard .pd-short .pd-primary{background:var(--pd-blue);color:white}
 @media(max-width:700px){.pd-layout{display:block}.pd-nav{flex-direction:row;align-items:center;border:0;border-bottom:1px solid #e1e6ec;padding:10px 12px;gap:3px}.pd-brand{font-size:17px;margin:0 auto 0 0;gap:6px}.pd-brand img{width:24px;height:24px}#period-dashboard .pd-nav button{font-size:13px;padding:7px 9px}.pd-main{padding:20px 14px 40px}.pd-controls{align-items:stretch;gap:8px}.pd-modes{flex:1;justify-content:space-between}.pd-range{margin-left:auto}.pd-summary,.pd-card,.pd-picker{padding:16px}.pd-bottom{grid-template-columns:1fr;gap:0}.pd-summary{gap:10px}.pd-bars{gap:1px}.pd-col small{font-size:9px}}
+
+/* Shared page frame for the dashboard, devices and settings. */
+.unified .sidebar {background:var(--surface);border-right:1px solid var(--line);padding-top:32px}
+.unified .nav button.active {background:var(--tint);color:var(--accent);box-shadow:none}
+.unified main {max-width:1160px;width:100%;margin:0 auto;padding:36px clamp(20px,4vw,56px) 56px;min-width:0}
+.unified .page-header.topbar {background:transparent;border:0;box-shadow:none;padding:0;margin:0 0 22px}
+.unified .page-heading h1 {font-size:32px;letter-spacing:-.04em}
+.unified .page-heading::before {display:block;content:"ZTIME　/　使用概览";font-size:11px;font-weight:650;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+.unified .devices-view .page-heading::before {content:"ZTIME　/　设备连接"}
+.unified .settings-view .page-heading::before {content:"ZTIME　/　偏好设置"}
+.unified .panel,.unified .period-card {background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 24px;margin:0 0 14px;box-shadow:none}
+.unified .devices-view .panel:first-of-type,.unified .period-total {border-top:3px solid var(--accent)}
+.unified .settings-grid {gap:14px}
+.unified .settings-grid .panel {margin:0}
+.unified .panel h2,.unified .period-card h2 {font-size:17px;letter-spacing:0}
+@media(max-width:700px){.unified main{padding:20px 14px 92px}.unified .panel,.unified .period-card{padding:16px}.unified .page-heading h1{font-size:28px}}
