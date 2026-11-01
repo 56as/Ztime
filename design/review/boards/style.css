@@ -341,12 +341,29 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .pd-summary :is(small,h2) {font:550 16px/1.4 system-ui,"Microsoft YaHei",sans-serif;color:#42536b;letter-spacing:normal;margin:0}
 .desktop-v2 .pd-bottom {gap:12px}
 .desktop-v2 .pd-card {padding:16px 18px}
-@media(min-width:800px) {
-  .desk-ui.desktop-v2 .pd-bottom.default-pair {grid-template-columns:minmax(0,3fr) minmax(0,2fr);align-items:stretch}
-  .desk-ui.desktop-v2 .pd-bottom.default-pair > [data-card-key]:not([hidden]) {grid-column:auto}
-  .desktop-v2 .default-pair .usage-chart svg,.desktop-v2 .default-pair .usage-y {height:clamp(118px,24vh,190px)}
-  .desktop-v2 .default-pair .rank-scroll {max-height:clamp(148px,30vh,220px)}
-}
+/* The default stack uses the available window height. Additional cards use normal page flow. */
+.desktop-v2 .pd-main:has(.default-pair) {display:flex;flex-direction:column;height:100dvh;min-height:560px}
+.desktop-v2 .pd-main:has(.default-pair) > :not(.pd-bottom) {flex:none}
+.desk-ui.desktop-v2 .pd-bottom.default-pair {flex:1;min-height:0;grid-template-columns:minmax(0,1fr);grid-auto-rows:minmax(0,1fr);align-items:stretch}
+.desktop-v2 .default-pair:has(> [data-card-key=trend]:nth-child(1 of :not([hidden]))) {grid-template-rows:minmax(0,1.2fr) minmax(0,1fr)}
+.desktop-v2 .default-pair:has(> [data-card-key=ranking]:nth-child(1 of :not([hidden]))) {grid-template-rows:minmax(0,1fr) minmax(0,1.2fr)}
+.desktop-v2 .default-pair > [data-card-key]:not([hidden]) {display:flex;flex-direction:column;min-height:0}
+.desktop-v2 .default-pair .usage-chart {flex:1;min-height:0;margin-top:8px}
+.desktop-v2 .default-pair .usage-chart > div:last-child {display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}
+.desktop-v2 .default-pair .usage-chart svg {height:100%;min-height:0}
+.desktop-v2 .default-pair .usage-y {height:auto;margin-bottom:20px}
+.desktop-v2 .default-pair .rank-scroll {flex:1;min-height:0;max-height:none}
+.desktop-v2 .devices-view {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:12px;padding-block:clamp(16px,3vh,28px)}
+.desktop-v2 .devices-view > .page-header,.desktop-v2 .devices-view > .page-header + .panel,.desktop-v2 .devices-view > [aria-live] {grid-column:1/-1}
+.desktop-v2.unified .devices-view > .panel {padding:14px 18px;margin:0}
+.desktop-v2 .devices-view > .page-header {margin:0}
+.desktop-v2 .devices-view .device {padding:8px 0}
+.desktop-v2 .devices-view .panel h2 {margin-bottom:8px}
+.desktop-v2 .devices-view .section-head h2 {margin:0}
+.desktop-v2 #design-settings-data {align-self:start;height:auto;padding:14px 18px}
+.desktop-v2 #design-settings-data h2 {margin-bottom:10px}
+.desktop-v2 #design-settings-data .row {display:flex;flex-wrap:wrap;gap:8px}
+
 .desktop-v2 .settings-view .fixed-setting .field :is(label,select) {font:500 14px/normal system-ui,"Microsoft YaHei",sans-serif;color:var(--text);letter-spacing:normal}
 .desktop-v2 .settings-view .fixed-setting .field select {height:36px;padding:0 10px;background-color:var(--bg)}
 .desktop-v2 .settings-view [data-action=save-settings] {display:block;margin-inline-start:auto}

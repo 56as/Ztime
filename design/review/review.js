@@ -52,7 +52,7 @@ function notice(d,message){
  timers.set(el,setTimeout(()=>{el.hidden=true;},2600));
 }
 function confirmDeletion(d,button){
- const group=button.closest('.spec,.risk-block');if(!group)return;
+ const group=button.closest('.spec,.risk-block,#design-settings-data');if(!group)return;
  const existing=group.querySelector('.style-confirm');if(existing){existing.querySelector('button').focus();return;}
  const box=d.createElement('div');box.className='style-confirm';box.setAttribute('role','group');
  box.setAttribute('aria-label','确认删除');
@@ -137,7 +137,7 @@ const removedDesktopCopy={
   'desktop-settings':[
     ['#extension-settings > p:nth-of-type(1)','#extension-settings h2'],
     ['#design-settings-data > p:nth-of-type(1)','#design-settings-data h2'],
-    ['#design-settings-data > section:nth-of-type(1) > p:nth-of-type(1)','#design-settings-data .risk-block h3']
+    ['#design-settings-data > section:nth-of-type(1) > p:nth-of-type(1)','#design-settings-data [data-action=delete-data]']
   ],
   'desktop-devices':[
     ['#app > div:nth-of-type(1) > main:nth-of-type(1) > section:nth-of-type(1) > p:nth-of-type(1)','#lan-ready h2']
@@ -154,6 +154,9 @@ function applySecondDesktopDraft(d,pageId){
   }
   if(pageId!=='settings')return;
   d.getElementById('extension-settings')?.remove();
+  const data=d.getElementById('design-settings-data');
+  data.querySelector('.row').append(data.querySelector('[data-action=delete-data]'));
+  data.querySelector('.risk-block').remove();
   const grid=d.querySelector('.settings-grid');
   const input=d.getElementById('timeZone');input.outerHTML=zoneSelect(desktopZone);
   const pause=grid.querySelector('[data-action=pause]'), startup=grid.querySelector('[data-action=autostart]');
@@ -363,6 +366,7 @@ function targetFor(note) {
       const card=doc().querySelector('[data-card-key=compare]');
       return card?.hidden?doc().querySelector('[data-cal=layout-toggle][data-key=compare]'):card;
     }
+    if(secondDraftNote(note) && note.board==='desktop-settings' && note.selector==='#design-settings-data > section:nth-of-type(1)')return doc().querySelector('#design-settings-data [data-action=delete-data]');
     const moved=secondDraftNote(note) && removedDesktopCopy[note.board]?.find(([selector])=>selector===note.selector);
     if(moved)return doc().querySelector(moved[1]);
     const replacement=mobileAnnotationTargets[note.board]?.[note.selector];
