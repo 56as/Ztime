@@ -336,8 +336,8 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 /* Desktop review #61–66: keep the two default charts visible together. */
 .desktop-v2 .pd-main {padding-block:clamp(12px,3vh,24px)}
 .desktop-v2 .pd-header {margin-bottom:14px}
-.desktop-v2 .pd-controls {margin-bottom:10px;border-top:3px solid var(--accent)}
-.desktop-v2 .pd-summary {padding:10px 16px;margin-bottom:10px;border-top:1px solid #e1e6ee}
+.desktop-v2 .pd-controls {margin-bottom:0;border-top:3px solid var(--accent);border-bottom:0;border-radius:14px 14px 0 0;padding:10px 14px 4px}
+.desktop-v2 .pd-summary {padding:4px 14px 10px;margin-bottom:10px;border-top:0;border-radius:0 0 14px 14px}
 .desktop-v2 .pd-summary :is(small,h2) {font:550 16px/1.4 system-ui,"Microsoft YaHei",sans-serif;color:#42536b;letter-spacing:normal;margin:0}
 .desktop-v2 .pd-bottom {gap:12px}
 .desktop-v2 .pd-card {padding:16px 18px}
@@ -367,3 +367,14 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .settings-view .fixed-setting .field :is(label,select) {font:500 14px/normal system-ui,"Microsoft YaHei",sans-serif;color:var(--text);letter-spacing:normal}
 .desktop-v2 .settings-view .fixed-setting .field select {height:36px;padding:0 10px;background-color:var(--bg)}
 .desktop-v2 .settings-view [data-action=save-settings] {display:block;margin-inline-start:auto}
+.desktop-v2 .settings-view .fixed-setting .field {grid-template-columns:minmax(60px,max-content) minmax(0,132px)}
+.desktop-v2 .settings-view #dayStart,.desktop-v2 .settings-view #timeZone {width:100%}
+.desktop-v2 .settings-view .record-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:255px;gap:8px}
+.desktop-v2 .settings-view .record-actions button {grid-column:auto;min-width:0;min-height:36px;padding:4px 6px}
+.desktop-v2 .settings-view .record-actions + .field {max-width:255px;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.desktop-v2 .settings-view .record-actions + .field #theme {width:100%;min-width:0}
+@media (min-width:1100px) {
+  .desktop-v2 .settings-grid {grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.18fr);align-items:start}
+  .desktop-v2 .settings-grid > .panel {height:auto;padding:16px}
+  .desktop-v2 #design-settings-data .row button {padding-inline:8px}
+}

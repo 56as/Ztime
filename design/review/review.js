@@ -441,10 +441,12 @@ function renderList() {
   $('notes').replaceChildren();
   const visibleNotes=notes.filter(n=>n.board.startsWith(device.value+'-') &&
     (device.value!=='mobile' || !/^mobile-(week|home-edit|home-detail)/.test(n.board) || n.board===board()));
-  $('count').textContent = visibleNotes.filter(n => !n.resolved).length;
+  const pending=visibleNotes.filter(n=>!n.resolved).length;
+  $('count').textContent=String(pending);
+  $('count').hidden=device.value==='desktop' && pending===0;
   const archive=document.createElement('details');
   const summary=document.createElement('summary');
-  summary.textContent='已归档的手机批注';archive.append(summary);
+  summary.textContent=device.value==='desktop'?'已归档的桌面批注':'已归档的手机批注';archive.append(summary);
   for (const n of visibleNotes.reverse()) {
     const card = document.createElement('article');
     const label = document.createElement('small'), text = document.createElement('p');
@@ -455,7 +457,7 @@ function renderList() {
     toggle.textContent = n.trial?(n.resolved?'重新应用':'撤回试改'):(n.resolved?'重新打开':'标为已处理');
     toggle.onclick = async () => { if (allowLeave()) await save({...n,resolved:!n.resolved}); };
     card.append(label,text,open,toggle);
-    (device.value==='mobile' && n.resolved?archive:$('notes')).append(card);
+    (n.resolved?archive:$('notes')).append(card);
   }
   if(archive.childElementCount>1)$('notes').append(archive);
   pins();
