@@ -13,16 +13,13 @@ try{
   service.store.write({id:'sample'+i,deviceId:service.store.device.id,appId:'notes',appName:'=示例笔记',start,end:Math.min(now,start+h*3600000),site:'private.example'});
  }
  browser=await chromium.launch({channel:process.env.ZTIME_BROWSER||'msedge',headless:true});const page=await browser.newPage(),errors=[];
- page.on('pageerror',e=>errors.push(e.message));await page.goto(service.url);await page.click("[data-tool=layout]");
- await page.locator('[data-filter=apps][value=android] + span').click();
- assert.equal(await page.locator('[data-filter=apps][value=android]').isChecked(),true);await page.reload();await page.click("[data-tool=layout]");
- await page.locator('[data-filter=apps][value=android]:checked').waitFor({state:'attached'});
+ page.on('pageerror',e=>errors.push(e.message));await page.goto(service.url);
  await page.click('[data-page=settings]');await page.click('[data-action=delete-data]');
  assert.equal(await page.locator('#dialog .danger').isDisabled(),true);await page.click('#dialog [data-cancel]');
  assert.equal(await page.locator('#dialog').isVisible(),false);
- await page.click('[data-page=dashboard]');await page.click('[data-mode=week]');await page.click('[data-tool=layout]');await page.locator('.header-main').waitFor();
- assert.deepEqual(await page.locator('.header-main .actions button').allTextContents(),['导出周报',' 更新',' 编辑']);
- await page.click('[data-action=week-report]');await page.locator('.report-image svg').waitFor();assert.match(await page.locator('.report-image').textContent(),/本周观察/);
+ await page.click('[data-page=dashboard]');await page.click('[data-mode=week]');await page.locator('[data-tool=report]').waitFor();
+ assert.deepEqual(await page.locator('.dashboard-view .actions button').allTextContents(),['布局','导出周报','']);
+ await page.click('[data-tool=report]');await page.locator('.report-image svg').waitFor();assert.match(await page.locator('.report-image').textContent(),/本周观察/);
  assert.match(await page.locator('.report-image').textContent(),/单位：小时/);
  const preview=await page.locator('.report-image').boundingBox(), formats=await page.locator('.report-formats').boundingBox();
  assert.ok(formats.y>=preview.y+preview.height,'export actions below recap');
@@ -40,9 +37,9 @@ try{
  const mobileAssets=[];mobile.on('request',r=>mobileAssets.push(new URL(r.url()).pathname));
  await mobile.goto(service.url);await mobile.click('[data-page=devices]');assert.equal(await mobile.locator('.device:visible').count(),2);assert.equal(await mobile.locator('[data-unpair]').getAttribute('data-unpair'),'new');
  await mobile.click('[data-history] summary');assert.equal(await mobile.locator('.device:visible').count(),3);
- await mobile.click('[data-page=dashboard]');await mobile.click('[data-mode=week]');await mobile.click('[data-tool=layout]');await mobile.locator('.header-main').waitFor();
- const buttons=await mobile.locator('.header-main .actions button').evaluateAll(els=>els.map(e=>[e.offsetTop,e.offsetLeft]));assert.ok(buttons.every(([y],i)=>y===buttons[0][0]&&(!i||buttons[i-1][1]<buttons[i][1])));
- await mobile.click('[data-action=week-report]');assert.equal(await mobile.locator('#dialog [data-save-report]').count(),1);await mobile.click('[data-save-report=txt]');assert.match(await mobile.evaluate(()=>window.savedReport.content),/设备累计/);assert.deepEqual(errors,[]);assert.ok(!mobileAssets.some(p=>['/reports/desktop.js','/reports/chart.js','/reports/image-export.js','/shared/report-csv.js'].includes(p)),'Android text reporting loads no desktop exporter');
+ await mobile.click('[data-page=dashboard]');await mobile.click('[data-mode=week]');await mobile.locator('[data-tool=report]').waitFor();
+ const buttons=await mobile.locator('.dashboard-view .actions button').evaluateAll(els=>els.map(e=>[e.offsetTop,e.offsetLeft]));assert.ok(buttons.every(([y],i)=>y===buttons[0][0]&&(!i||buttons[i-1][1]<buttons[i][1])));
+ await mobile.click('[data-tool=report]');assert.equal(await mobile.locator('#dialog [data-save-report]').count(),1);await mobile.click('[data-save-report=txt]');assert.match(await mobile.evaluate(()=>window.savedReport.content),/设备累计/);assert.deepEqual(errors,[]);assert.ok(!mobileAssets.some(p=>['/reports/desktop.js','/reports/chart.js','/reports/image-export.js','/shared/report-csv.js'].includes(p)),'Android text reporting loads no desktop exporter');
  console.log('Passed: desktop toolbar, four actual downloads, Android toolbar + text bridge, same-name pair/history separation.');
 }finally{await browser?.close();await service.close();fs.rmSync(tmp,{recursive:true,force:true});}
 

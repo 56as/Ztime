@@ -4,9 +4,6 @@
 .unified main {max-width:1160px;width:100%;margin:0 auto;padding:36px clamp(20px,4vw,56px) 56px;min-width:0}
 .unified .page-header.topbar {background:transparent;border:0;box-shadow:none;padding:0;margin:0 0 22px}
 .unified .page-heading h1 {font-size:32px;letter-spacing:-.04em}
-.unified .page-heading::before {display:block;content:"ZTIME　/　使用概览";font-size:11px;font-weight:650;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
-.unified .devices-view .page-heading::before {content:"ZTIME　/　设备连接"}
-.unified .settings-view .page-heading::before {content:"ZTIME　/　偏好设置"}
 .unified .panel,.unified .period-card {background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 24px;margin:0 0 14px;box-shadow:none}
 .unified .devices-view .panel:first-of-type,.unified .period-total {border-top:3px solid var(--accent)}
 .unified .settings-grid {gap:14px}
@@ -20,7 +17,7 @@
 .pd-modes button,.pd-range button {background:transparent;border:0;box-shadow:none}
 .pd-modes [aria-pressed=true] {background:var(--surface);box-shadow:0 1px 4px #18283c24;color:var(--accent)}
 .pd-range,.pd-picker {background:var(--surface);border:1px solid var(--line);border-radius:10px}
-.period-total h2 {font-size:clamp(26px,3vw,42px)!important;margin:4px 0}
+.unified .period-total h2 {font-size:24px;margin:0}
 .period-card p,.period-card small,.pd-help,.pd-grid small {color:var(--muted)}
 .pd-bottom {display:grid;grid-template-columns:1.15fr 1fr;gap:14px}
 .pd-plot {display:flex;gap:8px;margin-top:20px}.pd-axis{display:flex;flex-direction:column;justify-content:space-between;padding-bottom:20px;color:var(--muted);font-size:10px}
@@ -34,3 +31,20 @@
 .period-card .app-row{width:100%;grid-template-columns:minmax(0,1fr) auto auto}.period-card h2{margin:0}
 @media(max-width:700px){.pd-bottom{display:block}.pd-bars{gap:1px}.pd-modes button{padding:6px 9px}.pd-col small{font-size:9px}}
 
+
+.total-value {display:flex;align-items:baseline;flex-wrap:wrap;gap:14px}
+.total-value small {font-size:16px;font-weight:550;color:var(--text)}
+.pd-bottom {align-items:start}.trend-card {grid-column:1/-1}
+.pd-bottom .period-card {min-width:0;margin:0}
+.rank-track {height:5px;grid-column:1/-1;background:var(--bg);border-radius:5px}
+.rank-track i {display:block;height:100%;background:var(--accent);border-radius:inherit}
+.unified .fixed-setting {border-top:3px solid var(--accent)}
+.actions button.refresh-control {display:inline-grid;place-items:center;min-width:36px;width:36px;height:36px;padding:0;border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));background:var(--tint);color:var(--accent);order:99}
+.refresh-control svg {width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.period-dialog {width:min(416px,calc(100vw - 24px));padding:0;overscroll-behavior:contain}
+.period-dialog .pd-picker {max-width:none;border:0;margin:0;padding:20px}
+.period-dialog h2 {font-size:18px}.period-dialog .pd-end {margin-top:14px}
+.layout-row {display:flex;align-items:center;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
+.layout-row b {margin-right:auto}.layout-row [aria-pressed=true]{background:var(--tint);color:var(--accent)}
+.layout-error:empty {display:none}.layout-error {color:var(--danger)}
+@media(max-width:700px){.unified .nav{grid-template-columns:repeat(3,1fr)}.pd-bottom .period-card{margin-bottom:14px}.unified .period-total h2{font-size:22px}}

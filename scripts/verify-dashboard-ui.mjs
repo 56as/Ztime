@@ -1,43 +1,66 @@
+import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
-import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {randomUUID} from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 import {createApp} from '../desktop/server.js';
-import {dateKey,dayBounds,weekBounds} from '../shared/time.js';
-const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_PATH||require.resolve('playwright',{paths:[process.cwd(),path.dirname(process.execPath)]}));
-const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ztime-dashboard-ui-')),app=await createApp({dataDir:dir,collect:false,port:0,syncPort:0});app.sync.addresses=()=>['192.168.1.12'];
-const now=Date.now(),settings=app.store.get('settings'),today=dateKey(now,settings),bounds=dayBounds(today,settings),week=weekBounds(now,settings),end=Math.min(now,bounds.start+8*3600000);
-app.store.upsertDevice({id:'test-android',platform:'android',name:'测试手机'});
-for(const [appId,appName,deviceId,offset,length]of[['code.exe','Visual Studio Code',app.store.device.id,0,110],['chrome.exe','Chrome',app.store.device.id,120,75],['com.reader','阅读','test-android',180,35],['com.chat','聊天','test-android',220,25]]){const start=Math.min(bounds.start+offset*60000,end-60000);app.store.write({id:randomUUID(),deviceId,appId,appName,start,end:Math.min(start+length*60000,end)});}
-if(week.start<bounds.start)app.store.write({id:randomUUID(),deviceId:'test-android',appId:'weekly-only',appName:'WeeklyOnly',start:week.start+3600000,end:Math.min(week.start+3*3600000,now)});
-app.store.write({id:randomUUID(),deviceId:'test-android',appId:'com.reader',appName:'阅读',start:week.previous+3600000,end:Math.min(week.previous+7200000,week.previousEnd)});
-app.store.set('collector',{state:'active',appName:'Visual Studio Code'});
-let browser;const checks=[],errors=[];const check=(value,name)=>{if(!value)throw new Error(name);checks.push(name);};
+
+const require=createRequire(import.meta.url);
+const {chromium}=require(require.resolve('playwright',{paths:[process.cwd(),path.dirname(process.execPath)]}));
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ztime-dashboard-'));
+const service=await createApp({dataDir:dir,port:0,syncPort:0,collect:false});
+let browser;
 try{
- browser=await chromium.launch({channel:process.env.ZTIME_BROWSER||'msedge',headless:true});const page=await browser.newPage({viewport:{width:1440,height:1050}});page.on('pageerror',e=>errors.push(e.message));
- await page.goto(app.url);await page.click("[data-tool=layout]");await page.locator('[data-widget="pie"] .pie-visual').waitFor();check(await page.locator('[data-widget]').count()===9,'nine default modules including editable header');check(await page.locator('[data-action="refresh"]').isVisible(),'today refresh');
- fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({animations:'disabled',path:'artifacts/dashboard-today-test-data.png',fullPage:true});
- await page.locator('[data-action="edit"]').click();await page.locator('[data-typography="phone"][data-size-key="timeFontSize"]').selectOption('56');await page.locator('[data-typography="phone"][data-size-key="unitFontSize"]').selectOption('28');await page.locator('[data-title="header"]').fill('我的今日');await page.locator('[data-width="header"]').selectOption('9');await page.locator('[data-height="header"]').fill('160');await page.locator('[data-action="save-layout"]').click();
- check(app.store.get('layout').widgets.find(w=>w.id==='header').w===9&&app.store.get('layout').widgets.find(w=>w.id==='header').h===160,'header width and height saved');check(await page.getByRole('heading',{name:'我的今日',exact:true}).isVisible(),'custom header title');check(await page.locator('[data-widget="phone"] .metric small').first().evaluate(el=>getComputedStyle(el).fontSize)==='28px'&&await page.locator('[data-widget="phone"] .metric').evaluate(el=>getComputedStyle(el).fontSize)==='56px','independent number and unit font sizes applied');
- await page.locator('[data-action="edit"]').click();await page.locator('[data-hide="header"]').click();await page.locator('[data-hide="phone"]').click();await page.locator('[data-action="save-layout"]').click();await page.reload();await page.click("[data-tool=layout]");await page.locator('[data-widget="pie"]').waitFor();check(await page.locator('[data-widget="header"]').count()===0&&await page.locator('[data-action="edit"]').isVisible(),'removing header retains edit and refresh entry');
- await page.locator('[data-action="edit"]').click();await page.locator('[data-show="header"]').click();await page.locator('[data-show="phone"]').click();await page.locator('[data-show="deviceShare"]').click();await page.locator('[data-width="header"]').selectOption('12');await page.locator('[data-height="header"]').fill('112');await page.locator('[data-height="header"]').dispatchEvent('change');await page.locator('[data-title="header"]').fill('');await page.locator('[data-view="pie"]').selectOption('pie');
- const resize=page.locator('[data-widget="phone"] .resize-handle'),box=await resize.boundingBox();await page.mouse.move(box.x+10,box.y+10);await page.mouse.down();await page.mouse.move(box.x+140,box.y+40,{steps:8});await page.mouse.up();await page.locator('[data-action="save-layout"]').click();check(app.store.get('layout').widgets.find(w=>w.id==='phone').w>6,'pointer resize persists');check(await page.locator('[data-widget="deviceShare"] .pie-visual').isVisible(),'add device pie');check(await page.locator('[data-widget="pie"] .pie-visual path').count()>0,'switch donut to pie');
- const homePieWidth=app.store.get('layout').widgets.find(w=>w.id==='pie').w;await page.locator('[data-action="refresh"]').click();check(await page.locator('#selectedDate').inputValue()===today,'refresh retains chosen date');
- await page.locator('[data-app]').first().click();await page.locator('#dialog').waitFor({state:'visible'});await page.locator('[data-close]').click();check(true,'app detail dialog');
- await page.locator('.nav [data-page="dashboard"]').click();await page.click('[data-mode=week]');await page.click('[data-tool=layout]');await page.locator('[data-widget]').first().waitFor();await page.locator('[data-widget="pie"]').waitFor();const weekly=app.store.summary().week;check((await page.locator('[data-widget="phone"] .metric').innerText()).replace(/\s/g,'')===`${Math.floor(weekly.current.totals.android/3600000)?Math.floor(weekly.current.totals.android/3600000)+'小时':''}${Math.floor(weekly.current.totals.android/60000)%60}分钟`,'weekly phone total uses current week');check(await page.locator('[data-widget="hours"] .chart').getAttribute('aria-label')==='每日设备时长，本周与上周同期，单位小时','weekly daily trend');
- await page.screenshot({animations:'disabled',path:'artifacts/dashboard-week-test-data.png',fullPage:true});
- await page.locator('[data-action="edit"]').click();await page.locator('[data-hide="apps"]').click();await page.locator('[data-title="header"]').fill('我的每周');await page.locator('[data-width="pie"]').selectOption('9');await page.locator('[data-height="pie"]').fill('420');await page.locator('[data-height="pie"]').dispatchEvent('change');
- await page.evaluate(()=>window.scrollTo(0,0));await page.locator('[data-widget="header"] .drag-handle').dragTo(page.locator('[data-widget="phone"]'));await page.locator('[data-action="save-layout"]').click();check(app.store.get('weekLayout').widgets.findIndex(w=>w.id==='header')>0,'header can be dragged');check(app.store.get('weekLayout').widgets.find(w=>w.id==='pie').w===9,'weekly resize persisted');
- await page.reload();await page.click("[data-tool=layout]");await page.locator('[data-widget="apps"]').waitFor();check(app.store.get('layout').widgets.find(w=>w.id==='pie').w===homePieWidth,'today layout independent from week');check(await page.locator('[data-widget="phone"] .metric small').first().evaluate(el=>getComputedStyle(el).fontSize)==='28px','time typography persists after reload');await page.locator('.nav [data-page="dashboard"]').click();await page.click('[data-mode=week]');await page.click('[data-tool=layout]');await page.locator('[data-widget]').first().waitFor();check(await page.locator('[data-widget="apps"]').count()===0&&await page.getByRole('heading',{name:'我的每周'}).isVisible(),'weekly removal and title survive reload');
- await page.locator('[data-page="devices"]').click();await page.locator('[data-action="pair"]').click();await page.locator('.qr').waitFor();check((await page.locator('.pair-code').textContent()).trim().length===6,'pairing QR unaffected');
- await page.locator('[data-page="settings"]').click();const heights=await page.locator('.settings-grid>.panel').evaluateAll(els=>els.map(e=>e.getBoundingClientRect().height));check(Math.abs(heights[0]-heights[1])<1&&Math.abs(heights[2]-heights[3])<1,'settings cards equal height in each row');await page.screenshot({animations:'disabled',path:'artifacts/dashboard-settings-test-data.png'});
- const download=page.waitForEvent('download');await page.locator('[data-export="json"]').click();check((await download).suggestedFilename()==='time-ledger.json','export unaffected');
- await page.emulateMedia({colorScheme:'light'});await page.locator('#theme').selectOption('light');await page.locator('#timeZone').fill('UTC');await page.locator('.accent-choice[data-accent="amber"]').click();check(await page.locator('#timeZone').inputValue()==='UTC','changing accent preserves unsaved settings');await page.locator('#timeZone').fill(settings.timeZone);
- check(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue('--accent').trim())==='#b96713'&&await page.locator('.accent-choice[aria-pressed="true"]').count()===1,'selected accent applies immediately');
- await page.locator('#theme').selectOption('dark');check(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue('--accent').trim())==='#ffb15c','dark mode uses readable accent');await page.screenshot({animations:'disabled',path:'artifacts/accent-dark-test-data.png'});
- const otherOrigin=await browser.newPage();await otherOrigin.goto(app.url.replace('127.0.0.1','localhost'));await otherOrigin.locator('.period-total').waitFor();check(await otherOrigin.locator('body').getAttribute('data-accent')==='amber'&&await otherOrigin.locator('body').evaluate(el=>el.classList.contains('dark')),'appearance persists across different local origins');await otherOrigin.close();
- await page.reload();await page.click("[data-tool=layout]");await page.locator('[data-widget="apps"]').waitFor();await page.locator('[data-page="settings"]').click();check(await page.locator('#theme').inputValue()==='dark'&&await page.locator('.accent-choice[data-accent="amber"]').getAttribute('aria-pressed')==='true','accent and theme persist after reload');
- await page.locator('#theme').selectOption('system');await page.emulateMedia({colorScheme:'dark'});await page.waitForFunction(()=>getComputedStyle(document.body).getPropertyValue('--accent').trim()==='#ffb15c');await page.emulateMedia({colorScheme:'light'});await page.waitForFunction(()=>getComputedStyle(document.body).getPropertyValue('--accent').trim()==='#b96713');check(true,'system appearance changes update accent');await page.locator('.accent-choice[data-accent="blue"]').click();
- await page.setViewportSize({width:390,height:844});check(!await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'mobile color picker no overflow');await page.screenshot({animations:'disabled',path:'artifacts/accent-mobile-test-data.png',fullPage:true});await page.locator('.nav [data-page="dashboard"]').click();await page.click('[data-tool=layout]');check(!await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'mobile today no overflow');await page.screenshot({animations:'disabled',path:'artifacts/dashboard-mobile-test-data.png',fullPage:true});
- await page.locator('[data-action="edit"]').click();const before=app.store.get('layout').widgets.findIndex(w=>w.id==='pie');await page.locator('[data-widget="pie"] [data-move="up"]').click();await page.locator('[data-action="save-layout"]').click();check(app.store.get('layout').widgets.findIndex(w=>w.id==='pie')===before-1,'mobile module reorder');
- await page.locator('.nav [data-page="dashboard"]').click();await page.click('[data-mode=week]');await page.click('[data-tool=layout]');await page.locator('[data-widget]').first().waitFor();check(!await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'mobile week no overflow');
- check(errors.length===0,'no browser errors: '+errors.join(' | '));console.log(JSON.stringify({passed:true,checks,browserErrors:errors}));
-}finally{await browser?.close();await app.close();fs.rmSync(dir,{recursive:true,force:true});}
+  const now=Date.now();
+  for(const [appId,minutes] of [['notes',20],['reader',5]])
+    service.store.write({id:appId,appId,appName:appId,deviceId:service.store.device.id,start:now-minutes*60000,end:now});
+  browser=await chromium.launch({channel:process.env.ZTIME_BROWSER||'msedge'});
+  const page=await browser.newPage();
+  page.setDefaultTimeout(6000);
+  const errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.goto(service.url);
+  const click=selector=>page.locator(selector).click();
+  const cal=name=>click('[data-cal="'+name+'"]');
+  const modal=page.locator('.period-dialog');
+  await page.locator('.period-total').waitFor();
+  assert.deepEqual(await page.locator('[data-mode]').allTextContents(),['日','周','月','年']);
+  await click('[data-mode=week]');
+  const bars=page.locator('.rank-track i');
+  await bars.first().waitFor();
+  assert.equal(await bars.count(),2);
+  assert.ok((await bars.first().boundingBox()).width >= (await bars.last().boundingBox()).width);
+  await click('[data-rank="0"]');await page.locator('#dialog[open]').waitFor();await page.keyboard.press('Escape');
+  await page.locator('.period-total').waitFor();
+  const before=await page.locator('.period-total').boundingBox();
+  await cal('dates');await modal.waitFor();
+  assert.deepEqual(await page.locator('.period-total').boundingBox(),before);
+  await modal.locator('[data-edge=start]').fill('2024-03-01');await modal.locator('[data-edge=end]').fill('2024-04-01');await cal('apply');
+  assert.match(await modal.innerText(),/同一个自然月/);
+  await modal.locator('[data-edge=end]').fill('2024-03-31');await cal('apply');
+  await page.waitForFunction(()=>document.querySelectorAll('.pd-col').length===31);
+  await cal('compare');await page.keyboard.press('Escape');assert.ok(!await modal.isVisible());
+  await click('[data-tool=layout]');await click('[data-toggle=ranking]');await cal('cancel');
+  assert.ok(await page.getByRole('heading',{name:'应用排行'}).isVisible());
+  await click('[data-tool=layout]');await click('[data-key=compare][data-shift="-1"]');await click('[data-toggle=ranking]');await click('[data-save]');
+  await modal.waitFor({state:'hidden'});await page.reload();await page.locator('.period-total').waitFor();
+  assert.equal(await page.getByRole('heading',{name:'应用排行'}).count(),0);
+  assert.equal(service.store.get('periodLayout').cards[1].key,'compare');
+  await click('[data-page=devices]');await click('[data-action=pair]');await page.locator('.qr').waitFor();
+  await click('[data-page=settings]');await page.locator('#theme').selectOption('dark');
+  assert.deepEqual(await page.locator('.settings-grid>.panel h2').allTextContents().then(xs=>xs.slice(0,2)),['统计规则','记录与外观']);
+  for(const name of ['dashboard','devices','settings']){
+    await click('[data-page='+name+']');
+    const refresh=page.getByRole('button',{name:'更新',exact:true});
+    assert.equal(await refresh.textContent(),'');assert.ok(await refresh.evaluate(el=>el===el.parentElement.lastElementChild));
+    await refresh.click();
+    assert.equal(await page.locator('.nav [data-page=week]').count(),0);
+  }
+  await page.setViewportSize({width:390,height:740});await click('[data-page=dashboard]');await cal('dates');
+  assert.ok(await modal.evaluate(el=>el.getBoundingClientRect().right<=innerWidth));
+  assert.ok(await page.evaluate(()=>window.ledgerBack()));assert.ok(!await modal.isVisible());
+  assert.deepEqual(errors,[]);
+  console.log('Passed dashboard dates, ranking, layout persistence, refresh, navigation, settings and mobile modal.');
+}finally{
+  await browser?.close();await service.close();fs.rmSync(dir,{recursive:true,force:true});
+}

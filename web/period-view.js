@@ -1,15 +1,17 @@
+import {refreshControl} from './refresh-control.js';
+import {cardTitles,defaultCardLayout,validCardLayout} from './shared/period-layout.js';
 import {dateKey} from './shared/time.js';
 import {periodStats} from './shared/period.js';
 
 // Keep the selection when moving between dashboard, devices and settings.
-export function createPeriodView({api, escape, duration, details, openLayout, report, onError}) {
+export function createPeriodView({api, escape, duration, details, report, onError}) {
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
  let today;
  const ymd=(y,m,day=1)=>Date.UTC(y,m,day)/DAY;
  const month=n=>iso(n).slice(0,7),stamp=n=>iso(n).replaceAll('-','/'),short=n=>iso(n).slice(5).replace('-','/');
  const dt=n=>new Date(n*DAY),first=n=>ymd(dt(n).getUTCFullYear(),dt(n).getUTCMonth()),nextMonth=n=>ymd(dt(n).getUTCFullYear(),dt(n).getUTCMonth()+1);
  const yr=n=>dt(n).getUTCFullYear(), dayOf=n=>dt(n).getUTCDate(),len=r=>r[1]-r[0]+1;
- const modes={day:'每日',week:'每周',month:'每月',year:'每年',custom:'自选'};
+ const modes={day:'日',week:'周',month:'月',year:'年'};
  const span=(mode,n)=>{let a=n,b=n;
   if(mode==='week'){const mon=n-(dt(n).getUTCDay()+6)%7;a=mon;b=mon+6;}
   if(mode==='month'){a=first(n);b=nextMonth(n)-1;}
@@ -26,6 +28,67 @@ export function createPeriodView({api, escape, duration, details, openLayout, re
    if(snapshot.native)return periodStats(snapshot.sessions,snapshot.devices,snapshot.settings,from,to,kind,queryScope());
    return api('/api/period?'+new URLSearchParams({from,to,mode:kind,scope:queryScope()}));
  }
+ let layout, draft=null, saving=false, openerSelector;
+ const dialog=document.createElement('dialog');
+ dialog.className='period-dialog';
+ document.body.append(dialog);
+
+ function layoutPanel() {
+   const rows=draft.map(({key,visible},index)=>{
+     const name=cardTitles[key];
+     return `<div class="layout-row"><b>${name}</b><button data-shift="-1" data-key="${key}" aria-label="上移${name}" ${index===0?'disabled':''}>↑</button><button data-shift="1" data-key="${key}" aria-label="下移${name}" ${index===draft.length-1?'disabled':''}>↓</button><button data-toggle="${key}" aria-pressed="${visible}">${visible?'显示':'隐藏'}</button></div>`;
+   }).join('');
+   return `<section class="pd-picker"><h2>仪表盘布局</h2><p>调整卡片顺序和显示状态。</p>${rows}<div class="pd-end"><button data-cal="cancel">取消</button><button data-save class="pd-primary">保存布局</button></div><p class="layout-error" role="status"></p></section>`;
+ }
+ function drawModal() {
+   const active=document.activeElement;
+   const focusKey=active && dialog.contains(active) ? [...active.attributes].filter(a=>a.name.startsWith('data-')).map(a=>'['+a.name+'="'+CSS.escape(a.value)+'"]').join('') : '';
+   dialog.innerHTML=draft?layoutPanel():calendar();
+   dialog.setAttribute('aria-label',draft?'仪表盘布局':picker.target==='year'?'选择年份':picker.target==='comparison'?'选择对比区间':'选择统计区间');
+   if(!dialog.open)dialog.showModal();
+   if(focusKey)dialog.querySelector(focusKey)?.focus({preventScroll:true});
+ }
+ function closeModal(){
+   if(!dialog.open)return false;
+   if(saving)return true;
+   draft=null;picker=null;dialog.close();
+   host?.querySelector(openerSelector)?.focus({preventScroll:true});
+   return true;
+ }
+ dialog.oncancel=event=>{event.preventDefault();closeModal();};
+ dialog.onchange=event=>{
+   const edge=event.target.dataset.edge;
+   if(!picker || !edge)return;
+   picker[edge]=event.target.value;
+   picker.error=valid(picker);
+   if(edge==='start' && Number.isInteger(num(picker.start)))picker.month=first(num(picker.start));
+   drawModal();
+ };
+ dialog.onclick=async event=>{
+   if(saving)return;
+   const button=event.target.closest('button');
+   if(!button){
+     if(event.target===dialog){const rect=dialog.getBoundingClientRect();
+       if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeModal();}
+     return;
+   }
+   if(button.dataset.cal==='cancel'){closeModal();return;}
+   if(button.hasAttribute('data-save')){
+     saving=true;button.disabled=true;
+     try{
+       await api('/api/period-layout','PUT',{cards:draft});
+       layout=draft;saving=false;closeModal();paint();
+       host.querySelector('[data-tool=layout]')?.focus();
+     }catch(error){saving=false;button.disabled=false;dialog.querySelector('.layout-error').textContent=error.message;}
+   }else if(button.dataset.toggle){
+     const card=draft.find(row=>row.key===button.dataset.toggle);
+     card.visible=!card.visible;drawModal();
+   }else if(button.dataset.shift){
+     const i=draft.findIndex(row=>row.key===button.dataset.key),j=i+Number(button.dataset.shift);
+     if(j>=0 && j<draft.length)[draft[i],draft[j]]=[draft[j],draft[i]];
+     drawModal();
+   }else act(button);
+ };
  function promptPicker(target){
   const r=target==='comparison'?(comparison||period):period;
   const start=Math.max(r[0],first(r[1]));
@@ -42,14 +105,14 @@ export function createPeriodView({api, escape, duration, details, openLayout, re
  function act(button){
   const a=button.dataset.cal;if(!a)return false;
   if(a==='mode'){const m=button.dataset.mode;if(m==='custom')promptPicker('period');else choose(m,Math.min(period[1],today));}
-  if(a==='dates'){if(mode==='year')picker={target:'year'};else promptPicker('period');}
+  if(a==='dates'){openerSelector='[data-cal=dates]';if(mode==='year')picker={target:'year'};else promptPicker('period');}
   if(a==='prev'||a==='next'){
    const k=a==='prev'?-1:1,n=k<0?period[0]-1:period[1]+1;
    if(mode==='custom'){const m=first(n);const limit=nextMonth(m)-1;const start=k<0?Math.max(m,n-len(period)+1):n;period=[start,Math.min(k<0?n:start+len(period)-1,limit,today)];comparison=null;picker=null;}
    else choose(mode,n);
   }
-  if(a==='apply-year')choose('year',ymd(+host.querySelector('#pd-year').value,0));
-  if(a==='compare'){if(mode==='year'){const year=yr(period[0])-1,e=dt(period[1]);const m=e.getUTCMonth();comparison=[ymd(year,0),Math.min(ymd(year,m,e.getUTCDate()),ymd(year,m+1)-1)];}else promptPicker('comparison');}
+  if(a==='apply-year')choose('year',ymd(+dialog.querySelector('#pd-year').value,0));
+  if(a==='compare'){openerSelector='[data-cal=compare]';if(mode==='year'){const year=yr(period[0])-1,e=dt(period[1]);const m=e.getUTCMonth();comparison=[ymd(year,0),Math.min(ymd(year,m,e.getUTCDate()),ymd(year,m+1)-1)];}else promptPicker('comparison');}
   if(a==='clear'){comparison=null;picker=null;}
   if(a==='scope')scope=button.dataset.scope;
   if(a==='today'||a==='yesterday'){const n=today-(a==='yesterday'?1:0);picker.start=picker.end=iso(n);picker.month=first(n);picker.second=false;picker.error='';}
@@ -59,6 +122,8 @@ export function createPeriodView({api, escape, duration, details, openLayout, re
    else if(s.slice(0,7)!==picker.start.slice(0,7)){picker.error='结束日必须与开始日在同一个月。';}
    else{[picker.start,picker.end]=[picker.start,s].sort();picker.second=false;picker.error='';}}
   if(a==='apply'){const p=picker;p.error=p.error||valid(p);if(!p.error){const r=[num(p.start),num(p.end)];if(p.target==='comparison')comparison=r;else{period=r;mode=len(r)===1?'day':'custom';comparison=null;}picker=null;}}
+  if(picker){drawModal();return true;}
+  if(dialog.open)closeModal();
   followToday=period[1]===today;
   update();return true;
  }
@@ -80,13 +145,16 @@ export function createPeriodView({api, escape, duration, details, openLayout, re
  function paint() {
    const modesHtml=Object.entries(modes).map(([key,name])=>`<button data-cal="mode" data-mode="${key}" aria-pressed="${mode===key}">${name}</button>`).join('');
    const scopeHtml=[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([key,name])=>`<button data-cal="scope" data-scope="${key}" aria-pressed="${scope===key}">${name}</button>`).join('');
-   const header=`<header class="topbar page-header"><div class="page-heading"><h1>仪表盘</h1></div><div class="actions"><button data-tool="refresh">更新</button><button data-tool="layout">我的布局</button>${mode==='week'?'<button data-tool="report">导出周报</button>':''}</div></header>`;
-   const controls=`<div class="pd-controls"><div class="pd-modes">${modesHtml}</div><div class="pd-range"><button aria-label="上一期间" data-cal="prev">‹</button><button data-cal="dates">${mode==='year'?yr(period[0])+' 年':label(period)}　▾</button><button aria-label="下一期间" data-cal="next" ${period[1]>=today?'disabled':''}>›</button></div></div>`;
-   const ranking=result?.apps.slice(0,20).map((a,index)=>`<button class="app-row" data-rank="${index}"><span class="app-name">${escape(a.name)}</span><small>${a.platform==='android'?'手机':'电脑'}</small><strong>${duration(a.duration,true)}</strong></button>`).join('');
-   const summary=result?`<section class="period-card period-total"><div><small>设备累计</small><h2>${duration(result.total,true)}</h2><p>${label(period)} · ${result.days} 个统计日</p></div><div class="pd-modes">${scopeHtml}</div></section>
-     <section class="period-card"><div class="pd-top"><h2>${mode==='year'?'全年趋势':mode==='day'?'分时用时':'每日趋势'}</h2><small>单位：小时</small></div>${renderChart(result.bins)}</section>
-     <div class="pd-bottom"><section class="period-card"><h2>应用排行</h2>${ranking || '<p>所选期间暂无使用记录</p>'}</section>${renderComparison()}</div>`:'<p role="status">正在读取所选期间…</p>';
-   host.innerHTML=header+controls+calendar()+summary;
+   const header=`<header class="topbar page-header"><div class="page-heading"><h1>仪表盘</h1></div><div class="actions"><button data-tool="layout" aria-haspopup="dialog">布局</button>${mode==='week'?'<button data-tool="report">导出周报</button>':''}${refreshControl('data-tool="refresh"')}</div></header>`;
+   const controls=`<div class="pd-controls"><div class="pd-modes">${modesHtml}</div><div class="pd-range"><button aria-label="上一期间" data-cal="prev">‹</button><button data-cal="dates" aria-haspopup="dialog">${mode==='year'?yr(period[0])+' 年':label(period)}　▾</button><button aria-label="下一期间" data-cal="next" ${period[1]>=today?'disabled':''}>›</button></div></div>`;
+   const ranking=result?.apps.slice(0,20).map((a,index)=>`<button class="app-row" data-rank="${index}"><span class="app-name">${escape(a.name)}</span><small>${a.platform==='android'?'手机':'电脑'}</small><strong>${duration(a.duration,true)}</strong><span class="rank-track" aria-hidden="true"><i style="width:${100*a.duration/result.apps[0].duration}%"></i></span></button>`).join('');
+   const cards=result?{
+     trend:`<section class="period-card trend-card"><div class="pd-top"><h2>${mode==='year'?'全年趋势':mode==='day'?'分时用时':'每日趋势'}</h2><small>单位：小时</small></div>${renderChart(result.bins)}</section>`,
+     ranking:`<section class="period-card"><h2>应用排行</h2>${ranking || '<p>所选期间暂无使用记录</p>'}</section>`,
+     compare:renderComparison()
+   }:{};
+   const summary=result?`<section class="period-card period-total"><div class="total-value"><small>设备累计</small><h2>${duration(result.total,true)}</h2></div><div class="pd-modes">${scopeHtml}</div></section><div class="pd-bottom">${layout.filter(card=>card.visible).map(card=>cards[card.key]).join('')}</div>`:'<p role="status">正在读取所选期间…</p>';
+   host.innerHTML=header+controls+summary;
    host.onclick=async event=>{
      const button=event.target.closest('button');
      if(!button)return;
@@ -94,20 +162,15 @@ export function createPeriodView({api, escape, duration, details, openLayout, re
        if(button.hasAttribute('data-rank')){
          const app=result.apps[Number(button.dataset.rank)];
          await details(app.appId,app.deviceId,{start:result.start,end:result.end,label:label(period),single:mode==='day'});
-       } else if(button.dataset.tool==='layout')openLayout(mode,iso(period[1]));
+       } else if(button.dataset.tool==='layout'){
+         openerSelector='[data-tool=layout]';draft=structuredClone(layout);drawModal();
+       }
        else if(button.dataset.tool==='report')await report(iso(period[1]));
        else if(button.dataset.tool==='refresh')await update(true);
-       else if(act(button) && button.dataset.cal==='compare')host.querySelector('.pd-picker')?.scrollIntoView({block:'center'});
+       else act(button);
      } catch(error){onError(error.message);}
    };
-   host.onchange=event=>{
-     const edge=event.target.dataset.edge;
-     if(!picker || !edge)return;
-     picker[edge]=event.target.value;
-     picker.error=valid(picker);
-     if(edge==='start' && Number.isInteger(num(picker.start)))picker.month=first(num(picker.start));
-     paint();
-   };
+
  }
  async function update(force=false) {
    const key=JSON.stringify([mode,period,comparison,scope,snapshot.settings]);
@@ -126,8 +189,9 @@ export function createPeriodView({api, escape, duration, details, openLayout, re
    today=nextToday;
    if(!period || (rollover && followToday && mode!=='custom'))choose(mode,today);
    host=element;snapshot=data;
+   layout??=validCardLayout(data.periodLayout?.cards)?data.periodLayout.cards:defaultCardLayout();
    if(result)paint();
    update(true);
  }
- return {mount, get choosing(){return !!picker;}};
+ return {mount,closeModal,get choosing(){return dialog.open;}};
 }

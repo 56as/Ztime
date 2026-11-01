@@ -9,6 +9,8 @@ const paths=[
  'web/controls.css',
  'web/period.css',
  'web/period-view.js',
+ 'web/refresh-control.js',
+ 'shared/period-layout.js',
  'shared/period.js',
  'web/delete-confirm.js',
  'web/brand-icon.png',
