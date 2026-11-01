@@ -262,3 +262,21 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
   border:0;padding:0;margin-top:12px;
 }
 [data-review-device=mobile] .risk-block .style-confirm {flex-basis:100%}
+
+/* Desktop review #61–66: keep the two default charts visible together. */
+.desktop-v2 .pd-main {padding-block:clamp(12px,3vh,24px)}
+.desktop-v2 .pd-header {margin-bottom:14px}
+.desktop-v2 .pd-controls {margin-bottom:10px;border-top:3px solid var(--accent)}
+.desktop-v2 .pd-summary {padding:10px 16px;margin-bottom:10px;border-top:1px solid #e1e6ee}
+.desktop-v2 .pd-summary :is(small,h2) {font:550 16px/1.4 system-ui,"Microsoft YaHei",sans-serif;color:#42536b;letter-spacing:normal;margin:0}
+.desktop-v2 .pd-bottom {gap:12px}
+.desktop-v2 .pd-card {padding:16px 18px}
+@media(min-width:800px) {
+  .desk-ui.desktop-v2 .pd-bottom.default-pair {grid-template-columns:minmax(0,3fr) minmax(0,2fr);align-items:stretch}
+  .desk-ui.desktop-v2 .pd-bottom.default-pair > [data-card-key]:not([hidden]) {grid-column:auto}
+  .desktop-v2 .default-pair .usage-chart svg,.desktop-v2 .default-pair .usage-y {height:clamp(118px,24vh,190px)}
+  .desktop-v2 .default-pair .rank-scroll {max-height:clamp(148px,30vh,220px)}
+}
+.desktop-v2 .settings-view .fixed-setting .field :is(label,select) {font:500 14px/normal system-ui,"Microsoft YaHei",sans-serif;color:var(--text);letter-spacing:normal}
+.desktop-v2 .settings-view .fixed-setting .field select {height:36px;padding:0 10px;background-color:var(--bg)}
+.desktop-v2 .settings-view [data-action=save-settings] {display:block;margin-inline-start:auto}

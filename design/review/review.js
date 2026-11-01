@@ -147,7 +147,13 @@ function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2','desk-ui');
 
   for(const [selector] of removedDesktopCopy['desktop-'+pageId]||[])d.querySelector(selector)?.remove();
+  if(pageId==='devices'){
+    const card=d.createElement('section');card.className='panel';card.id='extension-settings';
+    card.innerHTML='<h2>浏览器识别</h2><button data-action="design-extension">启用并生成连接码</button><p id="design-connection" hidden>连接码示意 · 在扩展弹窗中输入</p>';
+    d.querySelector('.devices-view').append(card);
+  }
   if(pageId!=='settings')return;
+  d.getElementById('extension-settings')?.remove();
   const grid=d.querySelector('.settings-grid');
   const input=d.getElementById('timeZone');input.outerHTML=zoneSelect(desktopZone);
   const pause=grid.querySelector('[data-action=pause]'), startup=grid.querySelector('[data-action=autostart]');
@@ -303,7 +309,7 @@ function canEdit(el){
 function applyTrials(){
   for(const [el,base] of originals){if(!el.isConnected){originals.delete(el);continue;}el.textContent=base.copy;el.style.fontSize=base.size;}
   for(const n of notes){
-    if(n.board!==frame.dataset.loaded || !n.trial || n.resolved)continue;
+    if(noteBoard(n)!==frame.dataset.loaded || !n.trial || n.resolved)continue;
     const el=targetFor(n);if(!canEdit(el))continue;
     if(!originals.has(el))originals.set(el,{copy:el.textContent,size:el.style.fontSize});
     el.textContent=n.trial.copy;
@@ -340,6 +346,11 @@ const mobileAnnotationTargets={
     '#app > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(4)':'#mobile-version'
   }
 };
+// Keep earlier desktop notes attached to the browser card after it moves to Devices.
+function noteBoard(note){
+  return secondDraftNote(note) && note.board==='desktop-settings' && /^#(?:extension-settings|design-connection)(?:$|[ >])/.test(note.selector)
+    ? 'desktop-devices' : note.board;
+}
 function comparisonNote(note){
   return (secondDraftNote(note) && note.id===37) ||
     (note.board==='mobile-home' && [48,49].includes(note.id));
@@ -366,9 +377,10 @@ function locate(note) {
   const flow=v2?note.flow.slice(secondDraftPrefix.length):note.flow;
   const dashboardNote=flow?.startsWith('仪表盘 · ');
   const unifiedPage=note.flow?.includes('仪表盘') && /-(devices|settings)$/.test(note.board);
-  if (board() !== note.board || frame.dataset.loaded !== note.board || v2!==currentDraft() || (dashboardNote && !periodView) || (unifiedPage && !isDashboard(frame.dataset.feature))) {
+  const destination=noteBoard(note);
+  if (board() !== destination || frame.dataset.loaded !== destination || v2!==currentDraft() || (dashboardNote && !periodView) || (unifiedPage && !isDashboard(frame.dataset.feature))) {
     jumpTo = note;
-    showBoard(note.board,v2?desktopV2:dashboardNote||unifiedPage?'dashboard':'');
+    showBoard(destination,v2?desktopV2:dashboardNote||unifiedPage?'dashboard':'');
     return;
   }
   if(dashboardNote)periodView.restore(flow);
@@ -389,7 +401,7 @@ function pins() {
   if (!layer) return;
   layer.replaceChildren();
   const phoneNav=device.value==='mobile' && doc().querySelector('#period-dashboard:not([hidden]) .pd-nav, .unified .sidebar');
-  for (const note of notes.filter(n => n.board === frame.dataset.loaded && !n.resolved)) {
+  for (const note of notes.filter(n => noteBoard(n) === frame.dataset.loaded && !n.resolved)) {
     const el = targetFor(note);
     if (!el) continue;
     const box = el.getBoundingClientRect();
@@ -418,7 +430,7 @@ function renderList() {
   for (const n of visibleNotes.reverse()) {
     const card = document.createElement('article');
     const label = document.createElement('small'), text = document.createElement('p');
-    label.textContent = '#' + n.id + '　' + (n.kind||'UI')+' · '+describe(n.board) + (n.resolved ? ' · 已处理' : '');
+    label.textContent = '#' + n.id + '　' + (n.kind||'UI')+' · '+describe(noteBoard(n)) + (n.resolved ? ' · 已处理' : '');
     text.textContent = n.trial?('试改为“'+n.trial.copy+'”'+(n.trial.size?' · '+n.trial.size+' px':'')+' '+n.text):n.text;
     const open = document.createElement('button'), toggle = document.createElement('button');
     open.textContent = '定位 / 编辑'; open.onclick = () => locate(n);
@@ -541,7 +553,7 @@ frame.onload = () => {
   d.addEventListener('scroll', pins, true);
   frame.contentWindow.addEventListener('resize',pins);
   renderList();
-  if (jumpTo && jumpTo.board === frame.dataset.loaded) { const n=jumpTo; jumpTo=null; locate(n); }
+  if (jumpTo && noteBoard(jumpTo) === frame.dataset.loaded) { const n=jumpTo; jumpTo=null; locate(n); }
 };
 $('annotate').onclick = () => {
   if (!allowLeave()) return;
@@ -715,6 +727,8 @@ function mountPeriodDashboard(d,onChange){
        card.innerHTML='<h3>'+modules[key]+'</h3>'+shareChart(key,appTotals,ms=>dur(ms/60000));cards[key]=card;
      }
    }
+   const shown=layout.filter(row=>row.visible);
+   grid.classList.toggle('default-pair',desktop && shown.length===2 && shown.every(row=>['ranking','trend'].includes(row.key)));
    for(const entry of layout){
      const card=cards[entry.key];
      card.dataset.cardKey=entry.key;card.hidden=!entry.visible;
