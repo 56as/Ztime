@@ -4,14 +4,15 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 export class Collector {
- constructor(store){this.store=store;this.active=null;this.last=0;this.process=null;this.state='starting';}
+ constructor(store,hostFor=()=>null){this.store=store;this.hostFor=hostFor;this.active=null;this.last=0;this.process=null;this.state='starting';}
  sample(value,now=Date.now()){
   if(this.store.get('paused',false)){this.active=null;this.state='paused';return;}
   if(now-this.last>10000)this.active=null;
-  if(this.active&&(value.state!=='active'||value.appId!==this.active.appId)){this.active.end=now;this.store.write(this.active);this.active=null;}
+  const site=value.state==='active'?this.hostFor(value.appId,now):null;
+  if(this.active&&(this.active.site!==site||value.state!=='active'||value.appId!==this.active.appId)){this.active.end=now;this.store.write(this.active);this.active=null;}
   this.last=now;this.state=value.state;
   if(value.state!=='active'||!value.appId){this.active=null;this.store.set('collector',{state:value.state,lastSample:now});return;}
-  if(!this.active||this.active.appId!==value.appId)this.active={id:randomUUID(),deviceId:this.store.device.id,appId:value.appId,appName:value.appName,start:now,end:now};
+  if(!this.active||this.active.appId!==value.appId)this.active={id:randomUUID(),deviceId:this.store.device.id,appId:value.appId,appName:value.appName,site,start:now,end:now};
   this.active.end=now;
   this.store.write(this.active);
   this.store.set('collector',{state:'active',lastSample:now,appName:value.appName});

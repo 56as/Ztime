@@ -7,7 +7,7 @@ fs.mkdirSync(out,{recursive:true});if(!exists){fs.cpSync(path.join(electronRoot,
 const brandedExe=path.join(out,'Ztime.exe');if(!fs.existsSync(brandedExe))fs.copyFileSync(path.join(electronRoot,'dist','electron.exe'),brandedExe);
 execFileSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(root,'scripts/brand-windows.ps1'),'-Executable',brandedExe],{stdio:'inherit'});
 const target=path.join(out,'resources','app');fs.mkdirSync(target,{recursive:true});
-for(const dir of ['desktop','web','shared','assets'])fs.cpSync(path.join(root,dir),path.join(target,dir),{recursive:true});
+for(const dir of ['desktop','web','shared','assets','extension'])fs.cpSync(path.join(root,dir),path.join(target,dir),{recursive:true});
 const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));delete pkg.devDependencies;delete pkg.scripts;fs.writeFileSync(path.join(target,'package.json'),JSON.stringify(pkg,null,2));
 const copied=new Map();
 function copyDependency(name,from){const req=createRequire(path.join(from,'package.json'));const file=req.resolve(name+'/package.json'),source=path.dirname(file),metadata=JSON.parse(fs.readFileSync(file,'utf8'));if(copied.has(name)){if(copied.get(name)!==metadata.version)throw new Error('Dependency version conflict: '+name);return;}copied.set(name,metadata.version);const dest=path.join(target,'node_modules',name);fs.mkdirSync(path.dirname(dest),{recursive:true});fs.cpSync(source,dest,{recursive:true,filter:src=>!path.relative(source,src).split(path.sep).includes('node_modules')});for(const dep of Object.keys(metadata.dependencies??{}))copyDependency(dep,source);}

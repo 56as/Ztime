@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Ztime 网站识别",
+  "version": "1.0.0",
+  "minimum_chrome_version": "120",
+  "description": "为本机 Ztime 的前台浏览器时段标注网站域名。",
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "optional_permissions": [
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*"
+  ],
+  "incognito": "not_allowed",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "worker.js"
+  }
+}

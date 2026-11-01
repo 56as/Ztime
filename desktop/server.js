@@ -5,19 +5,22 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
+import { BrowserBridge } from './browser-bridge.js';
 import { Store } from './store.js';
 import { Collector } from './collector.js';
 import { SyncServer, readJson, send, equalSecret } from './protocol.js';
 const root=fileURLToPath(new URL('../',import.meta.url));
 export async function createApp(options={}){
  const dir=options.dataDir??process.env.TIME_LEDGER_DATA_DIR??path.join(root,'.data');fs.mkdirSync(dir,{recursive:true});
- const store=new Store(path.join(dir,'ledger.sqlite'));const collector=new Collector(store);const sync=new SyncServer(store,dir);let syncError=null;
+ const store=new Store(path.join(dir,'ledger.sqlite'));const browser=new BrowserBridge(store,options.browserPort);const collector=new Collector(store,(app,now)=>browser.hostFor(app,now));
+ if(browser.status().enabled){try{await browser.listen();}catch{/* Settings displays the unavailable bridge. */}}const sync=new SyncServer(store,dir);let syncError=null;
  try{await sync.start(options.syncPort??40327);}catch(e){syncError=e.message;}
  if(options.collect!==false)collector.start();
  const cookie=randomBytes(32).toString('hex');
  async function route(method,url,body={}){
   const u=new URL(url,'http://localhost');
-  if(method==='GET'&&u.pathname==='/api/summary')return {...store.summary(u.searchParams.get('date')||undefined),autostart:options.autostart?.get()??null,sync:{port:sync.port,addresses:sync.addresses(),error:syncError}};
+  if(method==='GET'&&u.pathname==='/api/summary')return {...store.summary(u.searchParams.get('date')||undefined),browser:browser.status(),autostart:options.autostart?.get()??null,sync:{port:sync.port,addresses:sync.addresses(),error:syncError}};
+  if(method==='POST'&&u.pathname==='/api/browser')return browser.configure(body.enabled===true);
   if(method==='PUT'&&u.pathname==='/api/appearance'){if(!validAppearance(body))throw new Error('外观选项无效');store.set('appearance',{theme:body.theme,accentColor:body.accentColor});return {ok:true};}
   if(method==='POST'&&u.pathname==='/api/autostart'){if(!options.autostart)throw new Error('开机启动仅在桌面程序中设置');options.autostart.set(body.enabled===true);return {ok:true};}
   if(method==='POST'&&u.pathname==='/api/pause'){collector.pause(body.paused===true);return {ok:true};}
@@ -60,6 +63,6 @@ export async function createApp(options={}){
   }catch(e){send(res,400,{error:e.message});}
  });
  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(options.port??40326,'127.0.0.1',resolve);});
- return {store,collector,sync,route,url:`http://127.0.0.1:${server.address().port}`,close:()=>new Promise(resolve=>{collector.stop();sync.close();server.close(()=>{store.close();resolve();});})};
+ return {store,collector,sync,route,url:`http://127.0.0.1:${server.address().port}`,close:()=>new Promise(resolve=>{browser.close();collector.stop();sync.close();server.close(()=>{store.close();resolve();});})};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){const app=await createApp();console.log(`Time Ledger: ${app.url}`);for(const s of ['SIGINT','SIGTERM'])process.on(s,async()=>{await app.close();process.exit();});}

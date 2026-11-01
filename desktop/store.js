@@ -13,6 +13,8 @@ export class Store {
   CREATE TABLE IF NOT EXISTS peers(id TEXT PRIMARY KEY,token_hash TEXT NOT NULL,name TEXT NOT NULL,created_at INTEGER NOT NULL,last_sync INTEGER DEFAULT 0);
   CREATE TABLE IF NOT EXISTS requests(id TEXT PRIMARY KEY,name TEXT NOT NULL,device_id TEXT NOT NULL,secret_hash TEXT NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL,token TEXT);
   `);
+  if (!this.db.prepare('PRAGMA table_info(sessions)').all().some(col=>col.name==='site'))
+    this.db.exec('ALTER TABLE sessions ADD COLUMN site TEXT');
   let device=this.get('device');if(!device){device={id:randomUUID(),name,platform};this.set('device',device);}this.device=device;this.upsertDevice(device);
   if(!this.get('settings'))this.set('settings',DEFAULT_SETTINGS);
  }
@@ -22,7 +24,7 @@ export class Store {
  transaction(fn){this.db.exec('BEGIN IMMEDIATE');try{const result=fn();this.db.exec('COMMIT');return result;}catch(e){this.db.exec('ROLLBACK');throw e;}}
  upsertDevice(d){if(!d||!['windows','android'].includes(d.platform)||typeof d.id!=='string'||typeof d.name!=='string'||d.name.length>100)throw new Error('设备信息无效');this.db.prepare('INSERT INTO devices(id,name,platform,last_seen) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,last_seen=excluded.last_seen').run(d.id,d.name,d.platform,Date.now());}
  devices(){return this.db.prepare('SELECT * FROM devices').all().map(r=>({id:r.id,name:r.name,platform:r.platform,lastSeen:r.last_seen,local:r.id===this.device.id}));}
- decode(r){return {id:r.id,deviceId:r.device_id,appId:r.app_id,appName:r.app_name,start:r.start,end:r.end,sourceSeq:r.source_seq,seq:r.seq,updatedAt:r.updated_at,deletedAt:r.deleted_at};}
+ decode(r){return {id:r.id,deviceId:r.device_id,appId:r.app_id,appName:r.app_name,start:r.start,end:r.end,sourceSeq:r.source_seq,seq:r.seq,updatedAt:r.updated_at,site:r.site??null,deletedAt:r.deleted_at};}
  sessions(){return this.db.prepare('SELECT * FROM sessions ORDER BY start DESC').all().map(r=>this.decode(r));}
  write(s,local=true){
   const old=this.db.prepare('SELECT * FROM sessions WHERE id=?').get(s.id);
@@ -30,9 +32,9 @@ export class Store {
   if(old&&(old.device_id!==s.deviceId||old.app_id!==s.appId||old.start!==s.start))throw new Error('记录来源不可修改');
   if(old&&!s.deletedAt&&!local&&old.source_seq>=s.sourceSeq)return false;
   const seq=this.next(),sourceSeq=local?seq:s.sourceSeq;
-  this.db.prepare(`INSERT INTO sessions VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET end=excluded.end,source_seq=excluded.source_seq,seq=excluded.seq,updated_at=excluded.updated_at,deleted_at=excluded.deleted_at`).run(s.id,s.deviceId,s.appId,s.appName,s.start,s.end,sourceSeq,seq,Date.now(),s.deletedAt||null);return true;
+  this.db.prepare(`INSERT INTO sessions(id,device_id,app_id,app_name,start,end,source_seq,seq,updated_at,deleted_at,site) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET end=excluded.end,source_seq=excluded.source_seq,seq=excluded.seq,updated_at=excluded.updated_at,deleted_at=excluded.deleted_at,site=excluded.site`).run(s.id,s.deviceId,s.appId,s.appName,s.start,s.end,sourceSeq,seq,Date.now(),s.deletedAt||null,s.deletedAt?null:(s.site??null));return true;
  }
- markDeleted(id){const row=this.db.prepare('SELECT * FROM sessions WHERE id=?').get(id);if(row&&!row.deleted_at){const seq=this.next();this.db.prepare('UPDATE sessions SET deleted_at=?,seq=?,updated_at=? WHERE id=?').run(Date.now(),seq,Date.now(),id);}return !!row;}
+ markDeleted(id){const row=this.db.prepare('SELECT * FROM sessions WHERE id=?').get(id);if(row&&!row.deleted_at){const seq=this.next();this.db.prepare('UPDATE sessions SET site=NULL,deleted_at=?,seq=?,updated_at=? WHERE id=?').run(Date.now(),seq,Date.now(),id);}return !!row;}
  changes(after=0,limit=1000,peerId=null){return this.db.prepare('SELECT * FROM sessions WHERE seq>? AND (device_id=? OR (deleted_at IS NOT NULL AND (? IS NULL OR device_id=?))) ORDER BY seq LIMIT ?').all(after,this.device.id,peerId,peerId,limit).map(r=>this.decode(r));}
  importChanges(changes,owner){if(!Array.isArray(changes)||changes.length>1000)throw new Error('同步批次无效');let count=0;this.transaction(()=>{for(const s of changes){validateSession(s);if(s.deviceId!==owner){const existing=this.db.prepare('SELECT * FROM sessions WHERE id=?').get(s.id);if(!s.deletedAt||!existing||existing.device_id!==s.deviceId)throw new Error('不能替其他设备写入记录');if(this.markDeleted(s.id))count++;continue;}if(this.write(s,false))count++;}});return count;}
  receiveSettings(remote){if(!validSettings(remote))throw new Error('统计设置无效');const local=this.get('settings');if(JSON.stringify([local.dayStart,local.timeZone])===JSON.stringify([remote.dayStart,remote.timeZone])){this.set('settingsConflict',null);return false;}if(remote.revision===local.baseRevision)return false;if(local.revision==='default'||remote.baseRevision===local.revision){this.set('settings',remote);this.set('settingsConflict',null);return false;}if(remote.revision!=='default')this.set('settingsConflict',remote);return true;}
@@ -46,4 +48,4 @@ export class Store {
  }
  close(){this.db.close();}
 }
-export function validateSession(s){if(!s||typeof s.id!=='string'||s.id.length>100||typeof s.deviceId!=='string'||s.deviceId.length>100||typeof s.appId!=='string'||s.appId.length>500||typeof s.appName!=='string'||s.appName.length>200||!Number.isSafeInteger(s.start)||!Number.isSafeInteger(s.end)||s.start<0||s.end<s.start||s.end-s.start>32*86400000||s.end>Date.now()+86400000||!Number.isSafeInteger(s.sourceSeq)||s.sourceSeq<0||(s.deletedAt!=null&&!Number.isSafeInteger(s.deletedAt)))throw new Error('无效的使用记录');}
+export function validateSession(s){if(!s||(s.site!=null&&(typeof s.site!=='string'||s.site.length>253||!/^[a-z0-9.-]+$/.test(s.site)))||typeof s.id!=='string'||s.id.length>100||typeof s.deviceId!=='string'||s.deviceId.length>100||typeof s.appId!=='string'||s.appId.length>500||typeof s.appName!=='string'||s.appName.length>200||!Number.isSafeInteger(s.start)||!Number.isSafeInteger(s.end)||s.start<0||s.end<s.start||s.end-s.start>32*86400000||s.end>Date.now()+86400000||!Number.isSafeInteger(s.sourceSeq)||s.sourceSeq<0||(s.deletedAt!=null&&!Number.isSafeInteger(s.deletedAt)))throw new Error('无效的使用记录');}
