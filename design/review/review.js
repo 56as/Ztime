@@ -115,6 +115,56 @@ const dashboardRoute=()=>device.value==='desktop'?desktopV2:'dashboard';
 const isDashboard = f=>['dashboard','calendar','layout',desktopV2].includes(f);
 
 let desktopZone='Asia/Hong_Kong';
+const desktopPreview={recording:true,startup:true,theme:'system',chart:'line'};
+function applyPreviewTheme(d){
+  const dark=desktopPreview.theme==='dark'||(desktopPreview.theme==='system'&&d.defaultView.matchMedia('(prefers-color-scheme: dark)').matches);
+  d.body.classList.toggle('dark',dark);
+  d.body.classList.toggle('light',!dark);
+}
+function updatePreviewRecording(d){
+  for(const state of d.querySelectorAll('.statusbar .state')){
+    state.innerHTML='<span class="dot'+(desktopPreview.recording?'':' off')+'"></span>'+(desktopPreview.recording?'正在记录 · 文稿编辑器':'记录已暂停');
+  }
+}
+function previewSwitch(d,row,button,label,key){
+  const line=d.createElement('label');line.className='preview-switch-row';
+  const caption=d.createElement('span');caption.textContent=label;
+  line.append(caption,button);row.append(line);
+  button.textContent='';button.dataset.styleNative='';button.className='preview-switch';
+  button.setAttribute('role','switch');button.setAttribute('aria-label',label);
+  function set(value){
+    desktopPreview[key]=value;button.setAttribute('aria-checked',String(value));
+    if(key==='recording')updatePreviewRecording(d);
+  }
+  set(desktopPreview[key]);
+  let start=null,dragged=false;
+  button.onpointerdown=e=>{if(picking||e.button!==0)return;start=e.clientX;dragged=false;button.setPointerCapture(e.pointerId);};
+  button.onpointermove=e=>{
+    if(start===null)return;
+    const position=(desktopPreview[key]?18:0)+e.clientX-start;
+    button.style.setProperty('--switch-position',Math.max(0,Math.min(18,position))+'px');
+  };
+  button.onpointerup=e=>{
+    if(start!==null && Math.abs(e.clientX-start)>5){dragged=true;set(e.clientX>start);}
+    button.style.removeProperty('--switch-position');
+    start=null;
+  };
+  button.onpointercancel=()=>{button.style.removeProperty('--switch-position');start=null;dragged=false;};
+  button.onclick=e=>{if(!picking && (!dragged||e.detail===0))set(!desktopPreview[key]);dragged=false;};
+}
+function appearanceChoices(d){
+  const field=d.querySelector('#theme').closest('.field');
+  field.classList.add('preview-appearance');field.setAttribute('role','group');field.setAttribute('aria-label','外观');
+  field.innerHTML='<span>外观</span><div class="appearance-options"></div>';
+  const options=field.lastElementChild;
+  for(const [key,label] of [['system','跟随系统'],['light','浅色'],['dark','深色']]){
+    const button=d.createElement('button');button.type='button';button.dataset.theme=key;button.dataset.styleNative='';
+    button.innerHTML='<i aria-hidden="true"></i>'+label;
+    button.setAttribute('aria-pressed',String(key===desktopPreview.theme));
+    button.onclick=()=>{if(picking)return;desktopPreview.theme=key;applyPreviewTheme(d);for(const item of options.children)item.setAttribute('aria-pressed',String(item===button));};
+    options.append(button);
+  }
+}
 let mobileZone='Asia/Hong_Kong';
 function populateTimeZones(d){
   const select=d.getElementById('timeZone');
@@ -145,6 +195,8 @@ const removedDesktopCopy={
 };
 function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2','desk-ui');
+  applyPreviewTheme(d);updatePreviewRecording(d);
+  d.defaultView.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>applyPreviewTheme(d));
   if(pageId!=='home'){
     const version=d.createElement('small');
     version.id='desktop-version';version.textContent='版本 0.2.14';
@@ -166,7 +218,8 @@ function applySecondDesktopDraft(d,pageId){
   const input=d.getElementById('timeZone');input.outerHTML=zoneSelect(desktopZone);
   const pause=grid.querySelector('[data-action=pause]'), startup=grid.querySelector('[data-action=autostart]');
   const row=d.createElement('div');row.className='record-actions';pause.before(row);const p=startup.parentElement;
-  row.append(pause,startup);p.remove();
+  previewSwitch(d,row,pause,'记录','recording');previewSwitch(d,row,startup,'开机自启','startup');p.remove();
+  appearanceChoices(d);
   grid.querySelector('.accent-picker')?.remove();
   const about=[...grid.children].find(card=>card.querySelector('h2')?.textContent==='Ztime');
   about?.remove();
@@ -363,11 +416,13 @@ function comparisonNote(note){
 function targetFor(note) {
   if(secondDraftNote(note)!==currentDraft())return null;
   try {
+    if(note.board==='desktop-settings' && [96,97].includes(note.id))return doc().querySelector(note.selector)?.parentElement.querySelector('span');
     if(note.board==='mobile-home' && note.selector==='#point-detail' && !doc().querySelector('#point-detail')?.textContent)return doc().querySelector('.point-plot');
     if(comparisonNote(note)){
       const card=doc().querySelector('[data-card-key=compare]');
       return card?.hidden?doc().querySelector('[data-cal=layout-toggle][data-key=compare]'):card;
     }
+    if(note.board==='desktop-home' && note.id===99)return doc().querySelector('.chart-style');
     if(secondDraftNote(note) && note.board==='desktop-settings' && note.selector==='#design-settings-data > section:nth-of-type(1)')return doc().querySelector('#design-settings-data [data-action=delete-data]');
     const moved=secondDraftNote(note) && removedDesktopCopy[note.board]?.find(([selector])=>selector===note.selector);
     if(moved)return doc().querySelector(moved[1]);
@@ -648,6 +703,7 @@ function mountPeriodDashboard(d,onChange){
  const root=d.createElement('section');root.id='period-dashboard';root.hidden=true;d.body.append(root);
  let mode='day',period=[today,today],comparison=null,scope='all',picker=null;
  const desktop=currentDraft();
+ if(desktop)updatePreviewRecording(d);
  const recording=desktop?(d.querySelector('#app .statusbar')?.outerHTML||''):'';
  const mobile=d.body.dataset.reviewDevice==='mobile';
  const apps=[['浏览器','pc'],['阅读','phone'],['编辑器','pc'],['笔记','phone']];
@@ -669,10 +725,28 @@ function mountPeriodDashboard(d,onChange){
    });
  }
  let pointIndex=null;
+ function desktopUsageChart(series){
+   const peak=Math.max(1,...series.map(bin=>(bin.minutes||0)/60));
+   const step=Math.max(1,Math.ceil(peak/4));
+   const top=Math.ceil(peak/step)*step;
+   const ticks=Array.from({length:top/step+1},(_,i)=>top-step*i);
+   const width=640,height=126,slot=width/series.length;
+   const points=series.flatMap((bin,index)=>bin.minutes===null?[]:[{
+     x:(index+.5)*slot,y:height*(1-bin.minutes/(top*60)),bin
+   }]);
+   const line=points.map(({x,y},i)=>(i?'L':'M')+x+' '+y).join(' ');
+   const guides=ticks.map(tick=>'<line x1="0" x2="640" y1="'+(1-tick/top)*height+'" y2="'+(1-tick/top)*height+'" stroke="var(--line)" vector-effect="non-scaling-stroke"/>').join('');
+   const drawing=desktopPreview.chart==='line' && points.length?'<path d="'+line+' L'+points.at(-1).x+' '+height+' L'+points[0].x+' '+height+' Z" fill="currentColor" opacity=".12"/><path d="'+line+'" fill="none" stroke="currentColor" stroke-width="2.5" vector-effect="non-scaling-stroke"/>':'';
+   const marks=points.map(({x,y})=>{
+     const bar=desktopPreview.chart==='bar'?'<rect x="'+(x-slot*.3)+'" y="'+y+'" width="'+slot*.6+'" height="'+(height-y)+'" rx="2" fill="currentColor"/>':'';
+     return '<g>'+bar+'<circle cx="'+x+'" cy="'+y+'" r="2.3" fill="currentColor"/><rect x="'+(x-slot/2)+'" width="'+slot+'" height="'+height+'" fill="transparent"/></g>';
+   }).join('');
+   const labels=series.map((bin,i)=>'<span>'+(i%(mode==='day'?2:Math.ceil(series.length/8))===0?html(bin.label):'')+'</span>').join('');
+   return '<div class="usage-chart desktop-hour-chart"><div class="usage-y">'+ticks.map(t=>'<span>'+t+' 小时</span>').join('')+'</div><div><svg viewBox="0 0 640 126" preserveAspectRatio="none">'+guides+drawing+marks+'</svg><div class="usage-x" style="grid-template-columns:repeat('+series.length+',1fr)">'+labels+'</div></div></div>';
+ }
  function enableDesktopPointDetails(card,series){
    const svg=card.querySelector('.usage-chart svg');
    // The chart keeps hourly data; only axis labels are spaced two hours apart.
-   if(mode==='day')card.querySelectorAll('.usage-x span').forEach((node,i)=>node.textContent=i%2===0?series[i].label:'');
    svg.setAttribute('role','group');
    svg.setAttribute('aria-label','使用时间，点击时间点查看应用明细');
    const detail=d.createElement('section');detail.className='desktop-point-detail';detail.id='point-detail';detail.hidden=true;
@@ -767,9 +841,17 @@ function mountPeriodDashboard(d,onChange){
    const cards={trend,ranking,compare};
    if(desktop || mobile){
      trend.querySelector('h3').textContent='使用时间';
-     trend.querySelector('.pd-plot').outerHTML=usageArea(series.map(b=>({label:b.label,duration:b.minutes==null?null:b.minutes*60000})),ms=>dur(ms/60000));
+     trend.querySelector('.pd-plot').outerHTML=desktop?desktopUsageChart(series):usageArea(series.map(b=>({label:b.label,duration:b.minutes==null?null:b.minutes*60000})),ms=>dur(ms/60000));
      if(mobile)enablePointDetails(trend,series);
-     if(desktop)enableDesktopPointDetails(trend,series);
+     if(desktop){
+       const selector=d.createElement('div');selector.className='chart-style';selector.setAttribute('role','group');selector.setAttribute('aria-label','图表类型');
+       for(const [key,label] of [['line','折线图'],['bar','柱形图']]){
+         const button=d.createElement('button');button.dataset.cal='chart-style';button.dataset.chart=key;
+         button.textContent=label;button.setAttribute('aria-pressed',String(desktopPreview.chart===key));selector.append(button);
+       }
+       trend.querySelector('.pd-top small').replaceWith(selector);
+       enableDesktopPointDetails(trend,series);
+     }
      const scroll=d.createElement('div');scroll.className='rank-scroll';scroll.tabIndex=0;scroll.setAttribute('aria-label','应用排行');scroll.setAttribute('role','region');
      scroll.append(...ranking.querySelectorAll('.pd-app'));ranking.append(scroll);
    }
@@ -853,6 +935,7 @@ function mountPeriodDashboard(d,onChange){
  function choose(m,n){mode=m;period=span(m,n);comparison=null;picker=null;}
  function act(button){
   const a=button.dataset.cal;if(!a)return false;
+  if(a==='chart-style'){desktopPreview.chart=button.dataset.chart;draw();root.querySelector('[data-chart="'+desktopPreview.chart+'"]').focus({preventScroll:true});return true;}
   if(['mode','prev','next','apply-year','apply','scope'].includes(a))pointIndex=null;
   const wasOpen=!!picker || !!layoutDraft;
   if(['layout','dates','compare'].includes(a))returnFocus=a;
