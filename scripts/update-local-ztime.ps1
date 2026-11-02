@@ -86,6 +86,8 @@ try {
     }
     & python scripts/upgrade-ledger.py backup $data $backup
     if ($LASTEXITCODE -ne 0) {throw 'Backup failed'}
+    & python scripts/upgrade-ledger.py verify $data $backup
+    if ($LASTEXITCODE -ne 0) {throw 'Pre-update ledger or pairing verification failed'}
     $old=MainProcess $exe
     if ($old) {
         $client=ConnectClient $old.ProcessId
