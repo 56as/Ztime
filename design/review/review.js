@@ -155,11 +155,11 @@ function previewSwitch(d,row,button,label,key){
 function appearanceChoices(d){
   const field=d.querySelector('#theme').closest('.field');
   field.classList.add('preview-appearance');field.setAttribute('role','group');field.setAttribute('aria-label','外观');
-  field.innerHTML='<span>外观</span><div class="appearance-options"></div>';
+  field.innerHTML='<div class="appearance-options"></div>';
   const options=field.lastElementChild;
   for(const [key,label] of [['system','跟随系统'],['light','浅色'],['dark','深色']]){
     const button=d.createElement('button');button.type='button';button.dataset.theme=key;button.dataset.styleNative='';
-    button.innerHTML='<i aria-hidden="true"></i>'+label;
+    button.textContent=label;
     button.setAttribute('aria-pressed',String(key===desktopPreview.theme));
     button.onclick=()=>{if(picking)return;desktopPreview.theme=key;applyPreviewTheme(d);for(const item of options.children)item.setAttribute('aria-pressed',String(item===button));};
     options.append(button);
@@ -423,6 +423,7 @@ function targetFor(note) {
       return card?.hidden?doc().querySelector('[data-cal=layout-toggle][data-key=compare]'):card;
     }
     if(note.board==='desktop-home' && note.id===99)return doc().querySelector('.chart-style');
+    if(note.board==='desktop-settings' && note.id===102)return doc().querySelector('.preview-appearance')?.closest('.panel')?.querySelector('h2');
     if(secondDraftNote(note) && note.board==='desktop-settings' && note.selector==='#design-settings-data > section:nth-of-type(1)')return doc().querySelector('#design-settings-data [data-action=delete-data]');
     const moved=secondDraftNote(note) && removedDesktopCopy[note.board]?.find(([selector])=>selector===note.selector);
     if(moved)return doc().querySelector(moved[1]);
@@ -474,9 +475,14 @@ function pins() {
     const pin = doc().createElement('button');
     pin.className = 'review-pin';
     // Keep toolbar actions clickable while their feedback remains open.
-    const above=currentDraft() && el.closest('.pd-tools button') ||
+    const above=currentDraft() && el.closest('.pd-tools button,.preview-appearance') ||
       device.value==='mobile' && el.matches('button,select,.pd-nav,.pd-controls');
     let x=box.left + box.width*note.x, y=above?box.top-8:box.top + box.height*note.y;
+    const switchRow=el.closest('.preview-switch-row');
+    if(switchRow){
+      const row=switchRow.getBoundingClientRect(),count=pinCounts.get(switchRow)||0;
+      pinCounts.set(switchRow,count+1);x=row.right+18+32*count;y=row.top+row.height/2;
+    }
     const tools=phoneNav && el.closest('.pd-tools');
     const summary=phoneNav && el.matches('.pd-summary > div:first-child');
     if(tools || summary){
