@@ -13,13 +13,15 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { BrowserBridge } from './browser-bridge.js';
 import { Store } from './store.js';
+import {createAppIcons} from './app-icons.js';
 import { Collector } from './collector.js';
 import { SyncServer, readJson, send, equalSecret } from './protocol.js';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const sourceVersion=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version;
 export async function createApp(options={}){
  const dir=options.dataDir??process.env.TIME_LEDGER_DATA_DIR??path.join(root,'.data');fs.mkdirSync(dir,{recursive:true});
- const store=new Store(path.join(dir,'ledger.sqlite'));const browser=new BrowserBridge(store,options.browserPort);const collector=new Collector(store,(app,now)=>browser.hostFor(app,now));
+ const store=new Store(path.join(dir,'ledger.sqlite'));const browser=new BrowserBridge(store,options.browserPort);const icons=createAppIcons(path.join(dir,'app-icons'),options.extractIcon);
+ const collector=new Collector(store,(app,now)=>browser.hostFor(app,now),icons.remember);
  if(browser.status().enabled){try{await browser.listen();}catch{/* Settings displays the unavailable bridge. */}}const sync=new SyncServer(store,dir);let syncError=null;
  try{await sync.start(options.syncPort??40327);}catch(e){syncError=e.message;}
  if(options.collect!==false)collector.start();
@@ -77,6 +79,11 @@ export async function createApp(options={}){
     const token=(req.headers.cookie??'').split(';').map(x=>x.trim()).find(x=>x.startsWith('ledger='))?.slice(7);
     if(!equalSecret(token,cookie))return send(res,401,{error:'请重新打开应用'});
     if(req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`)return send(res,403,{error:'请求来源不受信任'});
+    if(req.method==='GET' && u.pathname==='/api/app-icon'){
+     const icon=await icons.get(u.searchParams.get('platform'),u.searchParams.get('id'));
+     res.writeHead(200,{'content-type':icon.type,'cache-control':'private, max-age='+ (icon.type==='image/png'?86400:60),'x-content-type-options':'nosniff'});
+     return res.end(icon.data);
+    }
     return send(res,200,await route(req.method,req.url,req.method==='GET'?{}:await readJson(req)));
    }
    const file=uiFileFor(u.pathname);if(!file){res.writeHead(404);return res.end();}

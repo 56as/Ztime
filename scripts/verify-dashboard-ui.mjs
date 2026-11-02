@@ -26,6 +26,7 @@ try{
   const cal=name=>click('[data-cal="'+name+'"]');
   const modal=page.locator('.period-dialog');
   await page.locator('.period-total').waitFor();
+  await page.locator('.rank-label img').first().evaluate(image=>image.decode());
   assert.equal(await page.locator('.page-header .statusbar').innerText(),'正在记录 · Editor <Example>');
   assert.deepEqual(await page.locator('[data-mode]').allTextContents(),['日','周','月','年']);
   for(const [width,height] of [[820,620],[1280,824]]) {

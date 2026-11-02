@@ -4,10 +4,11 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 export class Collector {
- constructor(store,hostFor=()=>null){this.store=store;this.hostFor=hostFor;this.active=null;this.last=0;this.process=null;this.state='starting';}
+ constructor(store,hostFor=()=>null,rememberIcon=()=>{}){this.rememberIcon=rememberIcon;this.store=store;this.hostFor=hostFor;this.active=null;this.last=0;this.process=null;this.state='starting';}
  sample(value,now=Date.now()){
   if(this.store.get('paused',false)){this.active=null;this.state='paused';return;}
   if(now-this.last>10000)this.active=null;
+  if(value.iconSource)this.rememberIcon(value.iconSource);
   const site=value.state==='active'?this.hostFor(value.appId,now):null;
   if(this.active&&(this.active.site!==site||value.state!=='active'||value.appId!==this.active.appId)){this.active.end=now;this.store.write(this.active);this.active=null;}
   this.last=now;this.state=value.state;

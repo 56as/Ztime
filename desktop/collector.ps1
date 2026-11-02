@@ -26,7 +26,8 @@ while ($MaxSamples -eq 0 -or $sampleCount -lt $MaxSamples) {
     $foregroundProcess = Get-Process -Id $foregroundProcessId -ErrorAction Stop
     # Deliberately never read window titles, document names or keyboard input.
     $appName = $foregroundProcess.ProcessName
-    @{state='active';appId=($appName.ToLowerInvariant()+'.exe');appName=$appName} | ConvertTo-Json -Compress
+    $iconSource=try { $foregroundProcess.Path } catch { $null }
+    @{state='active';appId=($appName.ToLowerInvariant()+'.exe');appName=$appName;iconSource=$iconSource} | ConvertTo-Json -Compress
    } else { @{state='unknown';reason='no-foreground-window'} | ConvertTo-Json -Compress }
   }
  } catch { if($Diagnostics){@{state='unknown';reason=$_.Exception.Message} | ConvertTo-Json -Compress}else{@{state='unknown'} | ConvertTo-Json -Compress} }

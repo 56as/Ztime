@@ -11,7 +11,7 @@ app.on('second-instance',(_event,argv)=>{
 });
 app.whenReady().then(async()=>{
  const {createApp}=await import('./server.js');
- service=await createApp({dataDir,port:0,version:app.getVersion(),autostart:{get:()=>{const s=app.getLoginItemSettings({path:process.execPath,args:[]});return process.platform==='win32'?s.executableWillLaunchAtLogin:s.openAtLogin;},set:enabled=>app.setLoginItemSettings({openAtLogin:enabled,name:'Ztime',path:process.execPath,args:[]})}});
+ service=await createApp({dataDir,port:0,extractIcon:async file=>(await app.getFileIcon(file,{size:'normal'})).resize({width:32,height:32}).toPNG(),version:app.getVersion(),autostart:{get:()=>{const s=app.getLoginItemSettings({path:process.execPath,args:[]});return process.platform==='win32'?s.executableWillLaunchAtLogin:s.openAtLogin;},set:enabled=>app.setLoginItemSettings({openAtLogin:enabled,name:'Ztime',path:process.execPath,args:[]})}});
  const iconPath=path.resolve(__dirname,'../assets/icon.png');
  window=new BrowserWindow({width:1320,height:900,minWidth:820,minHeight:620,show:process.env.TIME_LEDGER_HEADLESS!=='1',icon:iconPath,title:'Ztime',backgroundColor:'#f7f8fa',webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
  window.setMenuBarVisibility(false);window.webContents.setWindowOpenHandler(()=>({action:'deny'}));
