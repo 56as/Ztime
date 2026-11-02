@@ -77,7 +77,10 @@ function handleStyleDemo(d,el){
   case 'save':{
    const hint=d.querySelector('[data-save-hint]');if(hint)hint.textContent='示例起点：'+d.querySelector('[data-style-id=day-start]').value;
     if(d.body.dataset.reviewDevice==='mobile' && d.getElementById('timeZone'))mobileZone=d.getElementById('timeZone').value;
-   if(currentDraft() && d.getElementById('timeZone'))desktopZone=d.getElementById('timeZone').value;
+   if(currentDraft() && d.getElementById('timeZone')){
+     desktopZone=d.getElementById('timeZone').value;
+     desktopPreview.dayStart=d.getElementById('dayStart').value;
+   }
    notice(d,'示例设置已保存');break;
   }
   case 'export':notice(d,'示例：'+button.textContent.trim().replace(/\s+/g,' ')+'（不会下载真实记录）');break;
@@ -115,9 +118,9 @@ const dashboardRoute=()=>device.value==='desktop'?desktopV2:'dashboard';
 const isDashboard = f=>['dashboard','calendar','layout',desktopV2].includes(f);
 
 let desktopZone='Asia/Hong_Kong';
-const desktopPreview={recording:true,startup:true,theme:'system',chart:'line'};
+const desktopPreview={recording:true,startup:true,theme:'light',chart:'line',dayStart:'4'};
 function applyPreviewTheme(d){
-  const dark=desktopPreview.theme==='dark'||(desktopPreview.theme==='system'&&d.defaultView.matchMedia('(prefers-color-scheme: dark)').matches);
+  const dark=desktopPreview.theme==='dark';
   d.body.classList.toggle('dark',dark);
   d.body.classList.toggle('light',!dark);
 }
@@ -157,7 +160,7 @@ function appearanceChoices(d){
   field.classList.add('preview-appearance');field.setAttribute('role','group');field.setAttribute('aria-label','外观');
   field.innerHTML='<div class="appearance-options"></div>';
   const options=field.lastElementChild;
-  for(const [key,label] of [['system','跟随系统'],['light','浅色'],['dark','深色']]){
+  for(const [key,label] of [['light','浅色'],['dark','深色']]){
     const button=d.createElement('button');button.type='button';button.dataset.theme=key;button.dataset.styleNative='';
     button.textContent=label;
     button.setAttribute('aria-pressed',String(key===desktopPreview.theme));
@@ -186,7 +189,7 @@ function populateTimeZones(d){
 const removedDesktopCopy={
   'desktop-settings':[
     ['#extension-settings > p:nth-of-type(1)','#extension-settings h2'],
-    ['#design-settings-data > p:nth-of-type(1)','#design-settings-data h2'],
+    ['#design-settings-data > p:nth-of-type(1)','#design-settings-data'],
     ['#design-settings-data > section:nth-of-type(1) > p:nth-of-type(1)','#design-settings-data [data-action=delete-data]']
   ],
   'desktop-devices':[
@@ -196,7 +199,6 @@ const removedDesktopCopy={
 function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2','desk-ui');
   applyPreviewTheme(d);updatePreviewRecording(d);
-  d.defaultView.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>applyPreviewTheme(d));
   if(pageId!=='home'){
     const version=d.createElement('small');
     version.id='desktop-version';version.textContent='版本 0.2.14';
@@ -216,10 +218,16 @@ function applySecondDesktopDraft(d,pageId){
   data.querySelector('.risk-block').remove();
   const grid=d.querySelector('.settings-grid');
   const input=d.getElementById('timeZone');input.outerHTML=zoneSelect(desktopZone);
+  const day=d.getElementById('dayStart');day.value=desktopPreview.dayStart;
+  const rules=day.closest('.panel');rules.classList.add('preview-rules');
   const pause=grid.querySelector('[data-action=pause]'), startup=grid.querySelector('[data-action=autostart]');
   const row=d.createElement('div');row.className='record-actions';pause.before(row);const p=startup.parentElement;
   previewSwitch(d,row,pause,'记录','recording');previewSwitch(d,row,startup,'开机自启','startup');p.remove();
   appearanceChoices(d);
+  const appearance=row.closest('.panel');appearance.classList.add('preview-preferences');
+  data.querySelector('h2').remove();data.className='preview-data-actions';
+  data.setAttribute('role','group');data.setAttribute('aria-label','使用记录操作');
+  appearance.append(data);
   grid.querySelector('.accent-picker')?.remove();
   const about=[...grid.children].find(card=>card.querySelector('h2')?.textContent==='Ztime');
   about?.remove();
@@ -352,7 +360,7 @@ function editor(note) {
   targetFor(note)?.setAttribute('data-review-selected','');
   draft = note;
   $('editor').hidden = false;
-  $('target').textContent = (note.id ? '#' + note.id + ' ' : '') + describe(note.board) + ' · ' + note.label;
+  $('target').textContent = (note.id && device.value!=='desktop' ? '#' + note.id + ' ' : '') + describe(note.board) + ' · ' + note.label;
   $('message').value = note.text || '';
   $('kind').value = note.kind || (note.board.includes('-pair-')?'UX':'UI');
   $('trail').textContent = (note.flow || describe(note.board)).split('｜')[0];
@@ -424,6 +432,7 @@ function targetFor(note) {
     }
     if(note.board==='desktop-home' && note.id===99)return doc().querySelector('.chart-style');
     if(note.board==='desktop-settings' && note.id===102)return doc().querySelector('.preview-appearance')?.closest('.panel')?.querySelector('h2');
+    if(note.board==='desktop-settings' && note.id===104)return doc().querySelector('.appearance-options');
     if(secondDraftNote(note) && note.board==='desktop-settings' && note.selector==='#design-settings-data > section:nth-of-type(1)')return doc().querySelector('#design-settings-data [data-action=delete-data]');
     const moved=secondDraftNote(note) && removedDesktopCopy[note.board]?.find(([selector])=>selector===note.selector);
     if(moved)return doc().querySelector(moved[1]);
@@ -463,6 +472,7 @@ function pins() {
   const layer = doc()?.getElementById('review-pins');
   if (!layer) return;
   layer.replaceChildren();
+  if(device.value==='desktop')return;
   const phoneNav=device.value==='mobile' && doc().querySelector('#period-dashboard:not([hidden]) .pd-nav, .unified .sidebar');
   const pinCounts=new Map();
   for (const note of notes.filter(n => noteBoard(n) === frame.dataset.loaded && !n.resolved)) {
@@ -506,14 +516,14 @@ function renderList() {
     (device.value!=='mobile' || !/^mobile-(week|home-edit|home-detail)/.test(n.board) || n.board===board()));
   const pending=visibleNotes.filter(n=>!n.resolved).length;
   $('count').textContent=String(pending);
-  $('count').hidden=device.value==='desktop' && pending===0;
+  $('count').hidden=device.value==='desktop';
   const archive=document.createElement('details');
   const summary=document.createElement('summary');
   summary.textContent=device.value==='desktop'?'已归档的桌面批注':'已归档的手机批注';archive.append(summary);
   for (const n of visibleNotes.reverse()) {
     const card = document.createElement('article');
     const label = document.createElement('small'), text = document.createElement('p');
-    label.textContent = '#' + n.id + '　' + (n.kind||'UI')+' · '+describe(noteBoard(n)) + (n.resolved ? ' · 已处理' : '');
+    label.textContent = (device.value==='desktop'?'':'#' + n.id + '　') + (n.kind||'UI')+' · '+describe(noteBoard(n)) + (n.resolved ? ' · 已处理' : '');
     text.textContent = n.trial?('试改为“'+n.trial.copy+'”'+(n.trial.size?' · '+n.trial.size+' px':'')+' '+n.text):n.text;
     const open = document.createElement('button'), toggle = document.createElement('button');
     open.textContent = '定位 / 编辑'; open.onclick = () => locate(n);
@@ -532,7 +542,7 @@ async function save(note) {
     if (!response.ok) throw new Error(data.error || '保存失败');
     clearEditor();
     await load();
-    status('#' + data.id + ' 已保存到本地。');
+    status(device.value==='desktop'?'批注已保存到本地。':'#' + data.id + ' 已保存到本地。');
   } catch (e) { status(e.message); }
 }
 async function load() {

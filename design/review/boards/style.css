@@ -393,9 +393,17 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .devices-view .device {padding:8px 0}
 .desktop-v2 .devices-view .panel h2 {margin-bottom:8px}
 .desktop-v2 .devices-view .section-head h2 {margin:0}
-.desktop-v2 #design-settings-data {align-self:start;height:auto;padding:14px 18px}
-.desktop-v2 #design-settings-data h2 {margin-bottom:10px}
-.desktop-v2 #design-settings-data .row {display:flex;flex-wrap:wrap;gap:8px}
+.desktop-v2 .preview-preferences {display:grid;grid-template-columns:minmax(124px,1fr) minmax(116px,max-content);column-gap:14px;align-content:start;align-items:start}
+.desktop-v2 .preview-preferences h2 {grid-column:1/-1}
+.desktop-v2 .preview-preferences .record-actions,.desktop-v2 .preview-preferences .preview-appearance {grid-column:1}
+.desktop-v2 #design-settings-data {grid-column:2;grid-row:2/span 2;min-width:0;padding-left:12px;border-left:1px solid var(--line)}
+.desktop-v2 #design-settings-data > .row {display:grid;gap:6px}
+.desktop-v2 #design-settings-data > .row button {min-height:31px;padding:3px 8px;font-size:13px}
+.desktop-v2 .preview-rules {display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;align-items:center;row-gap:8px}
+.desktop-v2 .preview-rules h2 {margin:0}
+.desktop-v2 .preview-rules [data-action=save-settings] {grid-area:1/2;min-height:30px;padding:3px 12px;font-size:13px}
+.desktop-v2 .settings-view .fixed-setting.preview-rules .field {grid-column:1/-1;grid-template-columns:1fr minmax(96px,126px);gap:8px;margin:0;padding:8px 0}
+.desktop-v2 .preview-rules .field + .field {border-top:1px solid var(--line)}
 
 .desktop-v2 .settings-view .fixed-setting .field :is(label,select) {font:500 14px/normal system-ui,"Microsoft YaHei",sans-serif;color:var(--text);letter-spacing:normal}
 .desktop-v2 .settings-view .fixed-setting .field select {height:36px;padding:0 10px;background-color:var(--bg)}
@@ -411,11 +419,10 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .preview-switch::after {transform:translateX(var(--switch-position,0px))}
 .preview-switch[aria-checked=true]::after {transform:translateX(var(--switch-position,18px))}
 .desktop-v2 .settings-view .fixed-setting .preview-appearance {display:block;margin:9px 0 0;border-top:1px solid var(--line);padding-top:10px}
-.appearance-options {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));max-width:228px;gap:6px}
+.appearance-options {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:148px;gap:6px}
 .appearance-options button {display:grid;place-items:center;min-width:0;height:32px;min-height:32px;padding:0 3px;border:1px solid #b6bdc8;border-radius:8px;color:#253047;font-size:13px;font-weight:550;white-space:nowrap}
 .appearance-options [data-theme=light] {background:linear-gradient(110deg,#e3e9f3,#fafbff)}
 .appearance-options [data-theme=dark] {background:linear-gradient(110deg,#3a4353,#202736);color:#fff}
-.appearance-options [data-theme=system] {background:linear-gradient(115deg,#eff2f8 78%,#3e495b 78%)}
 .appearance-options button[aria-pressed=true] {border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .desktop-v2 .chart-style {display:flex;gap:2px;background:var(--bg);padding:2px;border:1px solid var(--line);border-radius:8px}
 .desktop-v2 #period-dashboard .chart-style button {font-size:12px;padding:3px 8px}
@@ -428,6 +435,6 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2.dark #period-dashboard :is(.pd-modes,.pd-scope) {background:var(--bg)}
 .desktop-v2.dark #period-dashboard button:not(:disabled):hover {background:var(--tint)}
 @media (min-width:820px) {
-  .desktop-v2 .settings-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .desktop-v2 .settings-grid {grid-template-columns:minmax(0,.85fr) minmax(306px,1.15fr)}
   .desktop-v2 #design-settings-data .row button {padding-inline:8px}
 }
