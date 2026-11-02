@@ -804,7 +804,7 @@ function mountPeriodDashboard(d,onChange){
   ['RustDesk','pc','rustdesk'],['Tailscale','phone','tailscale-phone'],['Word','pc','word'],
   ['美团','phone','meituan'],['Chrome','pc','chrome'],['微信','pc','weixin'],
   ['VS Code','pc','code'],['Tailscale','pc','tailscale'],['任务管理器','pc','taskmgr'],
-  ['照片','pc','photos']
+  ['照片','pc','photos'],['Setup','pc',null],['相机','phone',null]
  ];
  if(desktop)apps.splice(0,apps.length,...desktopExamples);
  const base=(n,i)=>{const q=Math.abs((n*(19+i*8)+Math.floor(n/7)*(i+11))%167);if(i>=4)return 2+q%14;return [40,19,35,10][i]+q%[95,45,85,35][i];};
@@ -903,6 +903,14 @@ function mountPeriodDashboard(d,onChange){
        }
        trend.querySelector('.pd-top small').replaceWith(selector);
        const details=series.map(bin=>({...bin,rows:(bin.values||[]).map((minutes,i)=>({minutes,name:apps[i][0],platform:apps[i][1]==='pc'?'windows':'android'})).filter(row=>row.minutes).sort((a,b)=>b.minutes-a.minutes)}));
+       if(desktopPreview.chart==='line'){
+         for(const point of trend.querySelectorAll('.desktop-hour-chart g')){
+           const mark=point.querySelector('circle');
+           const hit=mark.cloneNode(false);
+           hit.setAttribute('class','dot-hit');hit.setAttribute('fill','none');hit.setAttribute('stroke','transparent');
+           point.querySelector('rect').replaceWith(hit);
+         }
+       }
        bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange});
      }
      const scroll=d.createElement('div');scroll.className='rank-scroll';scroll.tabIndex=0;scroll.setAttribute('aria-label','应用排行');scroll.setAttribute('role','region');
@@ -953,7 +961,9 @@ function mountPeriodDashboard(d,onChange){
   const presetButtons=Object.entries({day:'日',week:'周',month:'月',year:'年'}).map(([k,v])=>'<button data-cal="mode" data-mode="'+k+'" aria-pressed="'+(mode===k)+'" data-style-id="pd-'+k+'">'+v+'</button>').join('');
   function icon(i){
    if(!desktop)return '';
-   const name=desktopExamples[i][2],src=name==='brand-icon.png'?name:'rank-icons/'+name+'.png';
+   const name=desktopExamples[i][2];
+   if(!name)return '<span aria-hidden="true" class="review-app-icon review-initial">'+(desktopExamples[i][0]==='相机'?'X':'S')+'</span>';
+   const src=name==='brand-icon.png'?name:'rank-icons/'+name+'.png';
    return '<img class="review-app-icon" src="'+src+'" alt="">';
   }
   const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>'<div class="pd-app"><span>'+icon(i)+(desktop?'<span class="rank-name">'+apps[i][0]+'</span>':apps[i][0])+'</span><small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small><b>'+dur(m)+'</b><i class="rank-track"><i style="width:'+100*m/Math.max(...v)+'%"></i></i></div>').join('');

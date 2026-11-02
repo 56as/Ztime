@@ -454,3 +454,9 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .pd-app small {grid-column:3}
 .desktop-v2 .pd-app b {grid-column:4;text-align:right}
 .desktop-v2.dark .review-app-icon[src="rank-icons/chatgpt.png"] {filter:invert(1)}
+
+.review-initial {display:grid;place-items:center;background:#526982;color:white;border-radius:5px;font:600 14px/1 system-ui}
+.desktop-v2 .desktop-hour-chart g:has(.dot-hit) circle {r:.01px;vector-effect:non-scaling-stroke}
+.desktop-v2 .desktop-hour-chart g:has(.dot-hit) circle:first-child {stroke:currentColor;stroke-width:5px}
+.desktop-v2 .desktop-hour-chart g:has(.dot-hit):is(:hover,:focus-visible,[aria-expanded=true]) circle:first-child {stroke-width:8px}
+.desktop-v2 .desktop-hour-chart g .dot-hit {stroke-width:20px;pointer-events:stroke}
