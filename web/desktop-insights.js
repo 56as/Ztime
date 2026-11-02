@@ -42,7 +42,11 @@ export function desktopUsageChart(series,mode,style){
    const guides=ticks.map(tick=>'<line x1="0" x2="640" y1="'+(1-tick/top)*height+'" y2="'+(1-tick/top)*height+'" stroke="var(--line)" vector-effect="non-scaling-stroke"/>').join('');
    const drawing=style==='line' && points.length?'<path d="'+line+' L'+points.at(-1).x+' '+height+' L'+points[0].x+' '+height+' Z" fill="currentColor" opacity=".12"/><path d="'+line+'" fill="none" stroke="currentColor" stroke-width="2.5" vector-effect="non-scaling-stroke"/>':'';
    const marks=points.map(({x,y})=>{
-     const bar=style==='bar'?'<rect x="'+(x-slot*.3)+'" y="'+y+'" width="'+slot*.6+'" height="'+(height-y)+'" rx="2" fill="currentColor"/>':'';
+     if(style==='line'){
+       const center=' cx="'+x+'" cy="'+y+'"';
+       return '<g><circle class="chart-dot"'+center+' r=".01"/><circle class="dot-hit"'+center+' r="2"/></g>';
+     }
+     const bar='<rect x="'+(x-slot*.3)+'" y="'+y+'" width="'+slot*.6+'" height="'+(height-y)+'" rx="2" fill="currentColor"/>';
      return '<g>'+bar+'<circle cx="'+x+'" cy="'+y+'" r="2.3" fill="currentColor"/><rect x="'+(x-slot/2)+'" width="'+slot+'" height="'+height+'" fill="transparent"/></g>';
    }).join('');
    const labels=series.map((bin,i)=>'<span>'+(i%(mode==='day'?2:Math.ceil(series.length/8))===0?html(bin.label):'')+'</span>').join('');
@@ -58,10 +62,10 @@ export function bindDesktopPoints(card,series,{pointIndex,onSelect,dur,enabled=(
    detail.setAttribute('role','region');detail.setAttribute('aria-label','所选时段明细');detail.setAttribute('aria-live','polite');
    card.append(detail);
    const points=[...svg.querySelectorAll('g')];
-   const close=()=>{detail.hidden=true;pointIndex=null;onSelect(null);points.forEach(g=>{g.setAttribute('aria-expanded','false');g.querySelector('circle').setAttribute('r','2.3');});onChange();};
+   const close=()=>{detail.hidden=true;pointIndex=null;onSelect(null);points.forEach(g=>{g.setAttribute('aria-expanded','false');});onChange();};
    function inspect(index){
      const bin=series[index];pointIndex=index;onSelect(index);detail.hidden=false;
-     points.forEach((g,i)=>{g.setAttribute('aria-expanded',String(i===index));g.querySelector('circle').setAttribute('r',i===index?'5':'2.3');});
+     points.forEach((g,i)=>{g.setAttribute('aria-expanded',String(i===index));});
      const rows=bin.rows;
      detail.innerHTML='<header><strong>'+html(bin.detail)+'</strong><button type="button" aria-label="关闭时段明细">×</button></header><div class="point-total"><span>累计用时</span><b>'+dur(bin.minutes)+'</b></div>'+
        (rows.length?'<ul>'+rows.map(({name,platform,minutes})=>'<li><span>'+html(name)+' <small>'+(platform==='windows'?'电脑':'手机')+'</small></span><b>'+dur(minutes)+'</b></li>').join('')+'</ul>':'<p>这段时间没有使用记录。</p>');

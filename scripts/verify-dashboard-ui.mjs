@@ -50,7 +50,9 @@ try{
   assert.ok(dayTicks.every((text,i)=>i%2===0?text.length>0:text===''));
   await click('[data-mode=week]');
   const lastPoint=page.locator('.trend-card g[role=button]').last();
-  await lastPoint.click();await page.locator('.desktop-point-detail li').first().waitFor();
+  assert.equal(await lastPoint.locator('rect').count(),0);
+  await lastPoint.click();
+  assert.equal(await lastPoint.locator('.chart-dot').evaluate(dot=>getComputedStyle(dot).strokeWidth),'8px');await page.locator('.desktop-point-detail li').first().waitFor();
   const selected=await page.locator('.desktop-point-detail').innerText();
   assert.match(selected,/notes/);
   await click('[data-chart=bar]');

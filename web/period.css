@@ -132,7 +132,7 @@
 @media(min-width:820px){.desk-ui .settings-grid {grid-template-columns:minmax(0,.85fr) minmax(306px,1.15fr);align-items:stretch}}
 .desk-ui .trend-card {position:relative}
 .desk-ui .usage-chart g[role=button] {cursor:pointer;outline:none}
-.desk-ui .usage-chart g[role=button]:focus-visible circle {stroke:var(--text);stroke-width:3px}
+.desk-ui .usage-chart g[role=button]:focus-visible circle:not([class]) {stroke:var(--text);stroke-width:3px}
 .desk-ui .desktop-point-detail {position:absolute;z-index:5;right:18px;top:48px;width:min(320px,calc(100% - 36px));max-height:calc(100% - 60px);overflow:auto;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px #18283c26;font-size:13px}
 .desk-ui .desktop-point-detail[hidden] {display:none}
 .desk-ui .desktop-point-detail header,.desk-ui .desktop-point-detail li,.desk-ui .desktop-point-detail .point-total {display:flex;align-items:center;justify-content:space-between;gap:12px}

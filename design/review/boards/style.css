@@ -177,7 +177,7 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .pd-nav {position:sticky;top:0;height:100dvh;padding-bottom:38px}
 .desktop-v2 .pd-trend {position:relative}
 .desktop-v2 .usage-chart g[role=button] {cursor:pointer;outline:none}
-.desktop-v2 .usage-chart g[role=button]:focus-visible circle {stroke:var(--text);stroke-width:3px}
+.desktop-v2 .usage-chart g[role=button]:focus-visible circle:not([class]) {stroke:var(--text);stroke-width:3px}
 .desktop-v2 .desktop-point-detail {position:absolute;z-index:5;right:18px;top:48px;width:min(320px,calc(100% - 36px));max-height:calc(100% - 60px);overflow:auto;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px #18283c26;font-size:13px}
 .desktop-v2 .desktop-point-detail[hidden] {display:none}
 .desktop-v2 .desktop-point-detail header,.desktop-v2 .desktop-point-detail li,.desktop-v2 .desktop-point-detail .point-total {display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -228,6 +228,11 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desk-ui .record-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .desk-ui .fixed-setting #theme{width:fit-content;max-width:100%;min-width:7em;justify-self:start}
 .desk-ui .fixed-setting #timeZone{width:100%;min-width:0}
+
+.desktop-hour-chart g .chart-dot {stroke:currentColor;stroke-width:5px;vector-effect:non-scaling-stroke;fill:currentColor}
+.desktop-hour-chart g:is(:hover,:focus-visible,[aria-expanded=true]) .chart-dot {stroke-width:8px}
+.desktop-hour-chart g circle.dot-hit {fill:transparent;stroke:transparent;stroke-width:16px;vector-effect:non-scaling-stroke;pointer-events:all}
+.desktop-hour-chart:has(rect[rx]) g[aria-expanded=true] circle {r:5px}
 /* @generated desk-preview:end */
 
 /* The phone boards share one bottom tab bar. */
@@ -456,7 +461,3 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2.dark .review-app-icon[src="rank-icons/chatgpt.png"] {filter:invert(1)}
 
 .review-initial {display:grid;place-items:center;background:#526982;color:white;border-radius:5px;font:600 14px/1 system-ui}
-.desktop-v2 .desktop-hour-chart g:has(.dot-hit) circle {r:.01px;vector-effect:non-scaling-stroke}
-.desktop-v2 .desktop-hour-chart g:has(.dot-hit) circle:first-child {stroke:currentColor;stroke-width:5px}
-.desktop-v2 .desktop-hour-chart g:has(.dot-hit):is(:hover,:focus-visible,[aria-expanded=true]) circle:first-child {stroke-width:8px}
-.desktop-v2 .desktop-hour-chart g .dot-hit {stroke-width:20px;pointer-events:stroke}
