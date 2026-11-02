@@ -229,7 +229,7 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desk-ui .fixed-setting #theme{width:fit-content;max-width:100%;min-width:7em;justify-self:start}
 .desk-ui .fixed-setting #timeZone{width:100%;min-width:0}
 
-.desktop-hour-chart g .chart-dot {stroke:currentColor;stroke-width:5px;vector-effect:non-scaling-stroke;fill:currentColor}
+.desktop-hour-chart g .chart-dot {stroke:currentColor;stroke-width:5px;vector-effect:non-scaling-stroke;stroke-linecap:round;fill:none}
 .desktop-hour-chart g:is(:hover,:focus-visible,[aria-expanded=true]) .chart-dot {stroke-width:8px}
 .desktop-hour-chart g circle.dot-hit {fill:transparent;stroke:transparent;stroke-width:16px;vector-effect:non-scaling-stroke;pointer-events:all}
 .desktop-hour-chart:has(rect[rx]) g[aria-expanded=true] circle {r:5px}

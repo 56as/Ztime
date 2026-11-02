@@ -44,7 +44,7 @@ export function desktopUsageChart(series,mode,style){
    const marks=points.map(({x,y})=>{
      if(style==='line'){
        const center=' cx="'+x+'" cy="'+y+'"';
-       return '<g><circle class="chart-dot"'+center+' r=".01"/><circle class="dot-hit"'+center+' r="2"/></g>';
+       return '<g><path class="chart-dot" d="M'+x+' '+y+'h.01"/><circle class="dot-hit"'+center+' r="2"/></g>';
      }
      const bar='<rect x="'+(x-slot*.3)+'" y="'+y+'" width="'+slot*.6+'" height="'+(height-y)+'" rx="2" fill="currentColor"/>';
      return '<g>'+bar+'<circle cx="'+x+'" cy="'+y+'" r="2.3" fill="currentColor"/><rect x="'+(x-slot/2)+'" width="'+slot+'" height="'+height+'" fill="transparent"/></g>';
