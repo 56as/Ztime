@@ -444,3 +444,6 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 #period-dashboard .pd-nav button {display:flex;align-items:center;gap:12px;padding:11px 14px;font:400 13px/1.5 "Segoe UI","Microsoft YaHei",sans-serif;color:var(--muted);border-radius:9px}
 .desktop-v2 #period-dashboard .pd-nav button.active {color:var(--accent);background:var(--tint);font-weight:600}
 @media(max-width:1100px){.desktop-v2 #period-dashboard .pd-nav {padding-inline:10px}}
+
+.desktop-v2 .pd-app > span:first-child {display:flex;align-items:center;gap:8px;min-width:0}
+.review-app-icon {flex:none;width:22px;height:22px}

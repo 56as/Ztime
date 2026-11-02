@@ -104,7 +104,7 @@ function drawTimeline(rows){
   if(!rows.length){plot.append(element('p','所选期间没有对应记录。'));return;}
   const top=Math.ceil(Math.max(...rows.map(s=>s.minutes))/5)*5;
   const axis=element('div');axis.className='timeline-axis';
-  for(const tick of [top,top/2,0])axis.append(element('small',tick));
+  for(const tick of [top,top/2,0])axis.append(element('small',tick+' min'));
   const scroll=element('div');scroll.className='timeline-scroll';
   const columns=element('div');columns.className='timeline-columns '+chartStyle;
   columns.style.setProperty('--count',rows.length);
