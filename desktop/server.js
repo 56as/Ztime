@@ -80,7 +80,7 @@ export async function createApp(options={}){
     if(!equalSecret(token,cookie))return send(res,401,{error:'请重新打开应用'});
     if(req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`)return send(res,403,{error:'请求来源不受信任'});
     if(req.method==='GET' && u.pathname==='/api/app-icon'){
-     const icon=await icons.get(u.searchParams.get('platform'),u.searchParams.get('id'));
+     const icon=await icons.get(u.searchParams.get('platform'),u.searchParams.get('id'),u.searchParams.get('name'));
      res.writeHead(200,{'content-type':icon.type,'cache-control':'private, max-age='+ (icon.type==='image/png'?86400:60),'x-content-type-options':'nosniff'});
      return res.end(icon.data);
     }
