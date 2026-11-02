@@ -34,7 +34,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
 
  const label=r=>len(r)===1?stamp(r[0]):stamp(r[0])+' – '+short(r[1]);
  let mode='day', period, comparison=null, scope='all', picker=null, followToday=true;
- let host, snapshot, revision=0, result, prior, loadedKey;
+ let host, snapshot, revision=0, result, prior, loadedKey, pendingKey, committed;
  const queryScope=()=>({all:'all',phone:'android',pc:'windows'})[scope];
  async function read(range, kind) {
    const from=iso(range[0]), to=iso(range[1]);
@@ -170,7 +170,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
      if(!desktop)return `<button class="app-row" data-rank="${index}"><span class="app-name">${escape(app.name)}</span><small>${device}</small><strong>${duration(app.duration,true)}</strong><span class="rank-track" aria-hidden="true"><i style="width:${percent}%"></i></span></button>`;
      const query=new URLSearchParams({v:'4',platform:app.platform,id:app.appId,name:app.name});
      const mono=app.platform==='windows' && app.appId.toLowerCase()==='chatgpt.exe';
-     const icon=`<img class="review-app-icon" alt="" loading="lazy" ${mono?'data-monochrome':''} src="/api/app-icon?${escape(query.toString())}">`;
+     const icon=`<img class="review-app-icon" alt="" ${mono?'data-monochrome':''} src="/api/app-icon?${escape(query.toString())}">`;
      const name=(app.platform==='windows' && windowsRankNames.get(app.appId.toLowerCase()))||app.name;
      return desktopRankRow({name,icon,device,percent,index,minutes:Math.floor(app.duration/60000)});
    }).join('');
@@ -187,7 +187,20 @@ export function createPeriodView({api, escape, duration, details, report, refres
    const summary=result?`<section class="period-card period-total"><div class="total-value"><small>${desktop?{all:'设备累计',phone:'手机累计',pc:'电脑累计'}[scope]:'设备累计'}</small><h2>${duration(result.total,true)}</h2></div><div class="pd-modes">${scopeHtml}</div></section><div class="pd-bottom${defaultPair?' default-pair':''}">${visibleCards.map(card=>cards[card.key]).join('')}</div>`:'<p role="status">正在读取所选期间…</p>';
    const previousList=host.querySelector('.rank-scroll');
    if(previousList?.isConnected && previousList.clientHeight)rankOffset=previousList.scrollTop;
-   host.innerHTML=header+controls+summary;
+   if(desktop){
+     // Keep decoded icons when a refresh or filter change retains the same app.
+     const active=host.contains(document.activeElement)?document.activeElement.dataset:{};
+     const focus=active.mode?'[data-mode="'+active.mode+'"]':active.scope?'[data-scope="'+active.scope+'"]':null;
+     const icons=new Map([...host.querySelectorAll('.rank-label img')].map(img=>[img.getAttribute('src'),img]));
+     const template=document.createElement('template');
+     template.innerHTML=header+controls+summary;
+     for(const img of template.content.querySelectorAll('.rank-label img')){
+       const previous=icons.get(img.getAttribute('src'));
+       if(previous){img.replaceWith(previous);icons.delete(img.getAttribute('src'));}
+     }
+     host.replaceChildren(template.content);
+     if(focus)host.querySelector(focus)?.focus({preventScroll:true});
+   }else host.innerHTML=header+controls+summary;
    if(result){
      const key=JSON.stringify([period,mode,scope]);
      if(pointPeriod!==key){selectedPoint=null;pointPeriod=key;}
@@ -220,16 +233,40 @@ export function createPeriodView({api, escape, duration, details, report, refres
    };
 
  }
+ function markPending(changing){
+   host.setAttribute('aria-busy',String(changing));
+   const grid=host.querySelector('.pd-bottom');
+   if(grid)grid.inert=changing;
+   for(const button of host.querySelectorAll('[data-mode]'))button.setAttribute('aria-pressed',String(button.dataset.mode===mode));
+   for(const button of host.querySelectorAll('[data-scope]'))button.setAttribute('aria-pressed',String(button.dataset.scope===scope));
+ }
  async function update(force=false) {
    const key=JSON.stringify([mode,period,comparison,scope,snapshot.settings]);
-   if(!force && key===loadedKey && result){paint();return;}
+   if(key===pendingKey)return;
    const pending=++revision;
-   if(key!==loadedKey){result=null;prior=null;paint();}
+   if(!force && key===loadedKey && result){
+     pendingKey=null;markPending(false);return;
+   }
+   pendingKey=key;
+   if(!result && !host.childElementCount)paint();
+   markPending(key!==loadedKey);
    try {
      const [current,previous]=await Promise.all([read(period,mode),comparison?read(comparison,mode==='year'?'year':'custom'):null]);
      if(revision!==pending || !host.isConnected)return;
-     loadedKey=key;result=current;prior=previous;paint();
-   }catch(error){if(revision===pending){loadedKey=null;onError(error.message);}}
+     loadedKey=key;result=current;prior=previous;
+     committed={mode,period,comparison,scope,followToday};
+     paint();
+   }catch(error){
+     if(revision!==pending || !host.isConnected)return;
+     if(committed)({mode,period,comparison,scope,followToday}=committed);
+     else host.querySelector('[role=status]')?.replaceChildren('统计暂时无法读取，请点更新重试。');
+     onError(error.message);
+   }finally{
+     if(revision===pending){
+       pendingKey=null;
+       if(host.isConnected)markPending(false);
+     }
+   }
  }
  function mount(element,data) {
    const nextToday=num(dateKey(Date.now(),data.settings));
@@ -239,7 +276,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
    host=element;snapshot=data;
    desktop=!data.native;
    layout??=desktop?desktopLayout(data.periodLayout?.cards):validCardLayout(data.periodLayout?.cards)?data.periodLayout.cards:defaultCardLayout();
-   if(result)paint();
+   if(!host.childElementCount && result)paint();
    update(true);
  }
  return {mount,closeModal,get choosing(){return dialog.open;}};

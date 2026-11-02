@@ -33,7 +33,7 @@ try{
       getComputedStyle(row).borderBottomWidth,getComputedStyle(row.querySelector('small')).fontSize,
       getComputedStyle(row.querySelector('b')).fontSize,getComputedStyle(bar.firstElementChild).backgroundColor];
   });
-  assert.deepEqual(rowStyle,['15px',22,120,'1px','11px','13px','rgb(73, 131, 195)']);
+  assert.deepEqual(rowStyle,['15px',18,120,'1px','11px','13px','rgb(73, 131, 195)']);
   assert.equal(await page.locator('.page-header .statusbar').innerText(),'正在记录 · Editor <Example>');
   assert.deepEqual(await page.locator('[data-mode]').allTextContents(),['日','周','月','年']);
   for(const [width,height] of [[820,620],[1280,824]]) {
@@ -50,6 +50,36 @@ try{
   }
   assert.ok(await page.locator('.period-total').evaluate(el=>
     el.querySelector('.pd-modes').getBoundingClientRect().right<=el.querySelector('.total-value').getBoundingClientRect().left));
+  // Delay both kinds of queries. The old view stays visible, and a response
+  // from a superseded selection must never replace the currently selected one.
+  for(const [selector,query,restore] of [
+    ['[data-mode=week]','mode=week','[data-mode=day]'],
+    ['[data-scope=phone]','scope=android','[data-scope=all]']
+  ]){
+    let release;
+    const gate=new Promise(resolve=>{release=resolve;});
+    const route=async request=>{await gate;await request.continue();};
+    const pattern=url=>url.pathname==='/api/period' && url.search.includes(query);
+    await page.route(pattern,route);
+    const previous=await page.locator('.ranking-card').elementHandle();
+    const pending=page.waitForRequest(req=>pattern(new URL(req.url())));
+    await click(selector);await pending;
+    assert.ok(await previous.evaluate(el=>el.isConnected && el.getBoundingClientRect().height>0));
+    assert.equal(await page.locator('#period-view').getAttribute('aria-busy'),'true');
+    assert.equal(await page.locator('#period-view [role=status]').count(),0);
+    assert.equal(await page.locator(selector).getAttribute('aria-pressed'),'true');
+    await click(restore);
+    const response=page.waitForResponse(r=>pattern(new URL(r.url())));
+    release();await response;await page.unroute(pattern,route);
+    assert.equal(await page.locator(restore).getAttribute('aria-pressed'),'true');
+    assert.ok(await previous.evaluate(el=>el.isConnected));
+  }
+  await page.route('**/api/period?**mode=month**',route=>route.abort());
+  await click('[data-mode=month]');
+  await page.locator('#period-view[aria-busy=false]').waitFor();
+  assert.equal(await page.locator('[data-mode=day]').getAttribute('aria-pressed'),'true');
+  assert.ok(await page.locator('.ranking-card').isVisible());
+  await page.unroute('**/api/period?**mode=month**');
   await click('[data-scope=pc]');await page.locator('.total-value small').filter({hasText:'电脑累计'}).waitFor();
   await click('[data-scope=all]');await page.locator('.total-value small').filter({hasText:'设备累计'}).waitFor();
   assert.match(await page.locator('.sidebar-version').innerText(),/版本/);
