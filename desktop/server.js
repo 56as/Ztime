@@ -30,7 +30,7 @@ export async function createApp(options={}){
    const params=u.searchParams, from=params.get('from'), to=params.get('to');
    const now=Date.now(), settings=store.get('settings'), bounds=periodBounds(from,to,settings,now);
    const rows=store.db.prepare('SELECT * FROM sessions WHERE deleted_at IS NULL AND start<? AND end>?').all(bounds.end,bounds.start).map(row=>store.decode(row));
-   return periodStats(rows,store.devices(),settings,from,to,params.get('mode'),params.get('scope')||'all',now);
+   return periodStats(rows,store.devices(),settings,from,to,params.get('mode'),params.get('scope')||'all',now,true);
   }
   if(method==='GET'&&u.pathname==='/api/summary')return {...store.summary(u.searchParams.get('date')||undefined,u.searchParams.has('weekDate')?Math.min(Date.now(),dayBounds(u.searchParams.get('weekDate'),store.get('settings')).end-1):Date.now()),version:options.version??sourceVersion,periodLayout:store.get('periodLayout'),browser:browser.status(),autostart:options.autostart?.get()??null,sync:{port:sync.port,addresses:sync.addresses(),error:syncError}};
   if(method==='POST'&&u.pathname==='/api/browser')return browser.configure(body.enabled===true);

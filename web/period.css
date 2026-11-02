@@ -109,3 +109,20 @@
   .desk-ui .settings-grid {grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
   .desk-ui .data-settings .row button {padding-inline:8px}
 }
+
+.desk-ui .trend-card {position:relative}
+.desk-ui .usage-chart g[role=button] {cursor:pointer;outline:none}
+.desk-ui .usage-chart g[role=button]:focus-visible circle {stroke:var(--text);stroke-width:3px}
+.desk-ui .desktop-point-detail {position:absolute;z-index:5;right:18px;top:48px;width:min(320px,calc(100% - 36px));max-height:calc(100% - 60px);overflow:auto;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px #18283c26;font-size:13px}
+.desk-ui .desktop-point-detail[hidden] {display:none}
+.desk-ui .desktop-point-detail header,.desk-ui .desktop-point-detail li,.desk-ui .desktop-point-detail .point-total {display:flex;align-items:center;justify-content:space-between;gap:12px}
+.desk-ui .desktop-point-detail header button {padding:0;width:26px;height:26px;font-size:19px;line-height:24px}
+.desk-ui .desktop-point-detail .point-total {margin:10px 0}
+.desk-ui .desktop-point-detail ul {list-style:none;margin:0;padding:0}
+.desk-ui .desktop-point-detail li {padding:6px 0;border-top:1px solid var(--line)}
+.desk-ui .desktop-point-detail small {color:var(--muted)}
+.desk-ui .chart-style {display:flex;gap:2px;background:var(--bg);padding:2px;border:1px solid var(--line);border-radius:8px}
+.desk-ui #period-view .chart-style button {font-size:12px;padding:3px 8px}
+.desk-ui .desktop-hour-chart svg {background:none;overflow:visible}
+.desk-ui .desktop-hour-chart circle {pointer-events:none}
+.desk-ui .desktop-hour-chart:has(rect[rx]) g:not([aria-expanded=true]):not(:focus-visible) circle {opacity:0}

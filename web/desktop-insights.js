@@ -28,3 +28,52 @@ export function zoneSelect(current){
  }
  return '<select id="timeZone">'+[...groups].map(([label,items])=>'<optgroup label="'+label+'">'+items.map(([id,city])=>`<option value="${html(id)}" ${current===id?'selected':''}>${html(city)}</option>`).join('')+'</optgroup>').join('')+'</select>';
 }
+
+export function desktopUsageChart(series,mode,style){
+   const peak=Math.max(1,...series.map(bin=>(bin.minutes||0)/60));
+   const step=Math.max(1,Math.ceil(peak/4));
+   const top=Math.ceil(peak/step)*step;
+   const ticks=Array.from({length:top/step+1},(_,i)=>top-step*i);
+   const width=640,height=126,slot=width/series.length;
+   const points=series.flatMap((bin,index)=>bin.minutes===null?[]:[{
+     x:(index+.5)*slot,y:height*(1-bin.minutes/(top*60)),bin
+   }]);
+   const line=points.map(({x,y},i)=>(i?'L':'M')+x+' '+y).join(' ');
+   const guides=ticks.map(tick=>'<line x1="0" x2="640" y1="'+(1-tick/top)*height+'" y2="'+(1-tick/top)*height+'" stroke="var(--line)" vector-effect="non-scaling-stroke"/>').join('');
+   const drawing=style==='line' && points.length?'<path d="'+line+' L'+points.at(-1).x+' '+height+' L'+points[0].x+' '+height+' Z" fill="currentColor" opacity=".12"/><path d="'+line+'" fill="none" stroke="currentColor" stroke-width="2.5" vector-effect="non-scaling-stroke"/>':'';
+   const marks=points.map(({x,y})=>{
+     const bar=style==='bar'?'<rect x="'+(x-slot*.3)+'" y="'+y+'" width="'+slot*.6+'" height="'+(height-y)+'" rx="2" fill="currentColor"/>':'';
+     return '<g>'+bar+'<circle cx="'+x+'" cy="'+y+'" r="2.3" fill="currentColor"/><rect x="'+(x-slot/2)+'" width="'+slot+'" height="'+height+'" fill="transparent"/></g>';
+   }).join('');
+   const labels=series.map((bin,i)=>'<span>'+(i%(mode==='day'?2:Math.ceil(series.length/8))===0?html(bin.label):'')+'</span>').join('');
+   return '<div class="usage-chart desktop-hour-chart"><div class="usage-y">'+ticks.map(t=>'<span>'+t+' 小时</span>').join('')+'</div><div><svg viewBox="0 0 640 126" preserveAspectRatio="none">'+guides+drawing+marks+'</svg><div class="usage-x" style="grid-template-columns:repeat('+series.length+',1fr)">'+labels+'</div></div></div>';
+ }
+export function bindDesktopPoints(card,series,{pointIndex,onSelect,dur,enabled=()=>true,onChange=()=>{}}){
+   const d=card.ownerDocument;
+   const svg=card.querySelector('.usage-chart svg');
+   // The chart keeps hourly data; only axis labels are spaced two hours apart.
+   svg.setAttribute('role','group');
+   svg.setAttribute('aria-label','使用时间，点击时间点查看应用明细');
+   const detail=d.createElement('section');detail.className='desktop-point-detail';detail.id='point-detail';detail.hidden=true;
+   detail.setAttribute('role','region');detail.setAttribute('aria-label','所选时段明细');detail.setAttribute('aria-live','polite');
+   card.append(detail);
+   const points=[...svg.querySelectorAll('g')];
+   const close=()=>{detail.hidden=true;pointIndex=null;onSelect(null);points.forEach(g=>{g.setAttribute('aria-expanded','false');g.querySelector('circle').setAttribute('r','2.3');});onChange();};
+   function inspect(index){
+     const bin=series[index];pointIndex=index;onSelect(index);detail.hidden=false;
+     points.forEach((g,i)=>{g.setAttribute('aria-expanded',String(i===index));g.querySelector('circle').setAttribute('r',i===index?'5':'2.3');});
+     const rows=bin.rows;
+     detail.innerHTML='<header><strong>'+html(bin.detail)+'</strong><button type="button" aria-label="关闭时段明细">×</button></header><div class="point-total"><span>累计用时</span><b>'+dur(bin.minutes)+'</b></div>'+
+       (rows.length?'<ul>'+rows.map(({name,platform,minutes})=>'<li><span>'+html(name)+' <small>'+(platform==='windows'?'电脑':'手机')+'</small></span><b>'+dur(minutes)+'</b></li>').join('')+'</ul>':'<p>这段时间没有使用记录。</p>');
+     detail.querySelector('button').onclick=()=>{close();points[index]?.focus();};
+     onChange();
+   }
+   points.forEach((g,index)=>{
+     g.setAttribute('role','button');g.setAttribute('tabindex','0');g.setAttribute('aria-controls','point-detail');g.setAttribute('aria-expanded','false');
+     g.setAttribute('aria-label',series[index].detail+' · '+dur(series[index].minutes));
+     g.onclick=()=>{if(enabled())inspect(index);};
+     g.onkeydown=e=>{if(enabled() && ['Enter',' '].includes(e.key)){e.preventDefault();inspect(index);}};
+   });
+   card.addEventListener('keydown',e=>{if(e.key==='Escape' && !detail.hidden){const index=pointIndex;close();points[index]?.focus();e.stopPropagation();}});
+   if(pointIndex!==null && series[pointIndex]?.minutes!=null)inspect(pointIndex);
+ }

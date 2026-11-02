@@ -1,6 +1,6 @@
 import {recordingStatus} from './recording-status.js';
 import {desktopTitles,desktopLayout} from './shared/desktop-card-layout.js';
-import {usageArea,shareChart} from './desktop-insights.js';
+import {usageArea,shareChart,desktopUsageChart,bindDesktopPoints} from './desktop-insights.js';
 import {bindPhoneUsage} from './phone-usage.js';
 import {refreshControl} from './refresh-control.js';
 import {cardTitles,defaultCardLayout,validCardLayout} from './shared/period-layout.js';
@@ -10,6 +10,7 @@ import {periodStats} from './shared/period.js';
 // Keep the selection when moving between dashboard, devices and settings.
 export function createPeriodView({api, escape, duration, details, report, refreshPhone, onError}) {
  let selectedPoint=null, pointPeriod='';
+ let chartStyle='line';
  let desktop=false, rankOffset=0, rankPeriod='';
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
  let today;
@@ -142,6 +143,15 @@ export function createPeriodView({api, escape, duration, details, report, refres
    }
    return `<section class="period-card"><h2>期间对比</h2>${body?'<p>'+body+'</p>':''}<button data-cal="compare">${mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期'}</button> ${comparison?'<button data-cal="clear">清除对比</button>':''}</section>`;
  }
+ function chartSeries(){
+   const format=new Intl.DateTimeFormat('zh-CN',{timeZone:snapshot.settings.timeZone,...(mode==='day'?{hour:'2-digit',minute:'2-digit',hourCycle:'h23'}:mode==='year'?{year:'numeric',month:'long'}:{month:'short',day:'numeric'})});
+   return result.bins.map((bin,i)=>{
+     const end=Math.min(result.bins[i+1]?.start??result.end,result.end);
+     return {label:bin.label,detail:format.format(bin.start)+(mode==='day'&&end>bin.start?'–'+format.format(end):''),
+       minutes:bin.start>=result.end?null:bin.duration/60000,
+       rows:(bin.apps||[]).map(app=>({name:app.name,platform:app.platform,minutes:app.duration/60000}))};
+   });
+ }
  function paint() {
    const modesHtml=Object.entries(modes).map(([key,name])=>`<button data-cal="mode" data-mode="${key}" aria-pressed="${mode===key}">${name}</button>`).join('');
    const scopeHtml=[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([key,name])=>`<button data-cal="scope" data-scope="${key}" aria-pressed="${scope===key}">${name}</button>`).join('');
@@ -150,8 +160,10 @@ export function createPeriodView({api, escape, duration, details, report, refres
    const dateText=!desktop && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
    const controls=`<div class="pd-controls"><div class="pd-modes">${modesHtml}</div><div class="pd-range"><button aria-label="上一期间" data-cal="prev">‹</button><button data-cal="dates" aria-haspopup="dialog" aria-label="${fullDate}">${dateText} ▾</button><button aria-label="下一期间" data-cal="next" ${period[1]>=today?'disabled':''}>›</button></div></div>`;
    const ranking=result?.apps.map((a,index)=>`<button class="app-row" data-rank="${index}"><span class="app-name">${escape(a.name)}</span><small>${a.platform==='android'?'手机':'电脑'}</small><strong>${duration(a.duration,true)}</strong><span class="rank-track" aria-hidden="true"><i style="width:${100*a.duration/result.apps[0].duration}%"></i></span></button>`).join('');
+   const series=desktop && result?chartSeries():null;
+   const styleButtons='<div class="chart-style" role="group" aria-label="图表类型">'+[['line','折线图'],['bar','柱形图']].map(([key,label])=>`<button data-chart="${key}" aria-pressed="${chartStyle===key}">${label}</button>`).join('')+'</div>';
    const cards=result?{
-     trend:`<section class="period-card trend-card"><div class="pd-top"><h2>使用时间</h2><small>单位：小时</small></div>${usageArea(result.bins.map(b=>b.start>=result.end?{...b,duration:null}:b),ms=>duration(ms,true))}</section>`,
+     trend:`<section class="period-card trend-card"><div class="pd-top"><h2>使用时间</h2>${desktop?styleButtons:'<small>单位：小时</small>'}</div>${desktop?desktopUsageChart(series,mode,chartStyle):usageArea(result.bins.map(b=>b.start>=result.end?{...b,duration:null}:b),ms=>duration(ms,true))}</section>`,
      ranking:`<section class="period-card ranking-card"><h2>应用排行</h2>${ranking?'<div class="rank-scroll" tabindex="0" role="region" aria-label="应用排行">'+ranking+'</div>':ranking||'<p>所选期间暂无使用记录</p>'}</section>`,
      compare:renderComparison(),
      ...(desktop?Object.fromEntries(['devices','focus'].map(key=>[key,'<section class="period-card"><h2>'+desktopTitles[key]+'</h2>'+shareChart(key,result.apps,ms=>duration(ms,true))+'</section>'])):{})
@@ -162,10 +174,12 @@ export function createPeriodView({api, escape, duration, details, report, refres
    const previousList=host.querySelector('.rank-scroll');
    if(previousList?.isConnected && previousList.clientHeight)rankOffset=previousList.scrollTop;
    host.innerHTML=header+controls+summary;
-   if(!desktop && result){
+   if(result){
      const key=JSON.stringify([period,mode,scope]);
      if(pointPeriod!==key){selectedPoint=null;pointPeriod=key;}
-     bindPhoneUsage(host,{result,snapshot,scope:queryScope(),mode,selected:selectedPoint,onSelect:i=>{selectedPoint=i;},escape,duration});
+     const trend=host.querySelector('.trend-card');
+     if(desktop && trend)bindDesktopPoints(trend,series,{pointIndex:selectedPoint,onSelect:i=>{selectedPoint=i;},dur:m=>duration(m*60000,true)});
+     if(!desktop)bindPhoneUsage(host,{result,snapshot,scope:queryScope(),mode,selected:selectedPoint,onSelect:i=>{selectedPoint=i;},escape,duration});
    }
    const scroll=host.querySelector('.rank-scroll');
    if(scroll){
@@ -177,7 +191,9 @@ export function createPeriodView({api, escape, duration, details, report, refres
      const button=event.target.closest('button');
      if(!button)return;
      try {
-       if(button.hasAttribute('data-rank')){
+       if(button.dataset.chart){
+         chartStyle=button.dataset.chart;paint();host.querySelector('[data-chart="'+chartStyle+'"]').focus({preventScroll:true});
+       } else if(button.hasAttribute('data-rank')){
          const app=result.apps[Number(button.dataset.rank)];
          await details(app.appId,app.deviceId,{start:result.start,end:result.end,label:label(period),single:mode==='day'});
        } else if(button.dataset.tool==='layout'){

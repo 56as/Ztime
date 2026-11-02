@@ -12,7 +12,7 @@ export function periodBounds(from, to, settings, now = Date.now()) {
   return {start:dayBounds(from, settings).start, end:Math.min(now, dayBounds(to, settings).end), days};
 }
 
-export function periodStats(rows, devices, settings, from, to, mode, scope, now = Date.now()) {
+export function periodStats(rows, devices, settings, from, to, mode, scope, now = Date.now(), includeBinApps = false) {
   const {start, end, days} = periodBounds(from, to, settings, now);
   const bins = [];
   if (mode === 'day') {
@@ -28,6 +28,7 @@ export function periodStats(rows, devices, settings, from, to, mode, scope, now 
     for (let key = from; key <= to; key = addDays(key,1))
       bins.push({start:dayBounds(key, settings).start, label:String(Number(key.slice(-2))), duration:0});
   }
+  const perBin = includeBinApps ? bins.map(()=>new Map()) : null;
   const platforms = new Map(devices.map(d=>[d.id,d.platform]));
   const apps = new Map();
   let total = 0;
@@ -42,8 +43,14 @@ export function periodStats(rows, devices, settings, from, to, mode, scope, now 
     apps.set(key,app);
     total += b-a;
     const firstAfter = bins.findIndex(bin=>bin.start > a);
-    for (let i = firstAfter < 0 ? bins.length-1 : Math.max(0, firstAfter-1); i < bins.length && bins[i].start < b; i++)
-      bins[i].duration += Math.min(b,bins[i+1]?.start ?? end) - Math.max(a,bins[i].start);
+    for (let i = firstAfter < 0 ? bins.length-1 : Math.max(0, firstAfter-1); i < bins.length && bins[i].start < b; i++) {
+      const overlap=Math.min(b,bins[i+1]?.start ?? end) - Math.max(a,bins[i].start);
+      bins[i].duration+=overlap;
+      if(perBin)perBin[i].set(key,(perBin[i].get(key)||0)+overlap);
+    }
   }
+  if(perBin)bins.forEach((bin,i)=>{
+    bin.apps=Array.from(perBin[i],([key,duration])=>({...apps.get(key),duration})).sort((a,b)=>b.duration-a.duration);
+  });
   return {start,end,days,total,bins,apps:[...apps.values()].sort((a,b)=>b.duration-a.duration)};
 }

@@ -41,6 +41,55 @@ function zoneSelect(current){
  }
  return '<select id="timeZone">'+[...groups].map(([label,items])=>'<optgroup label="'+label+'">'+items.map(([id,city])=>`<option value="${html(id)}" ${current===id?'selected':''}>${html(city)}</option>`).join('')+'</optgroup>').join('')+'</select>';
 }
+
+function desktopUsageChart(series,mode,style){
+   const peak=Math.max(1,...series.map(bin=>(bin.minutes||0)/60));
+   const step=Math.max(1,Math.ceil(peak/4));
+   const top=Math.ceil(peak/step)*step;
+   const ticks=Array.from({length:top/step+1},(_,i)=>top-step*i);
+   const width=640,height=126,slot=width/series.length;
+   const points=series.flatMap((bin,index)=>bin.minutes===null?[]:[{
+     x:(index+.5)*slot,y:height*(1-bin.minutes/(top*60)),bin
+   }]);
+   const line=points.map(({x,y},i)=>(i?'L':'M')+x+' '+y).join(' ');
+   const guides=ticks.map(tick=>'<line x1="0" x2="640" y1="'+(1-tick/top)*height+'" y2="'+(1-tick/top)*height+'" stroke="var(--line)" vector-effect="non-scaling-stroke"/>').join('');
+   const drawing=style==='line' && points.length?'<path d="'+line+' L'+points.at(-1).x+' '+height+' L'+points[0].x+' '+height+' Z" fill="currentColor" opacity=".12"/><path d="'+line+'" fill="none" stroke="currentColor" stroke-width="2.5" vector-effect="non-scaling-stroke"/>':'';
+   const marks=points.map(({x,y})=>{
+     const bar=style==='bar'?'<rect x="'+(x-slot*.3)+'" y="'+y+'" width="'+slot*.6+'" height="'+(height-y)+'" rx="2" fill="currentColor"/>':'';
+     return '<g>'+bar+'<circle cx="'+x+'" cy="'+y+'" r="2.3" fill="currentColor"/><rect x="'+(x-slot/2)+'" width="'+slot+'" height="'+height+'" fill="transparent"/></g>';
+   }).join('');
+   const labels=series.map((bin,i)=>'<span>'+(i%(mode==='day'?2:Math.ceil(series.length/8))===0?html(bin.label):'')+'</span>').join('');
+   return '<div class="usage-chart desktop-hour-chart"><div class="usage-y">'+ticks.map(t=>'<span>'+t+' 小时</span>').join('')+'</div><div><svg viewBox="0 0 640 126" preserveAspectRatio="none">'+guides+drawing+marks+'</svg><div class="usage-x" style="grid-template-columns:repeat('+series.length+',1fr)">'+labels+'</div></div></div>';
+ }
+function bindDesktopPoints(card,series,{pointIndex,onSelect,dur,enabled=()=>true,onChange=()=>{}}){
+   const d=card.ownerDocument;
+   const svg=card.querySelector('.usage-chart svg');
+   // The chart keeps hourly data; only axis labels are spaced two hours apart.
+   svg.setAttribute('role','group');
+   svg.setAttribute('aria-label','使用时间，点击时间点查看应用明细');
+   const detail=d.createElement('section');detail.className='desktop-point-detail';detail.id='point-detail';detail.hidden=true;
+   detail.setAttribute('role','region');detail.setAttribute('aria-label','所选时段明细');detail.setAttribute('aria-live','polite');
+   card.append(detail);
+   const points=[...svg.querySelectorAll('g')];
+   const close=()=>{detail.hidden=true;pointIndex=null;onSelect(null);points.forEach(g=>{g.setAttribute('aria-expanded','false');g.querySelector('circle').setAttribute('r','2.3');});onChange();};
+   function inspect(index){
+     const bin=series[index];pointIndex=index;onSelect(index);detail.hidden=false;
+     points.forEach((g,i)=>{g.setAttribute('aria-expanded',String(i===index));g.querySelector('circle').setAttribute('r',i===index?'5':'2.3');});
+     const rows=bin.rows;
+     detail.innerHTML='<header><strong>'+html(bin.detail)+'</strong><button type="button" aria-label="关闭时段明细">×</button></header><div class="point-total"><span>累计用时</span><b>'+dur(bin.minutes)+'</b></div>'+
+       (rows.length?'<ul>'+rows.map(({name,platform,minutes})=>'<li><span>'+html(name)+' <small>'+(platform==='windows'?'电脑':'手机')+'</small></span><b>'+dur(minutes)+'</b></li>').join('')+'</ul>':'<p>这段时间没有使用记录。</p>');
+     detail.querySelector('button').onclick=()=>{close();points[index]?.focus();};
+     onChange();
+   }
+   points.forEach((g,index)=>{
+     g.setAttribute('role','button');g.setAttribute('tabindex','0');g.setAttribute('aria-controls','point-detail');g.setAttribute('aria-expanded','false');
+     g.setAttribute('aria-label',series[index].detail+' · '+dur(series[index].minutes));
+     g.onclick=()=>{if(enabled())inspect(index);};
+     g.onkeydown=e=>{if(enabled() && ['Enter',' '].includes(e.key)){e.preventDefault();inspect(index);}};
+   });
+   card.addEventListener('keydown',e=>{if(e.key==='Escape' && !detail.hidden){const index=pointIndex;close();points[index]?.focus();e.stopPropagation();}});
+   if(pointIndex!==null && series[pointIndex]?.minutes!=null)inspect(pointIndex);
+ }
 // @generated desk-preview:end
 // All state lives in the current fixture document; no calls to the product or the notes API.
 const timers=new WeakMap();
@@ -741,53 +790,6 @@ function mountPeriodDashboard(d,onChange){
    });
  }
  let pointIndex=null;
- function desktopUsageChart(series){
-   const peak=Math.max(1,...series.map(bin=>(bin.minutes||0)/60));
-   const step=Math.max(1,Math.ceil(peak/4));
-   const top=Math.ceil(peak/step)*step;
-   const ticks=Array.from({length:top/step+1},(_,i)=>top-step*i);
-   const width=640,height=126,slot=width/series.length;
-   const points=series.flatMap((bin,index)=>bin.minutes===null?[]:[{
-     x:(index+.5)*slot,y:height*(1-bin.minutes/(top*60)),bin
-   }]);
-   const line=points.map(({x,y},i)=>(i?'L':'M')+x+' '+y).join(' ');
-   const guides=ticks.map(tick=>'<line x1="0" x2="640" y1="'+(1-tick/top)*height+'" y2="'+(1-tick/top)*height+'" stroke="var(--line)" vector-effect="non-scaling-stroke"/>').join('');
-   const drawing=desktopPreview.chart==='line' && points.length?'<path d="'+line+' L'+points.at(-1).x+' '+height+' L'+points[0].x+' '+height+' Z" fill="currentColor" opacity=".12"/><path d="'+line+'" fill="none" stroke="currentColor" stroke-width="2.5" vector-effect="non-scaling-stroke"/>':'';
-   const marks=points.map(({x,y})=>{
-     const bar=desktopPreview.chart==='bar'?'<rect x="'+(x-slot*.3)+'" y="'+y+'" width="'+slot*.6+'" height="'+(height-y)+'" rx="2" fill="currentColor"/>':'';
-     return '<g>'+bar+'<circle cx="'+x+'" cy="'+y+'" r="2.3" fill="currentColor"/><rect x="'+(x-slot/2)+'" width="'+slot+'" height="'+height+'" fill="transparent"/></g>';
-   }).join('');
-   const labels=series.map((bin,i)=>'<span>'+(i%(mode==='day'?2:Math.ceil(series.length/8))===0?html(bin.label):'')+'</span>').join('');
-   return '<div class="usage-chart desktop-hour-chart"><div class="usage-y">'+ticks.map(t=>'<span>'+t+' 小时</span>').join('')+'</div><div><svg viewBox="0 0 640 126" preserveAspectRatio="none">'+guides+drawing+marks+'</svg><div class="usage-x" style="grid-template-columns:repeat('+series.length+',1fr)">'+labels+'</div></div></div>';
- }
- function enableDesktopPointDetails(card,series){
-   const svg=card.querySelector('.usage-chart svg');
-   // The chart keeps hourly data; only axis labels are spaced two hours apart.
-   svg.setAttribute('role','group');
-   svg.setAttribute('aria-label','使用时间，点击时间点查看应用明细');
-   const detail=d.createElement('section');detail.className='desktop-point-detail';detail.id='point-detail';detail.hidden=true;
-   detail.setAttribute('role','region');detail.setAttribute('aria-label','所选时段明细');detail.setAttribute('aria-live','polite');
-   card.append(detail);
-   const points=[...svg.querySelectorAll('g')];
-   const close=()=>{detail.hidden=true;pointIndex=null;points.forEach(g=>{g.setAttribute('aria-expanded','false');g.querySelector('circle').setAttribute('r','2.3');});onChange();};
-   function inspect(index){
-     const bin=series[index];pointIndex=index;detail.hidden=false;
-     points.forEach((g,i)=>{g.setAttribute('aria-expanded',String(i===index));g.querySelector('circle').setAttribute('r',i===index?'5':'2.3');});
-     const rows=(bin.values||[]).map((minutes,i)=>({minutes,i})).filter(r=>r.minutes).sort((a,b)=>b.minutes-a.minutes);
-     detail.innerHTML='<header><strong>'+html(bin.detail)+'</strong><button type="button" aria-label="关闭时段明细">×</button></header><div class="point-total"><span>累计用时</span><b>'+dur(bin.minutes)+'</b></div>'+
-       (rows.length?'<ul>'+rows.map(({minutes,i})=>'<li><span>'+html(apps[i][0])+' <small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small></span><b>'+dur(minutes)+'</b></li>').join('')+'</ul>':'<p>这段时间没有使用记录。</p>');
-     detail.querySelector('button').onclick=()=>{close();points[index]?.focus();};
-     onChange();
-   }
-   points.forEach((g,index)=>{
-     g.setAttribute('role','button');g.setAttribute('tabindex','0');g.setAttribute('aria-controls','point-detail');g.setAttribute('aria-expanded','false');
-     g.setAttribute('aria-label',series[index].detail+' · '+dur(series[index].minutes));
-     g.onclick=()=>{if(!picking)inspect(index);};
-     g.onkeydown=e=>{if(!picking && ['Enter',' '].includes(e.key)){e.preventDefault();inspect(index);}};
-   });
-   card.addEventListener('keydown',e=>{if(e.key==='Escape' && !detail.hidden){const index=pointIndex;close();points[index]?.focus();e.stopPropagation();}});
-   if(pointIndex!==null && series[pointIndex]?.minutes!==null)inspect(pointIndex);
- }
  function enablePointDetails(card,series){
    const svg=card.querySelector('.usage-chart svg');
    const plot=d.createElement('div');
@@ -857,7 +859,7 @@ function mountPeriodDashboard(d,onChange){
    const cards={trend,ranking,compare};
    if(desktop || mobile){
      trend.querySelector('h3').textContent='使用时间';
-     trend.querySelector('.pd-plot').outerHTML=desktop?desktopUsageChart(series):usageArea(series.map(b=>({label:b.label,duration:b.minutes==null?null:b.minutes*60000})),ms=>dur(ms/60000));
+     trend.querySelector('.pd-plot').outerHTML=desktop?desktopUsageChart(series,mode,desktopPreview.chart):usageArea(series.map(b=>({label:b.label,duration:b.minutes==null?null:b.minutes*60000})),ms=>dur(ms/60000));
      if(mobile)enablePointDetails(trend,series);
      if(desktop){
        const selector=d.createElement('div');selector.className='chart-style';selector.setAttribute('role','group');selector.setAttribute('aria-label','图表类型');
@@ -866,7 +868,8 @@ function mountPeriodDashboard(d,onChange){
          button.textContent=label;button.setAttribute('aria-pressed',String(desktopPreview.chart===key));selector.append(button);
        }
        trend.querySelector('.pd-top small').replaceWith(selector);
-       enableDesktopPointDetails(trend,series);
+       const details=series.map(bin=>({...bin,rows:(bin.values||[]).map((minutes,i)=>({minutes,name:apps[i][0],platform:apps[i][1]==='pc'?'windows':'android'})).filter(row=>row.minutes).sort((a,b)=>b.minutes-a.minutes)}));
+       bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange});
      }
      const scroll=d.createElement('div');scroll.className='rank-scroll';scroll.tabIndex=0;scroll.setAttribute('aria-label','应用排行');scroll.setAttribute('role','region');
      scroll.append(...ranking.querySelectorAll('.pd-app'));ranking.append(scroll);
