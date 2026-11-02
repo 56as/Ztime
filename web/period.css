@@ -149,4 +149,8 @@
 .desk-ui .chart-style [aria-pressed=true] {background:var(--surface);color:var(--accent);font-weight:600}
 
 .ranking-card .rank-label{display:flex;align-items:center;gap:8px;min-width:0}
-.rank-label img{flex:none;object-fit:contain}
+.rank-label img{display:block;flex:none;object-fit:contain}
+.desk-ui .rank-label .app-name{display:block;line-height:22px}
+.desk-ui .ranking-card .app-row{padding:9px 0;row-gap:4px}
+.desk-ui .ranking-card .rank-track{margin-left:30px}
+.dark .rank-label img[data-monochrome]{filter:invert(1)}

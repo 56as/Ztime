@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {execFile} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {promisify} from 'node:util';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -18,6 +19,18 @@ const counterparts=new Map([
  ['org.mozilla.firefox','firefox.exe'],['com.spotify.music','spotify.exe'],
  ['com.tencent.mm','weixin.exe'],['org.telegram.messenger','telegram.exe']
 ]);
+const bundled=new Map([
+ ['ztime.exe',new URL('../assets/icon.png',import.meta.url)],
+ ['chatgpt.exe',new URL('../assets/app-icons/chatgpt.png',import.meta.url)]
+]);
+async function packageIcon(source){
+ if(!source || !/\\WindowsApps\\/i.test(source))return null;
+ try{
+  const script=fileURLToPath(new URL('./package-icon.ps1',import.meta.url));
+  const {stdout}=await exec('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',script,source],{windowsHide:true,timeout:8000});
+  return stdout.trim()?await fs.readFile(stdout.trim()):null;
+ }catch{return null;}
+}
 const glyphs={
  windows:'<path d="M4 5h16v13H4z M8 21h8 M12 18v3"/>',
  android:'<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/>'
@@ -37,9 +50,10 @@ export function createAppIcons(dir,extract){
   }
  }
  async function load(id){
-  const file=path.join(dir,createHash('sha256').update(id).digest('hex')+'.png');
+  if(id==='ztime.exe')return {type:'image/png',data:await fs.readFile(bundled.get(id))};
+  const file=path.join(dir,'v2-'+createHash('sha256').update(id).digest('hex')+'.png');
   try{return {type:'image/png',data:await fs.readFile(file)};}catch{}
-  if(!extract || process.platform!=='win32')return fallback('windows');
+  if(process.platform!=='win32')return fallback('windows');
   if(!locations.has(id)){
    discovery??=exec('powershell.exe',['-NoLogo','-NoProfile','-NonInteractive','-Command',discover],{windowsHide:true,timeout:8000})
     .then(({stdout})=>stdout.split(/\r?\n/).forEach(line=>remember(line.trim().replace(/^"|"$/g,'')))).catch(()=>{});
@@ -47,8 +61,9 @@ export function createAppIcons(dir,extract){
   }
   const source=locations.get(id) || path.join(process.env.SystemRoot,'System32',id);
   try{
-   await fs.access(source);
-   const data=await extract(source);
+   let data=await packageIcon(source);
+   if(!data && bundled.has(id))data=await fs.readFile(bundled.get(id));
+   if(!data && extract){await fs.access(source);data=await extract(source);}
    if(data?.length){
     await fs.mkdir(dir,{recursive:true});
     const temp=file+'.tmp';
