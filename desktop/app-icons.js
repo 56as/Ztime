@@ -51,7 +51,8 @@ export function createAppIcons(dir,extract){
  }
  async function load(id){
   if(id==='ztime.exe')return {type:'image/png',data:await fs.readFile(bundled.get(id))};
-  const file=path.join(dir,'v2-'+createHash('sha256').update(id).digest('hex')+'.png');
+  const name=createHash('sha256').update(id).digest('hex')+'.png';
+  const file=path.join(dir,'v2-'+name);
   try{return {type:'image/png',data:await fs.readFile(file)};}catch{}
   if(process.platform!=='win32')return fallback('windows');
   if(!locations.has(id)){
@@ -71,6 +72,9 @@ export function createAppIcons(dir,extract){
     return {type:'image/png',data};
    }
   }catch{/* An inaccessible or removed app uses the platform icon. */}
+  // Historical apps can outlive their installers. Retain the prior artwork
+  // only when neither a fresh source nor bundled artwork was available.
+  try{return {type:'image/png',data:await fs.readFile(path.join(dir,name))};}catch{}
   return fallback('windows');
  }
  return {remember,async get(platform,appId){
