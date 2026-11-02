@@ -438,3 +438,9 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
   .desktop-v2 .settings-grid {grid-template-columns:minmax(0,.85fr) minmax(306px,1.15fr)}
   .desktop-v2 #design-settings-data .row button {padding-inline:8px}
 }
+/* Match the desktop statistics sidebar to the other three review pages. */
+.desktop-v2 #period-dashboard .pd-nav {gap:5px;padding:32px 14px 38px;background:var(--surface);border-color:var(--line)}
+.desktop-v2 #period-dashboard .pd-brand {margin:0;padding:0 13px 31px;font:650 21px/1.5 "Segoe UI","Microsoft YaHei",sans-serif;letter-spacing:-.6px;color:var(--text)}
+.desktop-v2 #period-dashboard .pd-nav button {display:flex;align-items:center;gap:12px;padding:11px 14px;font:400 13px/1.5 "Segoe UI","Microsoft YaHei",sans-serif;color:var(--muted);border-radius:9px}
+.desktop-v2 #period-dashboard .pd-nav button.active {color:var(--accent);background:var(--tint);font-weight:600}
+@media(max-width:1100px){.desktop-v2 #period-dashboard .pd-nav {padding-inline:10px}}

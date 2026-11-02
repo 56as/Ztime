@@ -150,7 +150,8 @@ const frame = $('frame'), device = $('device'), page = $('page');
 const titles = Object.fromEntries([...page.options].map(option => [option.value, option.text]));
 const flowTitles = {invite:'电脑生成配对信息',scan:'手机扫码',confirm:'确认目标设备',wait:'等待确认',request:'电脑审批',success:'配对成功',refused:'配对被拒绝',timeout:'等待超时'};
 function pageTitle(id) {
-  if(id==="behavior")return "行为复盘";
+  if(id==="behavior")return "行为";
+  if(id==="home" && device.value==="desktop")return "统计";
   if (id.startsWith('pair-')) return '配对 · '+flowTitles[id.slice(5)];
   if (id.includes('-detail-')) {
     const [parent, , app] = id.split('-');
@@ -246,15 +247,26 @@ const removedDesktopCopy={
     ['#app > div:nth-of-type(1) > main:nth-of-type(1) > section:nth-of-type(1) > p:nth-of-type(1)','#lan-ready h2']
   ]
 };
+const desktopNavigation=[
+  ['home','统计','M4 4v16h17 M8 16v-4 M13 16V7 M18 16v-7'],
+  ['behavior','行为','M3 12h4l3-7 4 14 3-7h4'],
+  ['devices','设备','M3 4h18v12H3z M8 21h8 M12 16v5'],
+  ['settings','设置','M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M12 2v3 M12 19v3 M2 12h3 M19 12h3 M5 5l2 2 M17 17l2 2 M19 5l-2 2 M7 17l-2 2']
+];
+function desktopNavButtons(current){
+  return desktopNavigation.map(([id,label,path])=>{
+    const active=current===id;
+    const target=active && id==='home'?'data-cal="home"':'data-page="'+id+'"';
+    return '<button '+target+(active?' class="active" aria-current="page"':'')+'><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="'+path+'"/></svg>'+label+'</button>';
+  }).join('');
+}
 function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2','desk-ui');
   applyPreviewTheme(d);updatePreviewRecording(d);
-  if(['devices','settings'].includes(pageId)){
-    const nav=d.querySelector('.sidebar .nav');
-    const entry=d.createElement('button');entry.dataset.page='behavior';entry.textContent='行为复盘';
-    nav?.querySelector('[data-page=devices]')?.before(entry);
-  }
   if(pageId!=='home'){
+    const nav=d.querySelector('.sidebar .nav');
+    nav.setAttribute('aria-label','主导航');
+    nav.innerHTML=desktopNavButtons(pageId);
     const version=d.createElement('small');
     version.id='desktop-version';version.textContent='版本 0.2.15';
     d.querySelector('.sidebar').append(version);
@@ -333,7 +345,7 @@ function resize() {
   const height = Math.round(stage.clientHeight / scale);
   $('mount').style.width = width * scale + 'px';
   Object.assign(frame.style, {width: width + 'px', height: height + 'px', transform: 'scale(' + scale + ')'});
-  $('caption').textContent = (frame.dataset.feature===desktopV2?secondDraftPrefix:'') + (frame.dataset.feature==='controls'?'控件样式':isDashboard(frame.dataset.feature)&&page.value==='home'?'仪表盘':describe(board())) + '　' + width + ' × ' + height + ' px';
+  $('caption').textContent = (frame.dataset.feature===desktopV2?secondDraftPrefix:'') + (frame.dataset.feature==='controls'?'控件样式':isDashboard(frame.dataset.feature)&&page.value==='home'?(frame.dataset.feature===desktopV2?'统计':'仪表盘'):describe(board())) + '　' + width + ' × ' + height + ' px';
 }
 function setPicking(enabled) {
   picking = enabled;
@@ -364,7 +376,7 @@ function showBoard(key, feature = "") {
   page.querySelector('[data-context]')?.remove();
   if (![...page.options].some(o=>o.value===id)) {const o=new Option(pageTitle(id),id);o.dataset.context='';page.add(o);}
   device.value = mode; page.value = id;
-  page.querySelector('option[value="home"]').textContent=isDashboard(feature)?'仪表盘':'今日';
+  page.querySelector('option[value="home"]').textContent=feature===desktopV2?'统计':isDashboard(feature)?'仪表盘':'今日';
   $('sync-scenario').hidden=id!=='devices';
   clearEditor(); frame.dataset.feature=feature; resize();
   location.hash = feature?key+'/'+feature:key;
@@ -479,6 +491,7 @@ function comparisonNote(note){
 function targetFor(note) {
   if(secondDraftNote(note)!==currentDraft())return null;
   try {
+    if(note.board==='desktop-behavior' && note.id===110)return doc().querySelector('.behavior h1');
     if(note.board==='desktop-settings' && [96,97].includes(note.id))return doc().querySelector(note.selector)?.parentElement.querySelector('span');
     if(note.board==='mobile-home' && note.selector==='#point-detail' && !doc().querySelector('#point-detail')?.textContent)return doc().querySelector('.point-plot');
     if(comparisonNote(note)){
@@ -857,7 +870,7 @@ function mountPeriodDashboard(d,onChange){
      const name=modules[key];
      return `<div class="pd-module-row"><b>${name}</b><button data-cal="layout-up" data-key="${key}" aria-label="上移${name}" ${i===0?'disabled':''}>↑</button><button data-cal="layout-down" data-key="${key}" aria-label="下移${name}" ${i===layoutDraft.length-1?'disabled':''}>↓</button><button data-cal="layout-toggle" data-key="${key}" aria-pressed="${visible}">${desktop||mobile?(visible?'已添加':'添加'):(visible?'显示':'隐藏')}</button></div>`;
    }).join('');
-   return '<section class="pd-picker"><h3>仪表盘布局</h3><p class="pd-help">调整卡片顺序和显示状态。</p>'+rows+'<div class="pd-end"><button data-cal="cancel">取消</button><button class="pd-primary" data-cal="layout-save">保存布局</button></div></section>';
+   return '<section class="pd-picker"><h3>'+(desktop?'统计布局':'仪表盘布局')+'</h3><p class="pd-help">调整卡片顺序和显示状态。</p>'+rows+'<div class="pd-end"><button data-cal="cancel">取消</button><button class="pd-primary" data-cal="layout-save">保存布局</button></div></section>';
  }
  function applyLayout(series){
    const grid=root.querySelector('.pd-bottom');
@@ -928,7 +941,7 @@ function mountPeriodDashboard(d,onChange){
   const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>'<div class="pd-app"><span>'+apps[i][0]+'</span><small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small><b>'+dur(m)+'</b><i class="rank-track"><i style="width:'+100*m/Math.max(...v)+'%"></i></i></div>').join('');
   const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
   const dateText=mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
-  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div><button aria-current="page" data-cal="home">仪表盘</button>'+(desktop?'<button data-page="behavior">行为复盘</button>':'')+'<button data-page="devices">设备</button><button data-page="settings">设置</button></nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">仪表盘</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
+  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div>'+(desktop?desktopNavButtons('home'):'<button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button>')+'</nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">'+(desktop?'统计':'仪表盘')+'</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
   '<section class="pd-summary"><div><small>'+(desktop?{all:'设备累计',phone:'手机累计',pc:'电脑累计'}[scope]:'设备累计')+'</small><h2>'+dur(sum)+'</h2></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
   (comparison?'<p class="pd-comp-label">'+label(comparison)+'</p><p>对比期累计　'+dur(compare)+'</p><strong>日均'+(Math.abs(delta)<0.5?'持平':(delta>0?'增加 ':'减少 ')+dur(Math.abs(delta)))+'</strong><p>本期日均 '+dur(sum/len(period))+' · 对比期日均 '+dur(compare/len(comparison))+'</p>':'<p>'+(mode==='year'?'比较上年同期的使用情况。':'可选另一月份的一段日期，比较日均用时。')+'</p>')+
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
@@ -944,7 +957,7 @@ function mountPeriodDashboard(d,onChange){
   applyLayout(series);
   const content=layoutDraft?layoutPanel():calendar();
   if(content){
-    const label=layoutDraft?'仪表盘布局':picker.target==='year'?'选择年份':picker.target==='comparison'?'选择对比区间':'选择统计区间';
+    const label=layoutDraft?(desktop?'统计布局':'仪表盘布局'):picker.target==='year'?'选择年份':picker.target==='comparison'?'选择对比区间':'选择统计区间';
     root.firstElementChild.inert=true;
     root.insertAdjacentHTML('beforeend','<div class="pd-scrim" data-cal="dismiss"><div class="pd-modal" role="dialog" aria-modal="true" aria-label="'+label+'">'+content+'</div></div>');
     // Dialog fields are created after the dashboard. Delegate edits to the current draft.
