@@ -27,6 +27,13 @@ try{
   const modal=page.locator('.period-dialog');
   await page.locator('.period-total').waitFor();
   await page.locator('.rank-label img').first().evaluate(image=>image.decode());
+  const rowStyle=await page.locator('.desktop-rank-row').first().evaluate(row=>{
+    const name=row.querySelector('.rank-name'),icon=row.querySelector('img'),bar=row.querySelector('.rank-track');
+    return [getComputedStyle(name).fontSize,icon.offsetWidth,bar.offsetLeft-icon.offsetLeft,
+      getComputedStyle(row).borderBottomWidth,getComputedStyle(row.querySelector('small')).fontSize,
+      getComputedStyle(row.querySelector('b')).fontSize,getComputedStyle(bar.firstElementChild).backgroundColor];
+  });
+  assert.deepEqual(rowStyle,['15px',22,120,'1px','11px','13px','rgb(73, 131, 195)']);
   assert.equal(await page.locator('.page-header .statusbar').innerText(),'正在记录 · Editor <Example>');
   assert.deepEqual(await page.locator('[data-mode]').allTextContents(),['日','周','月','年']);
   for(const [width,height] of [[820,620],[1280,824]]) {

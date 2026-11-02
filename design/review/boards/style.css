@@ -233,6 +233,29 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-hour-chart g:is(:hover,:focus-visible,[aria-expanded=true]) .chart-dot {stroke-width:8px}
 .desktop-hour-chart g circle.dot-hit {fill:transparent;stroke:transparent;stroke-width:16px;vector-effect:non-scaling-stroke;pointer-events:all}
 .desktop-hour-chart:has(rect[rx]) g[aria-expanded=true] circle {r:5px}
+
+/* Match the approved desktop ranking, including the typography of each interactive row. */
+.desktop-rank-card {--rank-ink:#172538;--rank-muted:#67788f;font:400 15px/1.5 system-ui,"Microsoft YaHei",sans-serif;color:var(--rank-ink)}
+.dark .desktop-rank-card {--rank-ink:var(--text);--rank-muted:var(--text)}
+.desktop-rank-card:is(section) {border-color:#e1e6ee}
+.dark .desktop-rank-card:is(section) {border-color:var(--line)}
+.desktop-rank-card > :is(h2,h3) {font:700 17px/1.5 system-ui,"Microsoft YaHei",sans-serif;color:var(--rank-ink);letter-spacing:normal;margin:0}
+.desktop-rank-card .desktop-rank-row {
+ display:grid;grid-template-columns:112px minmax(50px,1fr) 2.5em minmax(7em,auto);align-items:center;gap:4px 8px;
+ width:100%;padding:9px 0;margin:0;border:0;border-bottom:1px solid #eef0f4;border-radius:0;box-shadow:none;
+ background:transparent;color:var(--rank-ink);font:inherit;text-align:left;
+}
+.desktop-rank-card .desktop-rank-row:last-child {border-bottom:0}
+.desktop-rank-card .desktop-rank-row > * {grid-row:1}
+.desktop-rank-row .rank-label {display:flex;align-items:center;gap:8px;min-width:0}
+.desktop-rank-row .review-app-icon {display:block;width:22px;height:22px;flex:none;object-fit:contain}
+.desktop-rank-row .rank-name {display:block;font:inherit;line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.desktop-rank-row small {grid-column:3;font:400 11px/1.5 system-ui,"Microsoft YaHei",sans-serif;color:var(--rank-muted)}
+.desktop-rank-row b {grid-column:4;margin-left:auto;font:700 13px/1.5 system-ui,"Microsoft YaHei",sans-serif;font-variant-numeric:tabular-nums;text-align:right}
+.desktop-rank-card .desktop-rank-row .rank-track {display:block;grid-column:2;width:100%;height:8px;margin:0;background:#eef2f7;border-radius:4px}
+.desktop-rank-row .rank-track i {display:block;height:100%;background:#4983c3;border-radius:inherit}
+.dark .desktop-rank-row img:is([data-monochrome],[src="rank-icons/chatgpt.png"]) {filter:invert(1)}
+.desktop-rank-row:focus-visible {outline:2px solid var(--accent);outline-offset:-2px}
 /* @generated desk-preview:end */
 
 /* The phone boards share one bottom tab bar. */
@@ -449,15 +472,3 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 #period-dashboard .pd-nav button {display:flex;align-items:center;gap:12px;padding:11px 14px;font:400 13px/1.5 "Segoe UI","Microsoft YaHei",sans-serif;color:var(--muted);border-radius:9px}
 .desktop-v2 #period-dashboard .pd-nav button.active {color:var(--accent);background:var(--tint);font-weight:600}
 @media(max-width:1100px){.desktop-v2 #period-dashboard .pd-nav {padding-inline:10px}}
-
-.desktop-v2 .pd-app > span:first-child {display:flex;align-items:center;gap:8px;min-width:0}
-.review-app-icon {display:block;flex:none;width:22px;height:22px;object-fit:contain}
-.desktop-v2 .pd-app .rank-name {display:block;line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.desktop-v2 .pd-app {grid-template-columns:112px minmax(50px,1fr) 2.5em minmax(7em,auto);align-items:center;column-gap:8px}
-.desktop-v2 .pd-app > * {grid-row:1}
-.desktop-v2 .pd-app .rank-track {grid-column:2;width:100%;margin:0;height:8px}
-.desktop-v2 .pd-app small {grid-column:3}
-.desktop-v2 .pd-app b {grid-column:4;text-align:right}
-.desktop-v2.dark .review-app-icon[src="rank-icons/chatgpt.png"] {filter:invert(1)}
-
-.review-initial {display:grid;place-items:center;background:#526982;color:white;border-radius:5px;font:600 14px/1 system-ui}

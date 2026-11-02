@@ -11,8 +11,31 @@ function validDesktopLayout(rows){
    new Set(rows.map(r=>r.key)).size===rows.length;
 }
 
+const collation=new Intl.Collator('zh-CN-u-co-pinyin');
+const initials='ABCDEFGHJKLMNOPQRSTWXYZ';
+const boundaries=Array.from('阿八擦搭妸发旮哈丌咔垃妈拿噢趴七呥仨他挖夕丫帀');
+
+function rankInitialSvg(name,id){
+ const first=String(name||id||'').normalize('NFKC').match(/[\p{L}\p{N}]/u)?.[0];
+ let letter=first?.toLocaleUpperCase()||'#';
+ if(first && /\p{Script=Han}/u.test(first)){
+  const index=boundaries.findLastIndex(start=>collation.compare(first,start)>=0);
+  letter=initials[Math.max(0,index)];
+ }
+ return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22"><rect width="22" height="22" rx="5" fill="#526982"/><text x="11" y="11" text-anchor="middle" dominant-baseline="central" font-family="system-ui,sans-serif" font-size="14" font-weight="600" fill="white">${letter}</text></svg>`;
+}
+
 // Presentation shared by the Windows renderer and its example-data review board.
 const html=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// The review board supplies example icons. The installed client supplies its local icon URL.
+function desktopRankRow({name,icon,device,minutes,percent,index}){
+ const label=html(name),hours=Math.floor(minutes/60);
+ const time=hours?hours+' 小时 '+minutes%60+' 分钟':minutes+' 分钟';
+ const tag=index===undefined?'div':'button';
+ const attributes=index===undefined?'class="pd-app desktop-rank-row"':'class="desktop-rank-row" type="button" data-rank="'+index+'"';
+ return `<${tag} ${attributes}><span class="rank-label">${icon}<span class="rank-name" title="${label}">${label}</span></span><small>${device}</small><b>${time}</b><i class="rank-track" aria-hidden="true"><i style="width:${percent}%"></i></i></${tag}>`;
+}
+
 function usageArea(bins,format){
  if(!bins.length)return '<p>所选期间暂无使用记录</p>';
  const max=Math.max(60000,...bins.map(b=>b.duration||0)), width=640, height=126;
@@ -272,7 +295,7 @@ function applySecondDesktopDraft(d,pageId){
     nav.setAttribute('aria-label','主导航');
     nav.innerHTML=desktopNavButtons(pageId);
     const version=d.createElement('small');
-    version.id='desktop-version';version.textContent='版本 0.2.21';
+    version.id='desktop-version';version.textContent='版本 0.2.22';
     d.querySelector('.sidebar').append(version);
   }
 
@@ -909,6 +932,7 @@ function mountPeriodDashboard(d,onChange){
        const details=series.map(bin=>({...bin,rows:(bin.values||[]).map((minutes,i)=>({minutes,name:apps[i][0],platform:apps[i][1]==='pc'?'windows':'android'})).filter(row=>row.minutes).sort((a,b)=>b.minutes-a.minutes)}));
        bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange});
      }
+     if(desktop)ranking.classList.add('desktop-rank-card');
      const scroll=d.createElement('div');scroll.className='rank-scroll';scroll.tabIndex=0;scroll.setAttribute('aria-label','应用排行');scroll.setAttribute('role','region');
      scroll.append(...ranking.querySelectorAll('.pd-app'));ranking.append(scroll);
    }
@@ -958,11 +982,15 @@ function mountPeriodDashboard(d,onChange){
   function icon(i){
    if(!desktop)return '';
    const name=desktopExamples[i][2];
-   if(!name)return '<span aria-hidden="true" class="review-app-icon review-initial">'+(desktopExamples[i][0]==='相机'?'X':'S')+'</span>';
+   if(!name)return '<span aria-hidden="true" class="review-app-icon">'+rankInitialSvg(desktopExamples[i][0])+'</span>';
    const src=name==='brand-icon.png'?name:'rank-icons/'+name+'.png';
    return '<img class="review-app-icon" src="'+src+'" alt="">';
   }
-  const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>'<div class="pd-app"><span>'+icon(i)+(desktop?'<span class="rank-name" title="'+html(apps[i][0])+'">'+apps[i][0]+'</span>':apps[i][0])+'</span><small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small><b>'+dur(m)+'</b><i class="rank-track"><i style="width:'+100*m/Math.max(...v)+'%"></i></i></div>').join('');
+  const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>{
+   const name=apps[i][0],device=apps[i][1]==='pc'?'电脑':'手机',percent=100*m/Math.max(...v);
+   if(desktop)return desktopRankRow({name,icon:icon(i),device,percent,minutes:m});
+   return '<div class="pd-app"><span>'+name+'</span><small>'+device+'</small><b>'+dur(m)+'</b><i class="rank-track"><i style="width:'+percent+'%"></i></i></div>';
+  }).join('');
   const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
   const dateText=mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
   root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div>'+(desktop?desktopNavButtons('home'):'<button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button>')+'</nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">'+(desktop?'统计':'仪表盘')+'</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
@@ -971,7 +999,7 @@ function mountPeriodDashboard(d,onChange){
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
 
   if(desktop){
-    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.21';
+    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.22';
     root.querySelector('.pd-nav').append(version);
   }
   if(mobile){

@@ -1,5 +1,14 @@
 // Presentation shared by the Windows renderer and its example-data review board.
 const html=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// The review board supplies example icons. The installed client supplies its local icon URL.
+export function desktopRankRow({name,icon,device,minutes,percent,index}){
+ const label=html(name),hours=Math.floor(minutes/60);
+ const time=hours?hours+' 小时 '+minutes%60+' 分钟':minutes+' 分钟';
+ const tag=index===undefined?'div':'button';
+ const attributes=index===undefined?'class="pd-app desktop-rank-row"':'class="desktop-rank-row" type="button" data-rank="'+index+'"';
+ return `<${tag} ${attributes}><span class="rank-label">${icon}<span class="rank-name" title="${label}">${label}</span></span><small>${device}</small><b>${time}</b><i class="rank-track" aria-hidden="true"><i style="width:${percent}%"></i></i></${tag}>`;
+}
+
 export function usageArea(bins,format){
  if(!bins.length)return '<p>所选期间暂无使用记录</p>';
  const max=Math.max(60000,...bins.map(b=>b.duration||0)), width=640, height=126;

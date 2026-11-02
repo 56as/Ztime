@@ -1,11 +1,17 @@
 import {recordingStatus} from './recording-status.js';
 import {desktopTitles,desktopLayout} from './shared/desktop-card-layout.js';
-import {usageArea,shareChart,desktopUsageChart,bindDesktopPoints} from './desktop-insights.js';
+import {usageArea,shareChart,desktopUsageChart,bindDesktopPoints,desktopRankRow} from './desktop-insights.js';
 import {bindPhoneUsage} from './phone-usage.js';
 import {refreshControl} from './refresh-control.js';
 import {cardTitles,defaultCardLayout,validCardLayout} from './shared/period-layout.js';
 import {dateKey} from './shared/time.js';
 import {periodStats} from './shared/period.js';
+
+const windowsRankNames=new Map([
+ ['chrome.exe','Chrome'],['weixin.exe','微信'],['code.exe','VS Code'],['ztime.exe','Ztime'],
+ ['chatgpt.exe','ChatGPT'],['excel.exe','Excel'],['winword.exe','Word'],['photos.exe','照片'],
+ ['taskmgr.exe','任务管理器'],['rustdesk.exe','RustDesk'],['tailscale-ipn.exe','Tailscale']
+]);
 
 // Keep the selection when moving between dashboard, devices and settings.
 export function createPeriodView({api, escape, duration, details, report, refreshPhone, onError}) {
@@ -159,12 +165,20 @@ export function createPeriodView({api, escape, duration, details, report, refres
    const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
    const dateText=!desktop && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
    const controls=`<div class="pd-controls"><div class="pd-modes">${modesHtml}</div><div class="pd-range"><button aria-label="上一期间" data-cal="prev">‹</button><button data-cal="dates" aria-haspopup="dialog" aria-label="${fullDate}">${dateText} ▾</button><button aria-label="下一期间" data-cal="next" ${period[1]>=today?'disabled':''}>›</button></div></div>`;
-   const ranking=result?.apps.map((a,index)=>`<button class="app-row" data-rank="${index}">${desktop?`<span class="rank-label"><img width="22" height="22" loading="lazy" alt="" ${a.platform==='windows' && a.appId.toLowerCase()==='chatgpt.exe'?'data-monochrome':''} src="/api/app-icon?v=3&amp;platform=${encodeURIComponent(a.platform)}&amp;id=${encodeURIComponent(a.appId)}&amp;name=${encodeURIComponent(a.name)}">`:''}<span class="app-name"${desktop?` title="${escape(a.name)}"`:''}>${escape(a.name)}</span>${desktop?'</span>':''}<small>${a.platform==='android'?'手机':'电脑'}</small><strong>${duration(a.duration,true)}</strong><span class="rank-track" aria-hidden="true"><i style="width:${100*a.duration/result.apps[0].duration}%"></i></span></button>`).join('');
+   const ranking=result?.apps.map((app,index)=>{
+     const device=app.platform==='android'?'手机':'电脑',percent=100*app.duration/result.apps[0].duration;
+     if(!desktop)return `<button class="app-row" data-rank="${index}"><span class="app-name">${escape(app.name)}</span><small>${device}</small><strong>${duration(app.duration,true)}</strong><span class="rank-track" aria-hidden="true"><i style="width:${percent}%"></i></span></button>`;
+     const query=new URLSearchParams({v:'4',platform:app.platform,id:app.appId,name:app.name});
+     const mono=app.platform==='windows' && app.appId.toLowerCase()==='chatgpt.exe';
+     const icon=`<img class="review-app-icon" alt="" loading="lazy" ${mono?'data-monochrome':''} src="/api/app-icon?${escape(query.toString())}">`;
+     const name=(app.platform==='windows' && windowsRankNames.get(app.appId.toLowerCase()))||app.name;
+     return desktopRankRow({name,icon,device,percent,index,minutes:Math.floor(app.duration/60000)});
+   }).join('');
    const series=desktop && result?chartSeries():null;
    const styleButtons='<div class="chart-style" role="group" aria-label="图表类型">'+[['line','折线图'],['bar','柱形图']].map(([key,label])=>`<button data-chart="${key}" aria-pressed="${chartStyle===key}">${label}</button>`).join('')+'</div>';
    const cards=result?{
      trend:`<section class="period-card trend-card"><div class="pd-top"><h2>使用时间</h2>${desktop?styleButtons:'<small>单位：小时</small>'}</div>${desktop?desktopUsageChart(series,mode,chartStyle):usageArea(result.bins.map(b=>b.start>=result.end?{...b,duration:null}:b),ms=>duration(ms,true))}</section>`,
-     ranking:`<section class="period-card ranking-card"><h2>应用排行</h2>${ranking?'<div class="rank-scroll" tabindex="0" role="region" aria-label="应用排行">'+ranking+'</div>':ranking||'<p>所选期间暂无使用记录</p>'}</section>`,
+     ranking:`<section class="period-card ranking-card${desktop?' desktop-rank-card':''}"><h2>应用排行</h2>${ranking?'<div class="rank-scroll" tabindex="0" role="region" aria-label="应用排行">'+ranking+'</div>':ranking||'<p>所选期间暂无使用记录</p>'}</section>`,
      compare:renderComparison(),
      ...(desktop?Object.fromEntries(['devices','focus'].map(key=>[key,'<section class="period-card"><h2>'+desktopTitles[key]+'</h2>'+shareChart(key,result.apps,ms=>duration(ms,true))+'</section>'])):{})
    }:{};

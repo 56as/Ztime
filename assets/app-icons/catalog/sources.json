@@ -19,7 +19,10 @@
     "vcredist_x86.exe": "Windows launcher resource: vcredist_x86.exe",
     "vsupdate_kb3022398.exe": "Windows launcher resource: vsupdate_kb3022398.exe",
     "windowsterminal.exe": "Windows launcher resource: Square44x44Logo.scale-200_contrast-black.png",
-    "winword.exe": "Windows launcher resource: WINWORD.EXE"
+    "winword.exe": "Windows launcher resource: WINWORD.EXE",
+    "code.exe": "Windows launcher artwork used in the desktop review",
+    "weixin.exe": "Windows launcher artwork used in the desktop review",
+    "chrome.exe": "Windows launcher artwork used in the desktop review"
   },
   "android": {
     "cmb.pb": "https://sj.qq.com/appdetail/cmb.pb",

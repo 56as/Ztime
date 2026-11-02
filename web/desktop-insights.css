@@ -19,3 +19,26 @@
 .desktop-hour-chart g:is(:hover,:focus-visible,[aria-expanded=true]) .chart-dot {stroke-width:8px}
 .desktop-hour-chart g circle.dot-hit {fill:transparent;stroke:transparent;stroke-width:16px;vector-effect:non-scaling-stroke;pointer-events:all}
 .desktop-hour-chart:has(rect[rx]) g[aria-expanded=true] circle {r:5px}
+
+/* Match the approved desktop ranking, including the typography of each interactive row. */
+.desktop-rank-card {--rank-ink:#172538;--rank-muted:#67788f;font:400 15px/1.5 system-ui,"Microsoft YaHei",sans-serif;color:var(--rank-ink)}
+.dark .desktop-rank-card {--rank-ink:var(--text);--rank-muted:var(--text)}
+.desktop-rank-card:is(section) {border-color:#e1e6ee}
+.dark .desktop-rank-card:is(section) {border-color:var(--line)}
+.desktop-rank-card > :is(h2,h3) {font:700 17px/1.5 system-ui,"Microsoft YaHei",sans-serif;color:var(--rank-ink);letter-spacing:normal;margin:0}
+.desktop-rank-card .desktop-rank-row {
+ display:grid;grid-template-columns:112px minmax(50px,1fr) 2.5em minmax(7em,auto);align-items:center;gap:4px 8px;
+ width:100%;padding:9px 0;margin:0;border:0;border-bottom:1px solid #eef0f4;border-radius:0;box-shadow:none;
+ background:transparent;color:var(--rank-ink);font:inherit;text-align:left;
+}
+.desktop-rank-card .desktop-rank-row:last-child {border-bottom:0}
+.desktop-rank-card .desktop-rank-row > * {grid-row:1}
+.desktop-rank-row .rank-label {display:flex;align-items:center;gap:8px;min-width:0}
+.desktop-rank-row .review-app-icon {display:block;width:22px;height:22px;flex:none;object-fit:contain}
+.desktop-rank-row .rank-name {display:block;font:inherit;line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.desktop-rank-row small {grid-column:3;font:400 11px/1.5 system-ui,"Microsoft YaHei",sans-serif;color:var(--rank-muted)}
+.desktop-rank-row b {grid-column:4;margin-left:auto;font:700 13px/1.5 system-ui,"Microsoft YaHei",sans-serif;font-variant-numeric:tabular-nums;text-align:right}
+.desktop-rank-card .desktop-rank-row .rank-track {display:block;grid-column:2;width:100%;height:8px;margin:0;background:#eef2f7;border-radius:4px}
+.desktop-rank-row .rank-track i {display:block;height:100%;background:#4983c3;border-radius:inherit}
+.dark .desktop-rank-row img:is([data-monochrome],[src="rank-icons/chatgpt.png"]) {filter:invert(1)}
+.desktop-rank-row:focus-visible {outline:2px solid var(--accent);outline-offset:-2px}

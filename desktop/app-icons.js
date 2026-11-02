@@ -1,3 +1,4 @@
+import {rankInitialSvg} from '../shared/rank-initial.js';
 import {createHash} from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
@@ -21,7 +22,7 @@ const counterparts=new Map([
  ['com.tencent.mm','weixin.exe'],['org.telegram.messenger','telegram.exe']
 ]);
 const bundled=new Map([
- ['ztime.exe',new URL('../assets/icon.png',import.meta.url)],
+ ['ztime.exe',new URL('../web/brand-icon.png',import.meta.url)],
  ['chatgpt.exe',new URL('../assets/app-icons/chatgpt.png',import.meta.url)]
 ]);
 async function packageIcon(source){
@@ -35,20 +36,8 @@ async function packageIcon(source){
 // This PNG is the standard executable thumbnail returned by the Windows shell on this build.
 const genericDigest='a967ce9122a57a6c320d63ee04978fbc325262fefcd8e00b0690bd8cd62a1ca8';
 const png=data=>data?.length && createHash('sha256').update(data).digest('hex')!==genericDigest?{type:'image/png',data}:null;
-const collation=new Intl.Collator('zh-CN-u-co-pinyin');
-const initials='ABCDEFGHJKLMNOPQRSTWXYZ';
-const boundaries=Array.from('阿八擦搭妸发旮哈丌咔垃妈拿噢趴七呥仨他挖夕丫帀');
-
 export function initialIcon(name,id){
- const first=String(name||id||'').normalize('NFKC').match(/[\p{L}\p{N}]/u)?.[0];
- let letter=first?.toLocaleUpperCase()||'#';
- if(first && /\p{Script=Han}/u.test(first)){
-  const index=boundaries.findLastIndex(start=>collation.compare(first,start)>=0);
-  letter=initials[Math.max(0,index)];
- }
- const colors=['#415f81','#54694b','#845961','#635b89','#85623f','#406c72'];
- const color=colors[createHash('sha256').update(String(id)).digest()[0]%colors.length];
- return {type:'image/svg+xml',data:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="${color}"/><text x="12" y="12.5" text-anchor="middle" dominant-baseline="central" font-family="Segoe UI,sans-serif" font-size="15" font-weight="600" fill="white">${letter}</text></svg>`};
+ return {type:'image/svg+xml',data:rankInitialSvg(name,id)};
 }
 
 export function createAppIcons(dir,extract){
@@ -61,7 +50,7 @@ export function createAppIcons(dir,extract){
   }
  }
  async function load(id){
-  if(id==='ztime.exe')return {type:'image/png',data:await fs.readFile(bundled.get(id))};
+  if(bundled.has(id))return {type:'image/png',data:await fs.readFile(bundled.get(id))};
   const name=createHash('sha256').update(id).digest('hex')+'.png';
   const file=path.join(dir,'v2-'+name);
   try{const cached=png(await fs.readFile(file));if(cached)return cached;}catch{}
@@ -74,7 +63,6 @@ export function createAppIcons(dir,extract){
   const source=locations.get(id) || path.join(process.env.SystemRoot,'System32',id);
   try{
    let data=await packageIcon(source);
-   if(!data && bundled.has(id))data=await fs.readFile(bundled.get(id));
    if(!data && extract){await fs.access(source);data=await extract(source);}
    const icon=png(data);
    if(icon){
