@@ -14,13 +14,19 @@ const samples=[
 const storage='ztime-review-behavior-v1', missing='未分类';
 // The sample ledger ends on Tuesday. Historical weeks still show all seven days.
 const demoToday='2026-11-03';
-const presets=['学习','工作','沟通社交','休闲娱乐','运动健康','生活事务','出行'];
-const initial={names:presets,rules:{'课程播放器':'学习','词典':'学习','邮件':'工作','日历':'生活事务'},exceptions:{}};
+const presets=['学习','工作','社交','娱乐','运动','生活','出行'];
+const previousNames=new Map([['沟通社交','社交'],['休闲娱乐','娱乐'],['运动健康','运动'],['生活事务','生活']]);
+const rename=name=>previousNames.get(name)??name;
+const initial={names:presets,rules:{'课程播放器':'学习','词典':'学习','邮件':'工作','日历':'生活'},exceptions:{}};
 const state=JSON.parse(sessionStorage.getItem(storage)||'null')||initial;
-state.names=[...new Set([...presets,...state.names])];
+state.names=[...new Set([...presets,...state.names.map(rename)])];
+for(const table of [state.rules,state.exceptions]){
+  for(const key of Object.keys(table))table[key]=rename(table[key]);
+}
 sessionStorage.setItem(storage,JSON.stringify(state));
 const countedSamples=samples.filter(s=>s.minutes>=1);
 let filter=null,device='全部',mode='week',anchor=demoToday;
+let chartStyle='line',selectedId=null;
 const date=s=>new Date(s+'T12:00:00Z');
 const key=d=>d.toISOString().slice(0,10);
 function shift(s,n){const d=date(s);d.setUTCDate(d.getUTCDate()+n);return key(d);}
@@ -91,6 +97,39 @@ function drawChart(rows,start){
   }
   if(!entries.length)chart.append(element('p','当天没有使用记录。'));
 }
+function drawTimeline(rows){
+  const plot=$('session-plot');
+  plot.replaceChildren();
+  for(const control of $('timeline-style').children)control.setAttribute('aria-pressed',String(chartStyle===control.dataset.chart));
+  if(!rows.length){plot.append(element('p','所选期间没有对应记录。'));return;}
+  const top=Math.ceil(Math.max(...rows.map(s=>s.minutes))/5)*5;
+  const axis=element('div');axis.className='timeline-axis';
+  for(const tick of [top,top/2,0])axis.append(element('small',tick));
+  const scroll=element('div');scroll.className='timeline-scroll';
+  const columns=element('div');columns.className='timeline-columns '+chartStyle;
+  columns.style.setProperty('--count',rows.length);
+  if(chartStyle==='line'){
+    const ns='http://www.w3.org/2000/svg';
+    const svg=document.createElementNS(ns,'svg'),line=document.createElementNS(ns,'polyline');
+    svg.setAttribute('viewBox','0 0 100 100');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('aria-hidden','true');
+    line.setAttribute('points',rows.map((s,i)=>[(i+0.5)*100/rows.length,100-s.minutes/top*100].join(',')).join(' '));
+    svg.append(line);columns.append(svg);
+  }
+  for(const s of rows){
+    const label=s.date+' '+s.time+' · '+s.app+' · '+s.minutes+' 分钟 · '+group(s);
+    const column=button('',()=>{
+      selectedId=s.id;draw();
+      $(`point-${s.id}`).focus({preventScroll:true});
+    });
+    column.id='point-'+s.id;column.className='timeline-column';column.title=label;
+    column.setAttribute('aria-label',label);column.setAttribute('aria-pressed',String(s.id===selectedId));
+    column.style.setProperty('--height',(s.minutes/top*100)+'%');column.style.setProperty('--color',color(group(s)));
+    const mark=element('span');mark.className='timeline-mark';
+    const tick=element('small',s.date.slice(5));tick.className='timeline-tick';tick.append(element('span',s.time.split('–')[0]));
+    column.append(mark,tick);columns.append(column);
+  }
+  scroll.append(columns);plot.append(axis,scroll);
+}
 function draw(){
   const [start,end]=bounds(),rows=countedSamples.filter(s=>s.date>=start&&s.date<=end);
   $('anchor-date').max=demoToday;
@@ -110,7 +149,15 @@ function draw(){
   $('sessions-heading').textContent=filter?filter+'时段':'全部时段';$('show-all').hidden=!filter;
   for(const b of $('session-devices').children)b.setAttribute('aria-pressed',String(device===b.dataset.device));
   const visible=rows.filter(s=>(!filter||group(s)===filter)&&(device==='全部'||s.device===device)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  $('session-list').replaceChildren(...visible.map(s=>{
+  const selected=visible.find(s=>s.id===selectedId)??visible[0];
+  selectedId=selected?.id??null;
+  const oldOffset=$('session-plot').querySelector('.timeline-scroll')?.scrollLeft??0;
+  drawTimeline(visible);
+  const scroller=$('session-plot').querySelector('.timeline-scroll');
+  if(scroller)scroller.scrollLeft=oldOffset;
+  $('session-list').replaceChildren();
+  if(selected){
+    const s=selected;
     const row=element('div');row.className='session-row';row.id='session-'+s.id;
     const info=element('div');info.append(element('b',s.app+' · '+s.minutes+' 分钟'));
     const controls=element('div');controls.className='session-actions';
@@ -118,9 +165,8 @@ function draw(){
       state.exceptions[s.id]=value;save('本段已计入'+value+'。');
     }));
     if(Object.hasOwn(state.exceptions,s.id))controls.append(button('撤销调整',()=>{delete state.exceptions[s.id];save('本段已恢复为'+group(s)+'。');}));
-    row.append(element('small',s.date.slice(5)+' '+s.time),info,controls);return row;
-  }));
-  if(!visible.length)$('session-list').append(element('p','所选期间没有对应记录。'));
+    row.append(element('small',s.date.slice(5)+' '+s.time),info,controls);$('session-list').append(row);
+  }
   $('rule-list').replaceChildren(...[...new Set(countedSamples.map(s=>s.app))].map((app,i)=>{
     const label=element('label',app);label.append(picker('rule-'+i,app+'默认行为',options,state.rules[app]??missing,value=>{
       if(value!==missing)state.rules[app]=value;else delete state.rules[app];save(app+'的默认行为已更新。');
@@ -129,6 +175,7 @@ function draw(){
 }
 function move(n){const next=mode==='year'?String(Number(anchor.slice(0,4))+n)+'-01-01':shift(anchor,n*(mode==='day'?1:7));anchor=next<=demoToday?next:demoToday;filter=null;draw();}
 for(const b of $('session-devices').children)b.onclick=e=>{if(!e.defaultPrevented){device=b.dataset.device;draw();}};
+for(const b of $('timeline-style').children)b.onclick=e=>{if(!e.defaultPrevented){chartStyle=b.dataset.chart;draw();}};
 for(const b of $('period-modes').children)b.onclick=e=>{if(!e.defaultPrevented){mode=b.dataset.mode;filter=null;draw();}};
 $('prev').onclick=e=>{if(!e.defaultPrevented)move(-1);};$('next').onclick=e=>{if(!e.defaultPrevented)move(1);};
 $('anchor-date').onchange=e=>{if(e.target.validity.valid&&e.target.value){anchor=e.target.value;filter=null;}draw();};
@@ -143,11 +190,11 @@ draw();
 document.addEventListener('reveal-behavior-note',event=>{
   const selector=event.detail;
   if(selector==='#purpose-chart > button:nth-of-type(3)'){mode='week';anchor=demoToday;}
-  const s=samples.find(s=>selector.startsWith('#session-'+s.id)||selector.startsWith('#override-'+s.id));
-  if(s){anchor=s.date;mode='week';device='全部';}
+  const s=countedSamples.find(s=>['#session-','#override-','#point-'].some(prefix=>selector.startsWith(prefix+s.id)));
+  if(s){anchor=s.date;mode='week';device='全部';selectedId=s.id;}
   const cell=selector.match(/^#cell-(\d{4}-\d{2}-\d{2})/);if(cell){anchor=cell[1];mode='year';}
   filter=null;draw();
-  if(document.querySelector(selector)?.closest('#purpose-rules')){
+  if(selector==='#purpose-rules > p:nth-of-type(1)'||document.querySelector(selector)?.closest('#purpose-rules')){
     $('purpose-rules').hidden=false;$('rules-open').setAttribute('aria-expanded','true');
   }
 });
