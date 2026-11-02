@@ -1,6 +1,6 @@
 import {addDays as shift} from './shared/time.js';
 const date=s=>new Date(s+'T12:00:00Z');
-export function drawChart({$,element,button,tally,color,mode,fmt,dayView,selectFilter},rows,start){
+export function drawChart({$,element,button,tally,color,mode,fmt,dayView,selectFilter,today},rows,start){
 function bar(parts,max){
   const track=element('span');track.className='purpose-track';
   for(const [name,value] of parts){
@@ -23,7 +23,7 @@ function leader(parts){
       const row=element('div');row.className='year-row';row.append(element('small',month+'月'));
       for(let d=start.slice(0,4)+'-'+String(month).padStart(2,'0')+'-01';date(d).getUTCMonth()===month-1;d=shift(d,1)){
         const parts=tally(days.get(d)||[]),day=d,cell=button('',()=>dayView(day));
-        cell.id='cell-'+day;cell.title=day+' · '+leader(parts);cell.setAttribute('aria-label',cell.title);
+        cell.id='cell-'+day;cell.disabled=day>today;cell.title=cell.disabled?day:day+' · '+leader(parts);cell.setAttribute('aria-label',cell.title);
         if(parts.length){cell.style.background=color(parts[0][0]);if(parts[1]?.[1]===parts[0][1])cell.style.background='linear-gradient(135deg,'+color(parts[0][0])+' 50%,'+color(parts[1][0])+' 50%)';}
         row.append(cell);
       }
@@ -31,7 +31,7 @@ function leader(parts){
     }
     return;
   }
-  const days=Array.from({length:7},(_,i)=>shift(start,i));
+  const days=Array.from({length:7},(_,i)=>shift(start,i)).filter(day=>day<=today);
   const entries=mode==='week'?days.map(d=>({label:['周一','周二','周三','周四','周五','周六','周日'][days.indexOf(d)],day:d,parts:tally(rows.filter(s=>s.date===d))})):
     tally(rows).map(p=>({label:p[0],parts:[p]}));
   const max=Math.max(1,...entries.map(r=>r.parts.reduce((n,p)=>n+p[1],0)));

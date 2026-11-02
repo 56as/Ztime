@@ -25,7 +25,11 @@ with tempfile.TemporaryDirectory() as tmp:
             if "tls.json" in saved.namelist() and saved.read("tls.json") != (data / "tls.json").read_bytes():
                 raise ValueError("TLS identity changed")
         live.execute("ATTACH DATABASE ? AS before", (str(snapshot),))
-        for table, columns in [("sessions", "id"), ("peers", "id, token_hash"), ("meta", "value")]:
+        tables = [("sessions", "id"), ("peers", "id, token_hash"), ("meta", "value")]
+        for table in ("behavior_names", "behavior_rules", "behavior_overrides"):
+            if live.execute("SELECT 1 FROM before.sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+                tables.append((table, "*"))
+        for table, columns in tables:
             condition = " WHERE key='device'" if table == "meta" else ""
             if live.execute(f"SELECT {columns} FROM before.{table}{condition} EXCEPT SELECT {columns} FROM main.{table}{condition} LIMIT 1").fetchone():
                 raise ValueError(f"Upgrade check failed for {table}")

@@ -42,10 +42,16 @@ test('a raw session crossing the configured day boundary is clipped once per day
  try{
   const b=createBehavior(store),boundary=dayBounds('2026-01-01',store.get('settings')).start;
   store.write({id:'s',deviceId:store.device.id,appId:'a',appName:'A',start:boundary-20000,end:boundary+40000});
+  store.write({id:'brief',deviceId:store.device.id,appId:'brief',appName:'Brief',start:boundary,end:boundary+59999});
   const week=b.read('2026-01-01','week').rows;
   assert.deepEqual(week.map(r=>[r.id,r.date,r.end-r.start]),[['s','2025-12-31',20000],['s','2026-01-01',40000]]);
   assert.equal(b.read('2026-01-01','year').rows[0].start,boundary);
   assert.equal(b.read('2025-12-31','day').rows[0].end,boundary);
+  const partialWeek=b.read('2026-01-01','week',boundary+60000);
+  assert.equal(partialWeek.last,'2026-01-01');
+  assert.equal(partialWeek.apps.length,1);
+  assert.equal(store.sessions().length,2);
+  assert.deepEqual(partialWeek.names,['学习','工作','社交','娱乐','运动','生活','出行']);
   assert.throws(()=>b.read('2026-02-31','week'));
  }finally{store.close();}
 });
