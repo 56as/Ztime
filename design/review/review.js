@@ -797,13 +797,16 @@ function mountPeriodDashboard(d,onChange){
  const mobile=d.body.dataset.reviewDevice==='mobile';
  const apps=[['浏览器','pc'],['阅读','phone'],['编辑器','pc'],['笔记','phone']];
  if(desktop || mobile)apps.push(['邮件','pc'],['日历','phone'],['终端','pc'],['相册','phone'],['音乐','pc'],['地图','phone']);
- // Desktop examples use the same Windows launcher artwork as the named apps.
- const windowsExamples={
-   0:['Ztime','brand-icon.png'],2:['ChatGPT','rank-icons/chatgpt.png'],
-   4:['Chrome','rank-icons/chrome.png'],6:['微信','rank-icons/weixin.png'],
-   8:['VS Code','rank-icons/code.png']
- };
- if(desktop)for(const [index,[name]] of Object.entries(windowsExamples))apps[index][0]=name;
+ // Example usage only. Windows launcher artwork and Android store artwork are separate assets.
+ const desktopExamples=[
+  ['Ztime','pc','brand-icon.png'],['QQ','phone','qq'],['ChatGPT','pc','chatgpt'],
+  ['支付宝','phone','alipay'],['Excel','pc','excel'],['哔哩哔哩','phone','bilibili'],
+  ['RustDesk','pc','rustdesk'],['Tailscale','phone','tailscale-phone'],['Word','pc','word'],
+  ['美团','phone','meituan'],['Chrome','pc','chrome'],['微信','pc','weixin'],
+  ['VS Code','pc','code'],['Tailscale','pc','tailscale'],['任务管理器','pc','taskmgr'],
+  ['照片','pc','photos']
+ ];
+ if(desktop)apps.splice(0,apps.length,...desktopExamples);
  const base=(n,i)=>{const q=Math.abs((n*(19+i*8)+Math.floor(n/7)*(i+11))%167);if(i>=4)return 2+q%14;return [40,19,35,10][i]+q%[95,45,85,35][i];};
  const vector=r=>{const totals=apps.map(()=>0);for(let n=r[0];n<=r[1];n++)for(let i=0;i<apps.length;i++)if(scope==='all'||scope===apps[i][1])totals[i]+=base(n,i);return totals;};
  const total=v=>v.reduce((a,b)=>a+b,0),dur=m=>{const v=Math.round(m);return v>=60?Math.floor(v/60)+' 小时 '+v%60+' 分钟':v+' 分钟';};
@@ -948,11 +951,10 @@ function mountPeriodDashboard(d,onChange){
   const barUnit=mode==='day'?'时':mode==='year'?'月':'日';
   const bars=series.map((s,i)=>{const display=series.length<=12||i%Math.ceil(series.length/8)===0||i===series.length-1;return '<div class="pd-col" title="'+s.label+(barUnit==='月'?'':barUnit)+' · '+(s.minutes===null?'尚未到达':dur(s.minutes))+'"><div class="pd-track"><i style="height:'+((s.minutes||0)*100/max)+'%"></i></div><small>'+(display?s.label:'&nbsp;')+'</small></div>';}).join('');
   const presetButtons=Object.entries({day:'日',week:'周',month:'月',year:'年'}).map(([k,v])=>'<button data-cal="mode" data-mode="'+k+'" aria-pressed="'+(mode===k)+'" data-style-id="pd-'+k+'">'+v+'</button>').join('');
-  const exampleIcons=['browser','reader','editor','notes','mail','calendar','terminal','gallery','music','map'];
   function icon(i){
    if(!desktop)return '';
-   if(windowsExamples[i])return '<img class="review-app-icon" src="'+windowsExamples[i][1]+'" alt="">';
-   return '<svg class="review-app-icon" aria-hidden="true" viewBox="0 0 24 24"><use href="app-icons.svg#'+exampleIcons[i]+'"></use></svg>';
+   const name=desktopExamples[i][2],src=name==='brand-icon.png'?name:'rank-icons/'+name+'.png';
+   return '<img class="review-app-icon" src="'+src+'" alt="">';
   }
   const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>'<div class="pd-app"><span>'+icon(i)+(desktop?'<span class="rank-name">'+apps[i][0]+'</span>':apps[i][0])+'</span><small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small><b>'+dur(m)+'</b><i class="rank-track"><i style="width:'+100*m/Math.max(...v)+'%"></i></i></div>').join('');
   const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
