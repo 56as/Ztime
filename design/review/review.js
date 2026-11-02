@@ -492,6 +492,7 @@ function targetFor(note) {
   if(secondDraftNote(note)!==currentDraft())return null;
   try {
     if(note.board==='desktop-behavior' && note.id===110)return doc().querySelector('.behavior h1');
+    if(note.board==='desktop-behavior' && note.id===115)return doc().getElementById('purpose-chart');
     if(note.board==='desktop-settings' && [96,97].includes(note.id))return doc().querySelector(note.selector)?.parentElement.querySelector('span');
     if(note.board==='mobile-home' && note.selector==='#point-detail' && !doc().querySelector('#point-detail')?.textContent)return doc().querySelector('.point-plot');
     if(comparisonNote(note)){

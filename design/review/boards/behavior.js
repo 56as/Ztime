@@ -5,19 +5,22 @@ const samples=[
   ['mail','11-03','14:00–14:18','邮件','电脑',18],
   ['short','11-03','14:18–14:20','词典','手机',2],
   ['web','11-03','14:20–14:26','浏览器','电脑',6],
+  ['glance','11-03','14:26:00–14:26:45','日历','手机',0.75],
+  ['minute','10-30','09:20–09:21','日历','手机',1],
   ['spring','04-06','10:00–10:35','课程播放器','电脑',35],
   ['summer','07-15','16:00–16:40','邮件','电脑',40],
   ['oct','10-30','09:00–09:20','词典','手机',20]
 ].map(([id,date,time,app,device,minutes])=>({id,date:'2026-'+date,time,app,device,minutes}));
 const storage='ztime-review-behavior-v1', missing='未分类';
-const initial={names:['学习','工作'],rules:{'课程播放器':'学习','词典':'学习','邮件':'工作'},exceptions:{}};
+// The sample ledger ends on Tuesday. Historical weeks still show all seven days.
+const demoToday='2026-11-03';
+const presets=['学习','工作','沟通社交','休闲娱乐','运动健康','生活事务','出行'];
+const initial={names:presets,rules:{'课程播放器':'学习','词典':'学习','邮件':'工作','日历':'生活事务'},exceptions:{}};
 const state=JSON.parse(sessionStorage.getItem(storage)||'null')||initial;
-// Drop the former unused demo preset. Keep categories that already classify a record.
-if(!Object.values(state.rules).includes('娱乐')&&!Object.values(state.exceptions).includes('娱乐')&&!sessionStorage.getItem('behavior-upgraded')){
-  state.names=state.names.filter(n=>n!=='娱乐');
-}
-sessionStorage.setItem(storage,JSON.stringify(state));sessionStorage.setItem('behavior-upgraded','1');
-let filter=null,mode='week',anchor='2026-11-02';
+state.names=[...new Set([...presets,...state.names])];
+sessionStorage.setItem(storage,JSON.stringify(state));
+const countedSamples=samples.filter(s=>s.minutes>=1);
+let filter=null,device='全部',mode='week',anchor=demoToday;
 const date=s=>new Date(s+'T12:00:00Z');
 const key=d=>d.toISOString().slice(0,10);
 function shift(s,n){const d=date(s);d.setUTCDate(d.getUTCDate()+n);return key(d);}
@@ -33,7 +36,8 @@ function picker(id,label,choices,value,onchange){
 function bounds(){
   if(mode==='year')return [anchor.slice(0,4)+'-01-01',anchor.slice(0,4)+'-12-31'];
   if(mode==='day')return [anchor,anchor];
-  const start=shift(anchor,-((date(anchor).getUTCDay()+6)%7));return [start,shift(start,6)];
+  const start=shift(anchor,-((date(anchor).getUTCDay()+6)%7)),last=shift(start,6);
+  return [start,last<demoToday?last:demoToday];
 }
 function tally(rows){
   const totals=new Map();
@@ -68,7 +72,7 @@ function drawChart(rows,start){
       const row=element('div');row.className='year-row';row.append(element('small',month+'月'));
       for(let d=start.slice(0,4)+'-'+String(month).padStart(2,'0')+'-01';date(d).getUTCMonth()===month-1;d=shift(d,1)){
         const parts=tally(days.get(d)||[]),day=d,cell=button('',()=>dayView(day));
-        cell.id='cell-'+day;cell.title=day+' · '+leader(parts);cell.setAttribute('aria-label',cell.title);
+        cell.id='cell-'+day;cell.disabled=day>demoToday;cell.title=cell.disabled?day:day+' · '+leader(parts);cell.setAttribute('aria-label',cell.title);
         if(parts.length){cell.style.background=color(parts[0][0]);if(parts[1]?.[1]===parts[0][1])cell.style.background='linear-gradient(135deg,'+color(parts[0][0])+' 50%,'+color(parts[1][0])+' 50%)';}
         row.append(cell);
       }
@@ -76,7 +80,7 @@ function drawChart(rows,start){
     }
     return;
   }
-  const days=Array.from({length:7},(_,i)=>shift(start,i));
+  const days=Array.from({length:7},(_,i)=>shift(start,i)).filter(day=>day<=demoToday);
   const entries=mode==='week'?days.map(d=>({label:['周一','周二','周三','周四','周五','周六','周日'][days.indexOf(d)],day:d,parts:tally(rows.filter(s=>s.date===d))})):
     tally(rows).map(p=>({label:p[0],parts:[p]}));
   const max=Math.max(1,...entries.map(r=>r.parts.reduce((n,p)=>n+p[1],0)));
@@ -88,21 +92,27 @@ function drawChart(rows,start){
   if(!entries.length)chart.append(element('p','当天没有使用记录。'));
 }
 function draw(){
-  const [start,end]=bounds(),rows=samples.filter(s=>s.date>=start&&s.date<=end);
+  const [start,end]=bounds(),rows=countedSamples.filter(s=>s.date>=start&&s.date<=end);
+  $('anchor-date').max=demoToday;
+  $('next').disabled=end>=demoToday;
   $('anchor-date').value=anchor;$('range-label').textContent=mode==='year'?anchor.slice(0,4)+' 年':mode==='day'?anchor:start+' — '+end.slice(5);
   for(const b of $('period-modes').children)b.setAttribute('aria-pressed',String(b.dataset.mode===mode));
   const names=[...state.names,missing],options=names.map(n=>[n,n]),totals=new Map(tally(rows));
+  $('purpose-palette').replaceChildren(...names.map(name=>{
+    const label=element('span',name);label.style.setProperty('--color',color(name));return label;
+  }));
   $('sum').textContent='设备累计 '+rows.reduce((n,s)=>n+s.minutes,0)+' 分钟';
   drawChart(rows,start);
-  $('purpose-totals').replaceChildren(...names.map((name,i)=>{
-    const b=button(name,()=>{filter=filter===name?null:name;draw();});b.id='purpose-'+i;b.style.setProperty('--color',color(name));
+  $('purpose-totals').replaceChildren(...names.filter(name=>totals.has(name)||name===filter).map(name=>{
+    const b=button(name,()=>{filter=filter===name?null:name;draw();});b.id='purpose-'+names.indexOf(name);b.style.setProperty('--color',color(name));
     b.setAttribute('aria-pressed',String(filter===name));b.append(element('b',(totals.get(name)||0)+' 分钟'));return b;
   }));
   $('sessions-heading').textContent=filter?filter+'时段':'全部时段';$('show-all').hidden=!filter;
-  const visible=rows.filter(s=>!filter||group(s)===filter).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  for(const b of $('session-devices').children)b.setAttribute('aria-pressed',String(device===b.dataset.device));
+  const visible=rows.filter(s=>(!filter||group(s)===filter)&&(device==='全部'||s.device===device)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   $('session-list').replaceChildren(...visible.map(s=>{
     const row=element('div');row.className='session-row';row.id='session-'+s.id;
-    const info=element('div');info.append(element('b',s.app+' · '+s.minutes+' 分钟'),element('small',s.device));
+    const info=element('div');info.append(element('b',s.app+' · '+s.minutes+' 分钟'));
     const controls=element('div');controls.className='session-actions';
     controls.append(picker('override-'+s.id,'调整'+s.app+'本段用途',options,group(s),value=>{
       state.exceptions[s.id]=value;save('本段已计入'+value+'。');
@@ -111,16 +121,17 @@ function draw(){
     row.append(element('small',s.date.slice(5)+' '+s.time),info,controls);return row;
   }));
   if(!visible.length)$('session-list').append(element('p','所选期间没有对应记录。'));
-  $('rule-list').replaceChildren(...[...new Set(samples.map(s=>s.app))].map((app,i)=>{
+  $('rule-list').replaceChildren(...[...new Set(countedSamples.map(s=>s.app))].map((app,i)=>{
     const label=element('label',app);label.append(picker('rule-'+i,app+'默认行为',options,state.rules[app]??missing,value=>{
       if(value!==missing)state.rules[app]=value;else delete state.rules[app];save(app+'的默认行为已更新。');
     }));return label;
   }));
 }
-function move(n){anchor=mode==='year'?String(Number(anchor.slice(0,4))+n)+'-01-01':shift(anchor,n*(mode==='day'?1:7));filter=null;draw();}
+function move(n){const next=mode==='year'?String(Number(anchor.slice(0,4))+n)+'-01-01':shift(anchor,n*(mode==='day'?1:7));anchor=next<=demoToday?next:demoToday;filter=null;draw();}
+for(const b of $('session-devices').children)b.onclick=e=>{if(!e.defaultPrevented){device=b.dataset.device;draw();}};
 for(const b of $('period-modes').children)b.onclick=e=>{if(!e.defaultPrevented){mode=b.dataset.mode;filter=null;draw();}};
 $('prev').onclick=e=>{if(!e.defaultPrevented)move(-1);};$('next').onclick=e=>{if(!e.defaultPrevented)move(1);};
-$('anchor-date').onchange=e=>{if(/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)){anchor=e.target.value;filter=null;draw();}};
+$('anchor-date').onchange=e=>{if(e.target.validity.valid&&e.target.value){anchor=e.target.value;filter=null;}draw();};
 $('range-label').onclick=e=>{if(!e.defaultPrevented)$('anchor-date').showPicker?.();};
 $('rules-open').onclick=e=>{if(e.defaultPrevented)return;const panel=$('purpose-rules');panel.hidden=!panel.hidden;$('rules-open').setAttribute('aria-expanded',String(!panel.hidden));};
 $('show-all').onclick=e=>{if(!e.defaultPrevented){filter=null;draw();}};
@@ -131,8 +142,9 @@ $('purpose-form').onsubmit=e=>{e.preventDefault();const name=$('purpose-name').v
 draw();
 document.addEventListener('reveal-behavior-note',event=>{
   const selector=event.detail;
+  if(selector==='#purpose-chart > button:nth-of-type(3)'){mode='week';anchor=demoToday;}
   const s=samples.find(s=>selector.startsWith('#session-'+s.id)||selector.startsWith('#override-'+s.id));
-  if(s){anchor=s.date;mode='week';}
+  if(s){anchor=s.date;mode='week';device='全部';}
   const cell=selector.match(/^#cell-(\d{4}-\d{2}-\d{2})/);if(cell){anchor=cell[1];mode='year';}
   filter=null;draw();
   if(document.querySelector(selector)?.closest('#purpose-rules')){
