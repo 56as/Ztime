@@ -250,7 +250,7 @@ function applySecondDesktopDraft(d,pageId){
   applyPreviewTheme(d);updatePreviewRecording(d);
   if(pageId!=='home'){
     const version=d.createElement('small');
-    version.id='desktop-version';version.textContent='版本 0.2.14';
+    version.id='desktop-version';version.textContent='版本 0.2.15';
     d.querySelector('.sidebar').append(version);
   }
 
@@ -926,7 +926,7 @@ function mountPeriodDashboard(d,onChange){
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
 
   if(desktop){
-    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.14';
+    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.15';
     root.querySelector('.pd-nav').append(version);
   }
   if(mobile){
