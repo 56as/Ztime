@@ -150,6 +150,7 @@ const frame = $('frame'), device = $('device'), page = $('page');
 const titles = Object.fromEntries([...page.options].map(option => [option.value, option.text]));
 const flowTitles = {invite:'电脑生成配对信息',scan:'手机扫码',confirm:'确认目标设备',wait:'等待确认',request:'电脑审批',success:'配对成功',refused:'配对被拒绝',timeout:'等待超时'};
 function pageTitle(id) {
+  if(id==="behavior")return "行为复盘";
   if (id.startsWith('pair-')) return '配对 · '+flowTitles[id.slice(5)];
   if (id.includes('-detail-')) {
     const [parent, , app] = id.split('-');
@@ -248,6 +249,11 @@ const removedDesktopCopy={
 function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2','desk-ui');
   applyPreviewTheme(d);updatePreviewRecording(d);
+  if(['devices','settings'].includes(pageId)){
+    const nav=d.querySelector('.sidebar .nav');
+    const entry=d.createElement('button');entry.dataset.page='behavior';entry.textContent='行为复盘';
+    nav?.querySelector('[data-page=devices]')?.before(entry);
+  }
   if(pageId!=='home'){
     const version=d.createElement('small');
     version.id='desktop-version';version.textContent='版本 0.2.15';
@@ -506,6 +512,7 @@ function locate(note) {
   }
   if(dashboardNote)periodView.restore(flow);
   if(comparisonNote(note) && doc().querySelector('[data-card-key=compare]')?.hidden)periodView.open('layout');
+  if(destination==='desktop-behavior')doc().dispatchEvent(new CustomEvent('reveal-behavior-note',{detail:note.selector}));
   const el = targetFor(note);
   if (el) {
     reveal(el);
@@ -669,7 +676,7 @@ frame.onload = () => {
       if (flow) changeBoard(flow.dataset.flow,flow.textContent.trim());
       else if (el.closest('[data-close]')) changeBoard(board().split('-detail-')[0],'关闭明细');
       else if (app && ['home','week'].includes(page.value)) changeBoard(board()+'-detail-'+app.dataset.app,'点应用排行');
-      else if (nav) changeBoard(device.value+'-'+nav.dataset.page,nav.textContent.trim(),['home','devices','settings'].includes(nav.dataset.page)?dashboardRoute():'');
+      else if (nav) changeBoard(device.value+'-'+nav.dataset.page,nav.textContent.trim(),['home','devices','settings','behavior'].includes(nav.dataset.page)?dashboardRoute():'');
       else if (el.closest('[data-demo-format]')) d.querySelector('[data-demo-status]').textContent='示例：正式版将保存 '+el.closest('[data-demo-format]').dataset.demoFormat+' 格式的本地文件。';
       else if (el.closest('summary')) { const box=el.closest('details');box.open=!box.open; }
       else if (action==='design-extension') d.getElementById('design-connection').hidden=false;
@@ -730,6 +737,7 @@ document.querySelector('.quick').onclick=e=>{
 };
 function routeFromHash(){
  const [key,requested='']=location.hash.slice(1).split('/');
+ if(key==='desktop-behavior')return [key,desktopV2];
  if(!key)return ['desktop-home',desktopV2];
  if(key==='mobile-home-edit')return ['mobile-home','layout'];
  if(/^mobile-(home|devices|settings)$/.test(key))return [key,['calendar','layout'].includes(requested)?requested:'dashboard'];
@@ -920,7 +928,7 @@ function mountPeriodDashboard(d,onChange){
   const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>'<div class="pd-app"><span>'+apps[i][0]+'</span><small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small><b>'+dur(m)+'</b><i class="rank-track"><i style="width:'+100*m/Math.max(...v)+'%"></i></i></div>').join('');
   const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
   const dateText=mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
-  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div><button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button></nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">仪表盘</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
+  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div><button aria-current="page" data-cal="home">仪表盘</button>'+(desktop?'<button data-page="behavior">行为复盘</button>':'')+'<button data-page="devices">设备</button><button data-page="settings">设置</button></nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">仪表盘</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
   '<section class="pd-summary"><div><small>'+(desktop?{all:'设备累计',phone:'手机累计',pc:'电脑累计'}[scope]:'设备累计')+'</small><h2>'+dur(sum)+'</h2></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
   (comparison?'<p class="pd-comp-label">'+label(comparison)+'</p><p>对比期累计　'+dur(compare)+'</p><strong>日均'+(Math.abs(delta)<0.5?'持平':(delta>0?'增加 ':'减少 ')+dur(Math.abs(delta)))+'</strong><p>本期日均 '+dur(sum/len(period))+' · 对比期日均 '+dur(compare/len(comparison))+'</p>':'<p>'+(mode==='year'?'比较上年同期的使用情况。':'可选另一月份的一段日期，比较日均用时。')+'</p>')+
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';

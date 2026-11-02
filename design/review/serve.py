@@ -20,7 +20,7 @@ parser.add_argument("--no-browser", action="store_true")
 parser.add_argument("--notes", type=Path, default=ROOT / "review-notes.json")
 args = parser.parse_args()
 origin = f"http://127.0.0.1:{args.port}"
-board = r"((desktop|mobile)-((home|week)(-edit|-detail-(writer|browser|reader|notes))?|devices|settings)|desktop-pair-(invite|request)|mobile-pair-(scan|confirm|wait|success|refused|timeout))"
+board = r"((desktop|mobile)-((home|week)(-edit|-detail-(writer|browser|reader|notes))?|devices|settings)|desktop-behavior|desktop-pair-(invite|request)|mobile-pair-(scan|confirm|wait|success|refused|timeout))"
 write_lock = threading.Lock()
 
 
@@ -55,7 +55,7 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/api/notes":
             return self.reply(200, read_notes())
         name = route[1:] or "index.html"
-        if name not in {"index.html", "review.css", "review.js", "boards/style.css", "boards/brand-icon.png"} and not re.fullmatch("boards/" + board + r"\.html", name):
+        if name not in {"index.html", "review.css", "review.js", "boards/style.css", "boards/brand-icon.png", "boards/behavior.js", "boards/behavior.css"} and not re.fullmatch("boards/" + board + r"\.html", name):
             return self.reply(404, {})
         file = ROOT / name
         mime = {".js": "text/javascript", ".html": "text/html; charset=utf-8", ".css": "text/css", ".png": "image/png"}

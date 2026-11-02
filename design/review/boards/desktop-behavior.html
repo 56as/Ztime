@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>行为复盘 · Ztime</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="behavior.css"></head>
+<body><div class="app-shell"><aside class="sidebar"><div class="brand"><img src="brand-icon.png" class="brand-mark" alt=""><strong>Ztime</strong></div><nav class="nav"><button data-page="home">仪表盘</button><button class="active" aria-current="page">行为复盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button></nav></aside>
+<main class="behavior"><header><div><small>11 月 2 日 — 11 月 8 日 · 示例周</small><h1>行为复盘</h1></div><button id="rules-open" data-style-native aria-expanded="false">归类规则</button></header>
+<section id="purpose-rules" class="panel" hidden><h2>按应用归类</h2><p>修改规则会重算这周的示例记录。单独调整过的时段保留你的选择。</p><div id="rule-list"></div><form id="purpose-form" data-style-native><label>新行为 <input id="purpose-name" maxlength="16" placeholder="例如：写作"></label><button>添加</button></form></section>
+<section class="panel behavior-summary"><div class="behavior-head"><h2>时间花在哪</h2><span id="sum"></span></div><div id="purpose-totals"></div></section>
+<section class="panel"><div class="behavior-head"><h2 id="sessions-heading">全部时段</h2><button id="show-all" data-style-native hidden>查看全部</button></div><div id="session-list"></div><p id="feedback" role="status" aria-live="polite"></p></section></main></div>
+<script type="module" src="behavior.js"></script></body></html>
