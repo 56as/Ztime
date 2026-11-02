@@ -8,7 +8,8 @@ import {createApp} from '../desktop/server.js';
 const require=createRequire(import.meta.url);
 const {chromium}=require(require.resolve('playwright',{paths:[process.cwd(),path.dirname(process.execPath)]}));
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ztime-dashboard-'));
-const service=await createApp({dataDir:dir,port:0,syncPort:0,collect:false,autostart:{get:()=>true,set:()=>{}}});
+let startup=true;
+const service=await createApp({dataDir:dir,port:0,syncPort:0,collect:false,autostart:{get:()=>startup,set:value=>{startup=value;}}});
 let browser;
 try{
   const now=Date.now();
@@ -43,7 +44,19 @@ try{
     el.querySelector('.pd-modes').getBoundingClientRect().right<=el.querySelector('.total-value').getBoundingClientRect().left));
   await click('[data-scope=pc]');await page.locator('.total-value small').filter({hasText:'电脑累计'}).waitFor();
   await click('[data-scope=all]');await page.locator('.total-value small').filter({hasText:'设备累计'}).waitFor();
+  assert.match(await page.locator('.sidebar-version').innerText(),/版本/);
+  const dayTicks=await page.locator('.desktop-hour-chart .usage-x span').allTextContents();
+  assert.ok(dayTicks.every((text,i)=>i%2===0?text.length>0:text===''));
   await click('[data-mode=week]');
+  const lastPoint=page.locator('.trend-card g[role=button]').last();
+  await lastPoint.click();await page.locator('.desktop-point-detail li').first().waitFor();
+  const selected=await page.locator('.desktop-point-detail').innerText();
+  assert.match(selected,/notes/);
+  await click('[data-chart=bar]');
+  assert.equal(await page.locator('.desktop-point-detail').innerText(),selected);
+  assert.ok(await page.locator('.desktop-hour-chart rect[rx]').count()>0);
+  await click('[aria-label=关闭时段明细]');await click('[data-chart=line]');
+
   const bars=page.locator('.rank-track i');
   await bars.first().waitFor();
   assert.equal(await bars.count(),2);
@@ -88,23 +101,32 @@ try{
   await page.getByRole('heading',{name:'浏览器识别'}).waitFor();
   assert.ok(await page.evaluate(()=>document.scrollingElement.scrollHeight===innerHeight));
   await click('[data-action=pair]');await page.locator('.qr').waitFor();
-  await click('[data-page=settings]');await page.locator('#theme').selectOption('dark');
+  await click('[data-page=settings]');await click('[data-theme=dark]');await page.waitForFunction(()=>document.body.classList.contains('dark'));
   const grid=page.locator('.settings-grid');
   assert.equal(await page.getByRole('heading',{name:'浏览器识别'}).count(),0);
   assert.ok(await grid.evaluate(el=>{
-    const [rules,appearance,data]=Array.from(el.children,c=>c.getBoundingClientRect());
-    const csv=el.querySelector('[data-export=csv]').getBoundingClientRect();
-    const del=el.querySelector('[data-action=delete-data]').getBoundingClientRect();
-    return appearance.top===rules.top && Math.abs(rules.width-appearance.width)<1 &&
-      data.top>=rules.bottom && data.left===rules.left && del.left>=csv.right && del.top===csv.top &&
+    const [rules,appearance]=Array.from(el.children,c=>c.getBoundingClientRect());
+    const controls=el.querySelector('.record-actions').getBoundingClientRect();
+    const [json,csv,del]=Array.from(el.querySelector('.record-data .row').children,c=>c.getBoundingClientRect());
+    return appearance.top===rules.top && json.left>=controls.right && json.bottom<=csv.top && csv.bottom<=del.top &&
       el.querySelector('#timeZone').getBoundingClientRect().width<=135;
   }));
+  await click('[data-switch=recording]');await page.waitForFunction(()=>document.querySelector('[data-switch=recording]').getAttribute('aria-checked')==='false');
+  assert.equal(service.store.get('paused'),true);
+  const switchBox=await page.locator('[data-switch=startup]').boundingBox();
+  await page.mouse.move(switchBox.x+switchBox.width-4,switchBox.y+switchBox.height/2);
+  await page.mouse.down();await page.mouse.move(switchBox.x+4,switchBox.y+switchBox.height/2,{steps:5});await page.mouse.up();
+  await page.waitForFunction(()=>document.querySelector('[data-switch=startup]').getAttribute('aria-checked')==='false');
+  assert.equal(startup,false);
+  await click('[data-switch=recording]');await page.waitForFunction(()=>document.querySelector('[data-switch=recording]').getAttribute('aria-checked')==='true');
+  for(const type of ['json','csv']){
+    const download=page.waitForEvent('download');await click('[data-export='+type+']');assert.ok((await download).suggestedFilename().endsWith('.'+type));
+  }
   await click('[data-action=delete-data]');await page.locator('#dialog[open] [data-cancel]').click();
   await page.locator('#timeZone').selectOption('Europe/Paris');await click('[data-action=save-settings]');
   await page.waitForFunction(()=>document.querySelector('#timeZone')?.value==='Europe/Paris');
   assert.equal(service.store.get('settings').timeZone,'Europe/Paris');
-  assert.deepEqual(await page.locator('.record-actions button').evaluateAll(els=>els.map(e=>e.offsetTop).map((y,i,ys)=>y===ys[0])),[true,true]);
-  assert.ok((await page.locator('#theme').boundingBox()).width<200);
+  assert.deepEqual(await page.locator('.appearance-options button').allTextContents(),['浅色','深色']);
   assert.equal(await page.locator('.accent-picker').count(),0);assert.match(await page.locator('.sidebar-version').innerText(),/版本 \d/);
   assert.deepEqual(await page.locator('.settings-grid>.panel h2').allTextContents().then(xs=>xs.slice(0,2)),['统计规则','记录与外观']);
   for(const name of ['dashboard','devices','settings']){

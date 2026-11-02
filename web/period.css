@@ -97,19 +97,39 @@
 .desk-ui .fixed-setting .field :is(label,select) {font:500 14px/normal system-ui,"Microsoft YaHei",sans-serif;color:var(--text);letter-spacing:normal}
 .desk-ui .fixed-setting .field select {height:36px;padding:0 10px;background-color:var(--bg)}
 .desk-ui .fixed-setting #dayStart,.desk-ui .fixed-setting #timeZone {width:100%}
-.desk-ui .settings-view .record-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:255px;gap:8px}
-.desk-ui .settings-view .record-actions button {min-width:0;min-height:36px;padding:4px 6px}
-.desk-ui .settings-view .record-actions + .field {max-width:255px;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.desk-ui .settings-view .record-actions + .field #theme {width:100%;min-width:0}
-.desk-ui .settings-view [data-action=save-settings] {display:block;margin-inline-start:auto}
-.desk-ui .settings-grid .data-settings {align-self:start;height:auto;padding:14px 18px}
-.desk-ui .data-settings h2 {margin-bottom:10px}
-.desk-ui .data-settings .row {display:flex;flex-wrap:wrap;gap:8px}
-@media (min-width:820px) {
-  .desk-ui .settings-grid {grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
-  .desk-ui .data-settings .row button {padding-inline:8px}
-}
+.desk-ui .desktop-preferences {display:grid;grid-template-columns:minmax(124px,1fr) minmax(116px,max-content);column-gap:14px;align-content:start;align-items:start}
+.desk-ui .desktop-preferences h2 {grid-column:1/-1}
+.desk-ui .desktop-preferences .record-actions,.desk-ui .desktop-preferences .appearance-options {grid-column:1}
+.desk-ui .record-data {grid-column:2;grid-row:2/span 2;min-width:0;padding-left:12px;border-left:1px solid var(--line)}
+.desk-ui .record-data > .row {display:grid;gap:6px}
+.desk-ui .record-data > .row button {min-height:31px;padding:3px 8px;font-size:13px}
+.desk-ui .stat-rules {display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;align-items:center;row-gap:8px}
+.desk-ui .stat-rules h2 {margin:0}
+.desk-ui .stat-rules [data-action=save-settings] {grid-area:1/2;min-height:30px;padding:3px 12px;font-size:13px}
+.desk-ui .settings-view .fixed-setting.stat-rules .field {grid-column:1/-1;grid-template-columns:1fr minmax(96px,126px);gap:8px;margin:0;padding:8px 0}
+.desk-ui .stat-rules .field + .field {border-top:1px solid var(--line)}
 
+.desk-ui .settings-view .fixed-setting .field :is(label,select) {font:500 14px/normal system-ui,"Microsoft YaHei",sans-serif;color:var(--text);letter-spacing:normal}
+.desk-ui .settings-view .fixed-setting .field select {height:36px;padding:0 10px;background-color:var(--bg)}
+.desk-ui .settings-view [data-action=save-settings] {display:block;margin-inline-start:auto}
+.desk-ui .settings-view .fixed-setting .field {grid-template-columns:minmax(60px,max-content) minmax(0,132px)}
+.desk-ui .settings-view #dayStart,.desk-ui .settings-view #timeZone {width:100%}
+.desk-ui .settings-view .record-actions {display:grid;grid-template-columns:max-content;gap:0}
+.desk-ui .record-actions .setting-switch {grid-column:2;min-height:0;padding:0;width:42px;height:24px}
+.switch-row {display:grid;grid-template-columns:5em auto;gap:12px;align-items:center;width:fit-content;min-height:34px;cursor:pointer}
+.switch-row .setting-switch {position:relative;width:42px;height:24px;min-height:0;padding:0;border:0;border-radius:16px;background:#9499a2;touch-action:none}
+.setting-switch::after {content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:white;box-shadow:0 1px 3px #0003;transition:transform .15s}
+.setting-switch[aria-checked=true] {background:var(--accent)}
+.setting-switch::after {transform:translateX(var(--switch-position,0px))}
+.setting-switch[aria-checked=true]::after {transform:translateX(var(--switch-position,18px))}
+.desk-ui .settings-view .desktop-preferences .appearance-options {display:grid;margin:9px 0 0;border-top:1px solid var(--line);padding-top:10px}
+.appearance-options {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:148px;gap:6px}
+.appearance-options button {display:grid;place-items:center;min-width:0;height:32px;min-height:32px;padding:0 3px;border:1px solid #b6bdc8;border-radius:8px;color:#253047;font-size:13px;font-weight:550;white-space:nowrap}
+.appearance-options [data-theme=light] {background:linear-gradient(110deg,#e3e9f3,#fafbff)}
+.appearance-options [data-theme=dark] {background:linear-gradient(110deg,#3a4353,#202736);color:#fff}
+.appearance-options button[aria-pressed=true] {border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+
+@media(min-width:820px){.desk-ui .settings-grid {grid-template-columns:minmax(0,.85fr) minmax(306px,1.15fr);align-items:stretch}}
 .desk-ui .trend-card {position:relative}
 .desk-ui .usage-chart g[role=button] {cursor:pointer;outline:none}
 .desk-ui .usage-chart g[role=button]:focus-visible circle {stroke:var(--text);stroke-width:3px}
@@ -126,3 +146,4 @@
 .desk-ui .desktop-hour-chart svg {background:none;overflow:visible}
 .desk-ui .desktop-hour-chart circle {pointer-events:none}
 .desk-ui .desktop-hour-chart:has(rect[rx]) g:not([aria-expanded=true]):not(:focus-visible) circle {opacity:0}
+.desk-ui .chart-style [aria-pressed=true] {background:var(--surface);color:var(--accent);font-weight:600}

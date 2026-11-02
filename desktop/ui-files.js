@@ -2,6 +2,7 @@
 const paths=[
  'web/index.html',
  'web/app.js',
+ 'web/desktop-settings.js',
  'web/dashboard.js',
  'web/report-view.js',
  'web/device-list.js',
