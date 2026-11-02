@@ -473,3 +473,8 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 #period-dashboard .pd-nav button {display:flex;align-items:center;gap:12px;padding:11px 14px;font:400 13px/1.5 "Segoe UI","Microsoft YaHei",sans-serif;color:var(--muted);border-radius:9px}
 .desktop-v2 #period-dashboard .pd-nav button.active {color:var(--accent);background:var(--tint);font-weight:600}
 @media(max-width:1100px){.desktop-v2 #period-dashboard .pd-nav {padding-inline:10px}}
+
+.desktop-v2 .pd-summary {display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:8px 12px;border-top:3px solid var(--accent);border-radius:14px;padding:10px 14px}
+.desktop-v2 .pd-summary > div.pd-scope {order:0;align-items:stretch;gap:1px;margin-inline-start:0}
+.desktop-v2 .pd-summary .pd-range {margin-inline-start:auto;min-height:36px;white-space:nowrap}
+.desktop-v2 .pd-summary .pd-total-value {display:flex;align-items:baseline;gap:8px;white-space:nowrap}

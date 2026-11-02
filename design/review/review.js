@@ -518,6 +518,15 @@ function comparisonNote(note){
 function targetFor(note) {
   if(secondDraftNote(note)!==currentDraft())return null;
   try {
+    if(note.board==='desktop-home' && currentDraft() && [9,91,127,129].includes(note.id))return doc().querySelector('.pd-summary .pd-modes');
+    if(note.board==='desktop-home' && currentDraft() && note.id===10)return doc().querySelector('.pd-summary .pd-date');
+    if(note.board==='desktop-home' && currentDraft() && [61,79].includes(note.id))return doc().querySelector('.pd-summary');
+    if(note.board==='desktop-home' && currentDraft() && note.id===128)return doc().querySelector('.pd-summary .pd-scope');
+    if(note.board==='desktop-home' && note.id===130)return doc().querySelector('.pd-summary .pd-range');
+    if(note.board==='desktop-behavior' && note.id===131)return doc().getElementById('chart-title');
+    if(note.board==='desktop-behavior' && [132,133].includes(note.id))return doc().querySelectorAll('#purpose-chart .bar-row')[note.id-132];
+    if(note.board==='desktop-behavior' && note.id===134)return doc().querySelector('.period-nav');
+    if(note.board==='desktop-behavior' && note.id===135)return doc().getElementById('session-plot');
     if(note.board==='desktop-behavior' && note.id===110)return doc().querySelector('.behavior h1');
     if(note.board==='desktop-behavior' && note.id===115)return doc().getElementById('purpose-chart');
     if(note.board==='desktop-behavior' && note.id===118)return doc().getElementById('purpose-rules');
@@ -816,6 +825,16 @@ function mountPeriodDashboard(d,onChange){
   return [a,Math.min(b,today)];
  };
  const label=r=>len(r)===1?stamp(r[0]):stamp(r[0])+' – '+short(r[1]);
+ function desktopDateLabel(){
+   const [a,b]=period;
+   const fmt=(n,opts)=>new Intl.DateTimeFormat('zh-CN',{timeZone:'UTC',...opts}).format(dt(n));
+   if(mode==='year')return yr(a)+'年';
+   if(mode==='month')return fmt(a,{year:'numeric',month:'long'});
+   if(len(period)===1 && mode!=='week')return fmt(a,{month:'long',day:'numeric',...(yr(a)===yr(today)?{}:{year:'numeric'})})+' '+fmt(a,{weekday:'short'});
+   const start=fmt(a,{month:'long',day:'numeric',...(yr(a)===yr(today)&&yr(a)===yr(b)?{}:{year:'numeric'})});
+   const end=yr(a)!==yr(b)?fmt(b,{year:'numeric',month:'long',day:'numeric'}):month(a)!==month(b)?fmt(b,{month:'long',day:'numeric'}):dt(b).getUTCDate()+'日';
+   return (mode==='week'?'周 · ':'')+start+(a===b?'':'至'+end);
+ }
  const root=d.createElement('section');root.id='period-dashboard';root.hidden=true;d.body.append(root);
  let mode='day',period=[today,today],comparison=null,scope='all',picker=null;
  const desktop=currentDraft();
@@ -992,7 +1011,7 @@ function mountPeriodDashboard(d,onChange){
    return '<div class="pd-app"><span>'+name+'</span><small>'+device+'</small><b>'+dur(m)+'</b><i class="rank-track"><i style="width:'+percent+'%"></i></i></div>';
   }).join('');
   const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
-  const dateText=mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
+  const dateText=desktop?desktopDateLabel():mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
   const previousIcons=desktop?[...root.querySelectorAll('.rank-label img')]:[];
   root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div>'+(desktop?desktopNavButtons('home'):'<button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button>')+'</nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">'+(desktop?'统计':'仪表盘')+'</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
   '<section class="pd-summary"><div><small>'+(desktop?{all:'设备累计',phone:'手机累计',pc:'电脑累计'}[scope]:'设备累计')+'</small><h2>'+dur(sum)+'</h2></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
@@ -1000,6 +1019,10 @@ function mountPeriodDashboard(d,onChange){
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
 
   if(desktop){
+    const controls=root.querySelector('.pd-controls'),summary=root.querySelector('.pd-summary');
+    const total=summary.firstElementChild;total.className='pd-total-value';
+    summary.append(summary.querySelector('.pd-scope'),controls.querySelector('.pd-modes'),controls.querySelector('.pd-range'),total);
+    controls.remove();
     const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.23';
     root.querySelector('.pd-nav').append(version);
   }

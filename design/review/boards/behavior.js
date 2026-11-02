@@ -92,55 +92,98 @@ function drawChart(rows,start){
   const max=Math.max(1,...entries.map(r=>r.parts.reduce((n,p)=>n+p[1],0)));
   for(const r of entries){
     const line=button('',()=>{if(r.day)dayView(r.day);else{filter=r.label;draw();}});
-    line.className='bar-row';line.append(element('span',r.label),bar(r.parts,max),element('small',mode==='week'?leader(r.parts):r.parts[0][1]+' 分钟'));
+    line.className='bar-row';
+    line.append(element('span',r.label),bar(r.parts,max));
+    if(mode==='day')line.append(element('small',r.parts[0][1]+' 分钟'));
+    else line.setAttribute('aria-label',r.label+' · '+leader(r.parts));
     chart.append(line);
   }
   if(!entries.length)chart.append(element('p','当天没有使用记录。'));
 }
+const monthDay=d=>Number(d.slice(5,7))+'月'+Number(d.slice(8))+'日';
+const weekday=d=>['周日','周一','周二','周三','周四','周五','周六'][date(d).getUTCDay()];
+function dateRange(start,end){
+  const prefix=start.slice(0,4)===demoToday.slice(0,4)?'':start.slice(0,4)+'年';
+  if(start===end)return prefix+monthDay(start)+' '+weekday(start);
+  const finish=start.slice(0,4)!==end.slice(0,4)?end.slice(0,4)+'年'+monthDay(end):start.slice(0,7)!==end.slice(0,7)?monthDay(end):Number(end.slice(8))+'日';
+  return prefix+monthDay(start)+'至'+finish;
+}
+function timelineBins(rows){
+  const [start,end]=bounds(),bins=[];
+  if(mode==='day'){
+    const hour=h=>String(h).padStart(2,'0')+':00';
+    for(let h=0;h<24;h++){
+      const parts=rows.flatMap(s=>{
+        const [begin,finish]=s.time.split('–').map(t=>Number(t.slice(0,2))*60+Number(t.slice(3,5)));
+        const minutes=Math.min((h+1)*60,finish)-Math.max(h*60,begin);
+        return minutes>0?[{...s,minutes}]:[];
+      });
+      bins.push({label:hour(h),title:hour(h)+'–'+hour(h+1),parts});
+    }
+    return bins;
+  }
+  const until=end<demoToday?end:demoToday;
+  for(let first=start;first<=until;){
+    const last=mode==='week'?first:shift(first,6-(date(first).getUTCDay()+6)%7);
+    const stop=last<until?last:until;
+    bins.push({label:mode==='week'?weekday(first):'第'+(bins.length+1)+'周',
+      title:dateRange(first,stop),parts:rows.filter(s=>s.date>=first && s.date<=stop)});
+    first=shift(stop,1);
+  }
+  return bins;
+}
+let selectedBin=null;
 function drawTimeline(rows){
   const plot=$('session-plot');
   plot.replaceChildren();
   for(const control of $('timeline-style').children)control.setAttribute('aria-pressed',String(chartStyle===control.dataset.chart));
   if(!rows.length){plot.append(element('p','所选期间没有对应记录。'));return;}
-  const top=Math.ceil(Math.max(...rows.map(s=>s.minutes))/5)*5;
+  const bins=timelineBins(rows).map(bin=>({...bin,minutes:bin.parts.reduce((sum,s)=>sum+s.minutes,0)}));
+  const selected=bins.find(b=>b.title===selectedBin && b.parts.some(s=>s.id===selectedId))??bins.find(b=>b.parts.some(s=>s.id===selectedId));
+  selectedBin=selected?.title;
+  const top=Math.max(5,Math.ceil(Math.max(...bins.map(b=>b.minutes))/5)*5);
   const axis=element('div');axis.className='timeline-axis';
   for(const tick of [top,top/2,0])axis.append(element('small',tick+' min'));
   const scroll=element('div');scroll.className='timeline-scroll';
-  const columns=element('div');columns.className='timeline-columns '+chartStyle;
-  columns.style.setProperty('--count',rows.length);
+  const columns=element('div');columns.className='timeline-columns '+chartStyle+' timeline-'+mode;
+  columns.style.setProperty('--count',bins.length);
   if(chartStyle==='line'){
     const ns='http://www.w3.org/2000/svg';
     const svg=document.createElementNS(ns,'svg'),line=document.createElementNS(ns,'polyline');
     svg.setAttribute('viewBox','0 0 100 100');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('aria-hidden','true');
-    line.setAttribute('points',rows.map((s,i)=>[(i+0.5)*100/rows.length,100-s.minutes/top*100].join(',')).join(' '));
+    line.setAttribute('points',bins.map((s,i)=>[(i+0.5)*100/bins.length,100-s.minutes/top*100].join(',')).join(' '));
     svg.append(line);columns.append(svg);
   }
-  for(const s of rows){
-    const label=s.date+' '+s.time+' · '+s.app+' · '+s.minutes+' 分钟 · '+group(s);
+  const step=mode==='day'?4:mode==='year'?Math.ceil(bins.length/7):1;
+  for(const [i,bin] of bins.entries()){
+    const label=bin.title+' · '+bin.minutes+' 分钟';
     const column=button('',()=>{
-      selectedId=s.id;draw();
-      $(`point-${s.id}`).focus({preventScroll:true});
+      selectedId=bin.parts[0].id;selectedBin=bin.title;draw();
+      $(column.id)?.focus({preventScroll:true});
     });
-    column.id='point-'+s.id;column.className='timeline-column';column.title=label;
-    column.setAttribute('aria-label',label);column.setAttribute('aria-pressed',String(s.id===selectedId));
-    column.style.setProperty('--height',(s.minutes/top*100)+'%');column.style.setProperty('--color',color(group(s)));
-    const mark=element('span');mark.className='timeline-mark';
-    const tick=element('small',s.date.slice(5));tick.className='timeline-tick';tick.append(element('span',s.time.split('–')[0]));
-    column.append(mark,tick);columns.append(column);
+    column.id='bucket-'+mode+'-'+i;column.className='timeline-column';column.title=label;
+    column.disabled=!bin.parts.length;
+    column.setAttribute('aria-label',label);column.setAttribute('aria-pressed',String(bin===selected));
+    column.style.setProperty('--height',(bin.minutes/top*100)+'%');
+    column.style.setProperty('--color',color(tally(bin.parts)[0]?.[0]??missing));
+    if(bin.minutes){const mark=element('span');mark.className='timeline-mark';column.append(mark);}
+    if(i%step===0){
+      const tick=element('small',bin.label);tick.className='timeline-tick';column.append(tick);
+    }
+    columns.append(column);
   }
-  scroll.append(columns);plot.append(axis,scroll);
+  scroll.append(columns);plot.append(axis,scroll);return selected;
 }
 function draw(){
   const [start,end]=bounds(),rows=countedSamples.filter(s=>s.date>=start&&s.date<=end);
   $('anchor-date').max=demoToday;
   $('next').disabled=end>=demoToday;
-  $('anchor-date').value=anchor;$('range-label').textContent=mode==='year'?anchor.slice(0,4)+' 年':mode==='day'?anchor:start+' — '+end.slice(5);
+  $('anchor-date').value=anchor;$('range-label').textContent=mode==='year'?anchor.slice(0,4)+' 年':dateRange(start,end);
   for(const b of $('period-modes').children)b.setAttribute('aria-pressed',String(b.dataset.mode===mode));
   const names=[...state.names,missing],options=names.map(n=>[n,n]),totals=new Map(tally(rows));
   $('purpose-palette').replaceChildren(...names.map(name=>{
     const label=element('span',name);label.style.setProperty('--color',color(name));return label;
   }));
-  $('sum').textContent='设备累计 '+rows.reduce((n,s)=>n+s.minutes,0)+' 分钟';
   drawChart(rows,start);
   $('purpose-totals').replaceChildren(...names.filter(name=>totals.has(name)||name===filter).map(name=>{
     const b=button(name,()=>{filter=filter===name?null:name;draw();});b.id='purpose-'+names.indexOf(name);b.style.setProperty('--color',color(name));
@@ -152,7 +195,7 @@ function draw(){
   const selected=visible.find(s=>s.id===selectedId)??visible[0];
   selectedId=selected?.id??null;
   const oldOffset=$('session-plot').querySelector('.timeline-scroll')?.scrollLeft??0;
-  drawTimeline(visible);
+  const bucket=drawTimeline(visible);
   const scroller=$('session-plot').querySelector('.timeline-scroll');
   if(scroller)scroller.scrollLeft=oldOffset;
   $('session-list').replaceChildren();
@@ -165,7 +208,13 @@ function draw(){
       state.exceptions[s.id]=value;save('本段已计入'+value+'。');
     }));
     if(Object.hasOwn(state.exceptions,s.id))controls.append(button('撤销调整',()=>{delete state.exceptions[s.id];save('本段已恢复为'+group(s)+'。');}));
-    row.append(element('small',s.date.slice(5)+' '+s.time),info,controls);$('session-list').append(row);
+    if(bucket){
+      const summary=element('div');summary.className='bucket-detail';
+      summary.append(element('b',bucket.title+' · '+bucket.minutes+' 分钟'));
+      if(bucket.parts.length>1)summary.append(picker('bucket-session','选择原始时段',bucket.parts.map(part=>[part.id,part.time+' · '+part.app]),s.id,id=>{selectedId=id;draw();}));
+      $('session-list').append(summary);
+    }
+    row.append(element('small',(mode==='year'?monthDay(s.date)+' ':'')+s.time),info,controls);$('session-list').append(row);
   }
   $('rule-list').replaceChildren(...[...new Set(countedSamples.map(s=>s.app))].map((app,i)=>{
     const label=element('label',app);label.append(picker('rule-'+i,app+'默认行为',options,state.rules[app]??missing,value=>{
@@ -191,7 +240,7 @@ document.addEventListener('reveal-behavior-note',event=>{
   const selector=event.detail;
   if(selector==='#purpose-chart > button:nth-of-type(3)'){mode='week';anchor=demoToday;}
   const s=countedSamples.find(s=>['#session-','#override-','#point-'].some(prefix=>selector.startsWith(prefix+s.id)));
-  if(s){anchor=s.date;mode='week';device='全部';selectedId=s.id;}
+  if(s){anchor=s.date;mode=selector.startsWith('#point-')?'day':'week';device='全部';selectedId=s.id;selectedBin=null;}
   const cell=selector.match(/^#cell-(\d{4}-\d{2}-\d{2})/);if(cell){anchor=cell[1];mode='year';}
   filter=null;draw();
   if(selector==='#purpose-rules > p:nth-of-type(1)'||document.querySelector(selector)?.closest('#purpose-rules')){
