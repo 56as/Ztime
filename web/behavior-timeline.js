@@ -33,7 +33,7 @@ export function createTimeline(plot,paging,renderSelection){
   selectedKey=keyFor(selected);
   const top=Math.ceil(Math.max(...windowRows.map(minutes))/5)*5;
   const axis=make('div');axis.className='timeline-axis';
-  for(const tick of [top,top/2,0])axis.append(make('small',tick));
+  for(const tick of [top,top/2,0])axis.append(make('small',tick+' min'));
   const scroll=make('div');scroll.className='timeline-scroll';
   const columns=make('div');columns.className='timeline-columns '+style;
   columns.style.setProperty('--count',windowRows.length);

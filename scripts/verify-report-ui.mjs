@@ -20,7 +20,7 @@ try{
  await page.click('[data-page=dashboard]');await page.click('[data-mode=week]');await page.locator('[data-tool=report]').waitFor();
  assert.deepEqual(await page.locator('.dashboard-view .actions button').allTextContents(),['布局','导出周报','']);
  await page.click('[data-tool=report]');await page.locator('.report-image svg').waitFor();assert.match(await page.locator('.report-image').textContent(),/本周观察/);
- assert.match(await page.locator('.report-image').textContent(),/单位：小时/);
+ assert.ok(await page.locator('.report-image text').evaluateAll(labels=>labels.some(label=>/\d h$/.test(label.textContent))));
  const preview=await page.locator('.report-image').boundingBox(), formats=await page.locator('.report-formats').boundingBox();
  assert.ok(formats.y>=preview.y+preview.height,'export actions below recap');
  const out=process.env.ZTIME_REPORT_QA_DIR||tmp;fs.mkdirSync(out,{recursive:true});

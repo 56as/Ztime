@@ -26,13 +26,13 @@
 .behavior #session-devices{margin-left:auto;display:inline-flex;padding:3px;gap:2px;border:1px solid var(--line);background:var(--bg);border-radius:10px}
 .behavior #session-devices button{padding:0 12px;height:28px;border:0;border-radius:7px;font-size:13px;background:transparent}
 .behavior #session-devices button[aria-pressed=true]{color:var(--accent);background:var(--surface);box-shadow:0 1px 3px #19294020}
-.timeline-toolbar{display:flex;align-items:center;justify-content:space-between;margin:16px 0 4px}
+.timeline-toolbar{display:flex;align-items:center;justify-content:flex-end;margin:16px 0 4px}
 #timeline-style{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--bg)}
 #timeline-style button{border:0;border-radius:7px;padding:4px 10px;font-size:12px;background:transparent}
 #timeline-style [aria-pressed=true]{background:var(--surface);color:var(--accent);box-shadow:0 1px 3px #19294020}
 #session-plot{display:flex;gap:8px;--plot-height:124px}
 .timeline-axis{display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;height:var(--plot-height);margin-top:12px;min-width:20px}
-.timeline-axis small{font-size:11px;line-height:0}
+.timeline-axis small{font-size:11px;line-height:0;white-space:nowrap;font-variant-numeric:tabular-nums}
 .timeline-scroll{flex:1;min-width:0;overflow-x:auto;padding:12px 0 40px}
 .timeline-columns{position:relative;display:grid;grid-template-columns:repeat(var(--count),1fr);min-width:calc(var(--count) * 60px);height:var(--plot-height);background:linear-gradient(var(--line),var(--line)) top/100% 1px no-repeat,linear-gradient(var(--line),var(--line)) center/100% 1px no-repeat,linear-gradient(var(--line),var(--line)) bottom/100% 1px no-repeat}
 .timeline-columns svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
