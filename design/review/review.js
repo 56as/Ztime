@@ -272,7 +272,7 @@ function applySecondDesktopDraft(d,pageId){
     nav.setAttribute('aria-label','主导航');
     nav.innerHTML=desktopNavButtons(pageId);
     const version=d.createElement('small');
-    version.id='desktop-version';version.textContent='版本 0.2.20';
+    version.id='desktop-version';version.textContent='版本 0.2.21';
     d.querySelector('.sidebar').append(version);
   }
 
@@ -971,7 +971,7 @@ function mountPeriodDashboard(d,onChange){
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
 
   if(desktop){
-    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.20';
+    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.21';
     root.querySelector('.pd-nav').append(version);
   }
   if(mobile){
