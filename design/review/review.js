@@ -993,6 +993,7 @@ function mountPeriodDashboard(d,onChange){
   }).join('');
   const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
   const dateText=mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
+  const previousIcons=desktop?[...root.querySelectorAll('.rank-label img')]:[];
   root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div>'+(desktop?desktopNavButtons('home'):'<button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button>')+'</nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">'+(desktop?'统计':'仪表盘')+'</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
   '<section class="pd-summary"><div><small>'+(desktop?{all:'设备累计',phone:'手机累计',pc:'电脑累计'}[scope]:'设备累计')+'</small><h2>'+dur(sum)+'</h2></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
   (comparison?'<p class="pd-comp-label">'+label(comparison)+'</p><p>对比期累计　'+dur(compare)+'</p><strong>日均'+(Math.abs(delta)<0.5?'持平':(delta>0?'增加 ':'减少 ')+dur(Math.abs(delta)))+'</strong><p>本期日均 '+dur(sum/len(period))+' · 对比期日均 '+dur(compare/len(comparison))+'</p>':'<p>'+(mode==='year'?'比较上年同期的使用情况。':'可选另一月份的一段日期，比较日均用时。')+'</p>')+
@@ -1005,6 +1006,13 @@ function mountPeriodDashboard(d,onChange){
   if(mobile){
     root.querySelector('.pd-brand').remove();
     if(!comparison)root.querySelector('.pd-bottom > section:last-child > p')?.remove();
+  }
+  if(desktop){
+    const icons=new Map(previousIcons.map(img=>[img.getAttribute('src'),img]));
+    for(const img of root.querySelectorAll('.rank-label img')){
+      const previous=icons.get(img.getAttribute('src'));
+      if(previous)img.replaceWith(previous);
+    }
   }
   applyLayout(series);
   const content=layoutDraft?layoutPanel():calendar();
