@@ -2,6 +2,7 @@ import {validDesktopLayout} from '../shared/desktop-card-layout.js';
 import {validCardLayout} from '../shared/period-layout.js';
 import {periodBounds,periodStats} from '../shared/period.js';
 import {dayBounds} from '../shared/time.js';
+import {createBehavior} from './behavior.js';
 import {uiFileFor} from './ui-files.js';
 import http from 'node:http';
 import {validAppearance} from '../shared/appearance.js';
@@ -22,9 +23,14 @@ export async function createApp(options={}){
  if(browser.status().enabled){try{await browser.listen();}catch{/* Settings displays the unavailable bridge. */}}const sync=new SyncServer(store,dir);let syncError=null;
  try{await sync.start(options.syncPort??40327);}catch(e){syncError=e.message;}
  if(options.collect!==false)collector.start();
+ const behavior=createBehavior(store);
  const cookie=randomBytes(32).toString('hex');
  async function route(method,url,body={}){
   const u=new URL(url,'http://localhost');
+  if(u.pathname==='/api/behavior'){
+   if(method==='GET')return behavior.read(u.searchParams.get('anchor'),u.searchParams.get('mode'));
+   if(method==='PUT')return behavior.change(body);
+  }
   if(method==='GET'&&u.pathname==='/api/version')return {version:options.version??null,quitForUpdate:!!options.version};
   if(method==='GET'&&u.pathname==='/api/period'){
    const params=u.searchParams, from=params.get('from'), to=params.get('to');
@@ -32,7 +38,7 @@ export async function createApp(options={}){
    const rows=store.db.prepare('SELECT * FROM sessions WHERE deleted_at IS NULL AND start<? AND end>?').all(bounds.end,bounds.start).map(row=>store.decode(row));
    return periodStats(rows,store.devices(),settings,from,to,params.get('mode'),params.get('scope')||'all',now,true);
   }
-  if(method==='GET'&&u.pathname==='/api/summary')return {...store.summary(u.searchParams.get('date')||undefined,u.searchParams.has('weekDate')?Math.min(Date.now(),dayBounds(u.searchParams.get('weekDate'),store.get('settings')).end-1):Date.now()),version:options.version??sourceVersion,periodLayout:store.get('periodLayout'),browser:browser.status(),autostart:options.autostart?.get()??null,sync:{port:sync.port,addresses:sync.addresses(),error:syncError}};
+  if(method==='GET'&&u.pathname==='/api/summary')return {...store.summary(u.searchParams.get('date')||undefined,u.searchParams.has('weekDate')?Math.min(Date.now(),dayBounds(u.searchParams.get('weekDate'),store.get('settings')).end-1):Date.now()),version:options.version??sourceVersion,ledgerSequence:store.get('sequence',0),periodLayout:store.get('periodLayout'),browser:browser.status(),autostart:options.autostart?.get()??null,sync:{port:sync.port,addresses:sync.addresses(),error:syncError}};
   if(method==='POST'&&u.pathname==='/api/browser')return browser.configure(body.enabled===true);
   if(method==='PUT'&&u.pathname==='/api/appearance'){if(!validAppearance(body))throw new Error('外观选项无效');store.set('appearance',{theme:body.theme,accentColor:body.accentColor});return {ok:true};}
   if(method==='POST'&&u.pathname==='/api/autostart'){if(!options.autostart)throw new Error('开机启动仅在桌面程序中设置');options.autostart.set(body.enabled===true);return {ok:true};}

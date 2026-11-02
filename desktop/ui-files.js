@@ -3,6 +3,7 @@ const paths=[
  'web/index.html',
  'web/app.js',
  'web/desktop-settings.js',
+ 'web/behavior-view.js','web/behavior-chart.js','web/behavior.css',
  'web/dashboard.js',
  'web/report-view.js',
  'web/device-list.js',

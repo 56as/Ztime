@@ -1,0 +1,21 @@
+.behavior{max-width:1030px}.behavior>header,.behavior-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.behavior>header{margin-bottom:20px}.behavior h1{margin:4px 0;font-size:30px}.behavior p,.behavior small,.behavior-head span{color:var(--muted)}.behavior-summary{border-top:3px solid var(--accent)!important}.behavior .behavior-head h2{margin:0}.behavior #purpose-totals{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.behavior #purpose-totals button{min-width:96px;text-align:left;background:var(--bg);border:1px solid var(--line)}.behavior #purpose-totals button[aria-pressed=true]{background:var(--tint);border-color:var(--accent)}.behavior #purpose-totals b{display:block;font-size:20px}.behavior .session-row{display:grid;grid-template-columns:130px minmax(125px,1fr) auto;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}.behavior .session-row b,.behavior .session-row small{display:block}.behavior select{max-width:100%;padding:5px 8px}.behavior #rule-list label{display:flex;align-items:center;justify-content:space-between;padding:6px 0}.behavior form{display:flex;gap:8px;align-items:center;margin-top:12px}.behavior #feedback:empty{display:none}.behavior #feedback{margin:8px 0 0;color:var(--accent)}@media(max-width:850px){.behavior .session-row{grid-template-columns:1fr auto}.behavior .session-row>small{grid-column:1/-1}}
+.behavior .period-toolbar,.behavior .period-nav,.behavior #period-modes,.behavior .session-actions{display:flex;align-items:center;gap:6px}
+.behavior .period-toolbar{margin:16px 0;justify-content:space-between;flex-wrap:wrap}
+.behavior #period-modes{padding:3px;background:var(--bg);border:1px solid var(--line);border-radius:10px;gap:2px}
+.behavior #period-modes button{border:0;background:transparent;border-radius:7px;padding:4px 14px}
+.behavior #period-modes [aria-pressed=true]{color:var(--accent);background:var(--surface);box-shadow:0 1px 3px #19294020}
+.behavior .period-nav button,.behavior .period-nav label{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:4px 9px}
+.behavior .period-nav label{position:relative;font-size:13px}.behavior .period-nav input{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer}
+.behavior .period-nav input::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
+.behavior .period-nav label:focus-within{outline:2px solid var(--accent)}
+.behavior .bar-row{display:grid;align-items:center;width:100%;grid-template-columns:minmax(3em,max-content) 1fr minmax(7em,max-content);gap:12px;padding:5px 2px;text-align:left;border:0;background:transparent;font-size:13px}
+.behavior .bar-row:hover{background:var(--bg)}.behavior .bar-row small{text-align:right;font-size:12px}.behavior .purpose-track{display:flex;height:12px;overflow:hidden;background:var(--bg);border-radius:4px}.behavior .purpose-track i{height:100%}
+.behavior #purpose-totals{border-top:1px solid var(--line);padding-top:10px;gap:6px}
+.behavior #purpose-totals button{display:flex;align-items:center;gap:6px;min-width:0;padding:4px 8px;font-size:12px}
+.behavior #purpose-totals button::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--color)}
+.behavior #purpose-totals b{font-size:12px}.behavior .year-row{display:grid;grid-template-columns:32px repeat(31,minmax(0,1fr));gap:3px;align-items:center;margin-bottom:4px}
+.behavior .year-row button{height:16px;padding:0;min-width:0;border:0;border-radius:3px;background:var(--bg)}
+.behavior .year-row button:hover{outline:1px solid var(--accent)}.behavior .session-actions button{font-size:12px;color:var(--accent);border:0;background:transparent;padding:4px}
+.behavior .session-row{grid-template-columns:145px minmax(110px,1fr) auto}
+@media(max-width:850px){.behavior .session-row{grid-template-columns:1fr auto}.behavior .year-row{gap:2px}.behavior .bar-row small{font-size:11px}}
+.behavior [hidden]{display:none!important}.behavior #rule-list{max-height:320px;overflow:auto}.behavior .session-row b{overflow-wrap:anywhere}

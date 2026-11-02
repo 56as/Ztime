@@ -45,13 +45,13 @@ export function createPeriodView({api, escape, duration, details, report, refres
      const name=(desktop?desktopTitles:cardTitles)[key];
      return `<div class="layout-row"><b>${name}</b><button data-shift="-1" data-key="${key}" aria-label="上移${name}" ${index===0?'disabled':''}>↑</button><button data-shift="1" data-key="${key}" aria-label="下移${name}" ${index===draft.length-1?'disabled':''}>↓</button><button data-toggle="${key}" aria-pressed="${visible}">${visible?'已添加':'添加'}</button></div>`;
    }).join('');
-   return `<section class="pd-picker"><h2>仪表盘布局</h2><p>调整卡片顺序和显示状态。</p>${rows}<div class="pd-end"><button data-cal="cancel">取消</button><button data-save class="pd-primary">保存布局</button></div><p class="layout-error" role="status"></p></section>`;
+   return `<section class="pd-picker"><h2>${desktop?'统计布局':'仪表盘布局'}</h2><p>调整卡片顺序和显示状态。</p>${rows}<div class="pd-end"><button data-cal="cancel">取消</button><button data-save class="pd-primary">保存布局</button></div><p class="layout-error" role="status"></p></section>`;
  }
  function drawModal() {
    const active=document.activeElement;
    const focusKey=active && dialog.contains(active) ? [...active.attributes].filter(a=>a.name.startsWith('data-')).map(a=>'['+a.name+'="'+CSS.escape(a.value)+'"]').join('') : '';
    dialog.innerHTML=draft?layoutPanel():calendar();
-   dialog.setAttribute('aria-label',draft?'仪表盘布局':picker.target==='year'?'选择年份':picker.target==='comparison'?'选择对比区间':'选择统计区间');
+   dialog.setAttribute('aria-label',draft?(desktop?'统计布局':'仪表盘布局'):picker.target==='year'?'选择年份':picker.target==='comparison'?'选择对比区间':'选择统计区间');
    if(!dialog.open)dialog.showModal();
    if(focusKey)dialog.querySelector(focusKey)?.focus({preventScroll:true});
  }
@@ -155,7 +155,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
  function paint() {
    const modesHtml=Object.entries(modes).map(([key,name])=>`<button data-cal="mode" data-mode="${key}" aria-pressed="${mode===key}">${name}</button>`).join('');
    const scopeHtml=[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([key,name])=>`<button data-cal="scope" data-scope="${key}" aria-pressed="${scope===key}">${name}</button>`).join('');
-   const header=`<header class="topbar page-header"><div class="page-heading"><h1>仪表盘</h1>${desktop?recordingStatus(snapshot.collector,escape):''}</div><div class="actions"><button data-tool="layout" aria-haspopup="dialog">布局</button>${mode==='week'?'<button data-tool="report">导出周报</button>':''}${refreshControl('data-tool="refresh"')}</div></header>`;
+   const header=`<header class="topbar page-header"><div class="page-heading"><h1>${desktop?'统计':'仪表盘'}</h1>${desktop?recordingStatus(snapshot.collector,escape):''}</div><div class="actions"><button data-tool="layout" aria-haspopup="dialog">布局</button>${mode==='week'?'<button data-tool="report">导出周报</button>':''}${refreshControl('data-tool="refresh"')}</div></header>`;
    const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
    const dateText=!desktop && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
    const controls=`<div class="pd-controls"><div class="pd-modes">${modesHtml}</div><div class="pd-range"><button aria-label="上一期间" data-cal="prev">‹</button><button data-cal="dates" aria-haspopup="dialog" aria-label="${fullDate}">${dateText} ▾</button><button aria-label="下一期间" data-cal="next" ${period[1]>=today?'disabled':''}>›</button></div></div>`;
