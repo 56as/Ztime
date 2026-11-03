@@ -44,6 +44,7 @@ try{
  for(const [mode,title] of [['day','日报'],['week','周报'],['month','月报'],['year','年报']]){
   await page.click('[data-mode='+mode+']');
   const trigger=page.getByRole('button',{name:title,exact:true});
+  assert.equal(await trigger.locator('svg,img').count(),0,title+' is text only');
   await trigger.click();
   await page.locator('#dialog h2').filter({hasText:title+'预览'}).waitFor();
   assert.match(await page.locator('.period-report').innerText(),/手机/);
