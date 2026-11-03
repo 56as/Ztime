@@ -513,8 +513,36 @@ function mountDesktopWheels(d){
     observed.set(wheel,sizeObserver);
     select.addEventListener('change',align);
     wheel.addEventListener('scrollend',()=>choose(Math.round(wheel.scrollTop/rowHeight)));
+    wheel.setAttribute('aria-haspopup','listbox');
+    wheel.setAttribute('aria-expanded','false');
+    function openChoices(){
+      if(picking||select.disabled||!select.hidden)return;
+      const rect=wheel.getBoundingClientRect();
+      const style=select.style;
+      style.setProperty('--wheel-left',rect.left+'px');
+      style.setProperty('--wheel-top',rect.top+'px');
+      style.setProperty('--wheel-width',rect.width+'px');
+      select.classList.add('wheel-picker-anchor');
+      select.hidden=false;
+      select.focus({preventScroll:true});
+      function closeChoices(){
+        if(!select.isConnected)return;
+        if(select.matches(':open')){d.defaultView.requestAnimationFrame(closeChoices);return;}
+        const restore=d.activeElement===select;
+        select.hidden=true;
+        select.classList.remove('wheel-picker-anchor');
+        wheel.setAttribute('aria-expanded','false');
+        if(restore)wheel.focus({preventScroll:true});
+      }
+      try{
+        select.showPicker();
+        wheel.setAttribute('aria-expanded','true');
+      }finally{d.defaultView.requestAnimationFrame(closeChoices);}
+    }
+    wheel.addEventListener('click',openChoices);
     let search='',typedAt=0;
     wheel.addEventListener('keydown',event=>{
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();openChoices();return;}
       const index=select.selectedIndex;
       const targets={ArrowDown:index+1,ArrowUp:index-1,Home:0,End:items.length-1,PageDown:index+10,PageUp:index-10};
       if(Object.hasOwn(targets,event.key)){

@@ -603,3 +603,11 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .wheel-list {position:relative;height:180px;padding:72px 0;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;scrollbar-width:none}
 .wheel-list [role=option] {height:36px;display:grid;place-items:center;scroll-snap-align:center;cursor:pointer;color:var(--muted);white-space:nowrap}
 .wheel-list [aria-selected=true] {font-weight:650;color:var(--text)}
+
+.desktop-v2 select.wheel-picker-anchor {
+  position:fixed!important;left:var(--wheel-left);top:var(--wheel-top);
+  width:var(--wheel-width)!important;height:32px!important;margin:0;
+  opacity:0;pointer-events:none;
+}
+.desktop-v2 .desktop-choice-wheel {cursor:pointer}
+.desktop-v2 select.wheel-picker-anchor::picker(select) {pointer-events:auto}
