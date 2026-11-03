@@ -101,7 +101,13 @@ window.ledgerPairUri=uri=>{manualPairOpen=true;state.pairUri=uri;state.page='dev
 window.ledgerBack=()=>{if(periodView.closeModal())return true;const dialog=document.querySelector('#dialog');if(dialog.open){dialog.close();return true;}if(state.edit){toast('请先完成或取消布局编辑');return true;}if(state.page!=='dashboard'){state.page='dashboard';render();return true;}return false;};
 const periodView=createPeriodView({
  api,escape:esc,duration,details,onError:toast,refreshPhone:()=>refresh(true),
- async report(date){
+ async report(date,selection){
+   if(selection){
+     const {openPeriodReport}=await import('./reports/period.js');
+     const weekly=selection.mode==='week'?await api('/api/summary?'+new URLSearchParams({date,weekDate:date})):null;
+     await openPeriodReport(selection,document.querySelector('#dialog'),weekly);
+     return;
+   }
    const raw=await api('/api/summary?'+new URLSearchParams({date,weekDate:date}));
    await openWeekReport(normalise(raw,date,date),document.querySelector('#dialog'),native?report=>api('/api/week-report','POST',report):null);
  }

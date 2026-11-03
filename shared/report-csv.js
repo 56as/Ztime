@@ -1,5 +1,5 @@
 const mins=ms=>Math.round(ms/60000*100)/100;
-const safeField=v=>{let s=String(v).replace(/[\x00-\x1f]/g,' ');if(typeof v==='string'&&/^\s*[=+@-]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};
+export const safeField=v=>{let s=String(v).replace(/[\x00-\x1f]/g,' ');if(typeof v==='string'&&/^\s*[=+@-]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};
 export function reportCsv(m){
  const rows=[['统计周起点','截至（含时区）','分组','日期或应用','平台','本期分钟','上期同期分钟','变化分钟']];
  const add=(category,label,platform,now,previous)=>rows.push([m.first,m.range,category,label,platform,mins(now),mins(previous),mins(now-previous)]);

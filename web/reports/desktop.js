@@ -2,7 +2,7 @@ import {reportData} from '../shared/report-model.js';
 import {reportCsv} from '../shared/report-csv.js';
 import {reportSvg} from './chart.js';
 
-function download(blob,filename){
+export function download(blob,filename){
  const url=URL.createObjectURL(blob),link=document.createElement('a');
  link.href=url;link.download=filename;
  try{link.click();}finally{setTimeout(()=>URL.revokeObjectURL(url),30000);}

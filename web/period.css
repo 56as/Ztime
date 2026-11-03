@@ -148,3 +148,13 @@
 .desk-ui .desktop-hour-chart circle {pointer-events:none}
 .desk-ui .desktop-hour-chart:has(rect[rx]) g:not([aria-expanded=true]):not(:focus-visible) circle {opacity:0}
 .desk-ui .chart-style [aria-pressed=true] {background:var(--surface);color:var(--accent);font-weight:600}
+
+.desk-ui #period-view .page-header .actions button[data-tool] {display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;min-height:36px;padding:0 12px;border-radius:9px;border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));background:var(--tint);color:var(--accent);font:600 13px/1 system-ui;white-space:nowrap}
+.desk-ui #period-view .page-header .actions [data-tool=refresh] {padding:0;width:36px}
+.desk-ui [data-tool=report] svg {width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.desk-ui #dialog:has(.period-report) {width:min(510px,calc(100vw - 24px))}
+.period-report>strong {font-size:24px}.period-report h3 {margin:16px 0 8px}
+.period-report .report-app {display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:4px 0}
+.report-app span {overflow-wrap:anywhere}.report-app b {white-space:nowrap}
+.desk-ui .period-total .pd-range button {height:34px;min-height:0;padding-block:0}
+.desk-ui main.behavior-view {padding-top:24px}

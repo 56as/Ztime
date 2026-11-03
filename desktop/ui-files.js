@@ -30,7 +30,7 @@ const paths=[
  'shared/report-model.js',
  'shared/report-format.js',
  'shared/report-csv.js',
- 'web/reports/dialog.js',
+ 'web/reports/dialog.js','web/reports/period.js',
  'web/reports/desktop.js',
  'web/reports/chart.js',
  'web/reports/image-export.js',

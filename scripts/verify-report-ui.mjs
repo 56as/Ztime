@@ -17,10 +17,10 @@ try{
  await page.click('[data-page=settings]');await page.click('[data-action=delete-data]');
  assert.equal(await page.locator('#dialog .danger').isDisabled(),true);await page.click('#dialog [data-cancel]');
  assert.equal(await page.locator('#dialog').isVisible(),false);
- await page.click('[data-page=dashboard]');await page.click('[data-mode=week]');await page.locator('[data-tool=report]').waitFor();
+ await page.click('[data-page=dashboard]');await page.click('[data-mode=week]');await page.locator('[data-tool=report]').filter({hasText:'导出周报'}).waitFor();
  assert.deepEqual(await page.locator('.dashboard-view .actions button').allTextContents(),['布局','导出周报','']);
- await page.click('[data-tool=report]');await page.locator('.report-image svg').waitFor();assert.match(await page.locator('.report-image').textContent(),/本周观察/);
- assert.ok(await page.locator('.report-image text').evaluateAll(labels=>labels.some(label=>/\d h$/.test(label.textContent))));
+ await page.click('[data-tool=report]');await page.locator('.report-image svg').waitFor();assert.match(await page.locator('.period-report').textContent(),/每日用时/);
+ assert.ok(await page.locator('.report-image text').evaluateAll(labels=>labels.some(label=>/\d 小时$/.test(label.textContent))));
  const preview=await page.locator('.report-image').boundingBox(), formats=await page.locator('.report-formats').boundingBox();
  assert.ok(formats.y>=preview.y+preview.height,'export actions below recap');
  const out=process.env.ZTIME_REPORT_QA_DIR||tmp;fs.mkdirSync(out,{recursive:true});
@@ -30,6 +30,24 @@ try{
   const raw=fs.readFileSync(dest);assert.ok(raw.length>100);assert.ok(!raw.includes('private.example'));
   if(fmt==='csv'){assert.match(raw.toString(),/本期分钟/);if(now>w.start+60000)assert.match(raw.toString(),/"'=示例笔记"/);}
   if(fmt==='png')assert.equal(raw.subarray(1,4).toString(),'PNG');if(fmt==='pdf')assert.equal(raw.subarray(0,5).toString(),'%PDF-');
+ }
+ await page.keyboard.press('Escape');
+ await page.click('[data-scope=phone]');
+ for(const [mode,title] of [['day','日报'],['week','周报'],['month','月报'],['year','年报']]){
+  await page.click('[data-mode='+mode+']');
+  const trigger=page.getByRole('button',{name:'导出'+title,exact:true});
+  await trigger.click();
+  await page.locator('#dialog h2').filter({hasText:title+'预览'}).waitFor();
+  assert.match(await page.locator('.period-report').innerText(),/手机/);
+  assert.equal(await page.locator('.period-report>strong').innerText(),'0 分钟');
+  for(const fmt of ['csv','txt','png','pdf']){
+   const [dl]=await Promise.all([page.waitForEvent('download'),page.click('[data-save-report='+fmt+']')]);
+   assert.ok(dl.suggestedFilename().startsWith('Ztime-'+title+'-'));
+   const raw=fs.readFileSync(await dl.path());
+   if(fmt==='csv'||fmt==='txt')assert.ok(!raw.includes('示例笔记'));
+   else assert.equal(fmt==='png'?raw.subarray(1,4).toString():raw.subarray(0,5).toString(),fmt==='png'?'PNG':'%PDF-');
+  }
+  await page.keyboard.press('Escape');
  }
  const mobile=await browser.newPage({viewport:{width:390,height:692}});
  const fixture={native:true,devices:[{id:'local',name:'手机',platform:'android',local:true},{id:'new',name:'同名电脑',platform:'windows'},{id:'old',name:'同名电脑',platform:'windows'}],peers:[{id:'new',last_sync:now}],sessions:[],settings:service.store.get('settings'),collector:{state:'ready'}};

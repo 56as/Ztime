@@ -1,9 +1,9 @@
 // Render a prepared preview. No knowledge of the week model, file formats or native bridge.
-export function showReportDialog(dialog,{text,sheet='',formats,save}){
+export function showReportDialog(dialog,{text,sheet='',preview='',title='周报预览',formats,save}){
  const content=dialog.querySelector('#dialogContent');
  const actions=formats.map(([id,label])=>`<button data-save-report="${id}" data-file-code="${id.toUpperCase()}">${label}</button>`).join('');
- const body=sheet?`<div class="report-image">${sheet}</div><details><summary>查看文字明细</summary><pre class="report-text"></pre></details>`:'<pre class="report-text"></pre>';
- content.innerHTML=`<header><h2>周报预览</h2><button class="dialog-close" aria-label="关闭">×</button></header>${body}<p class="small">导出统计摘要，不含网站域名和原始时段。</p><div class="row report-formats" aria-label="导出格式">${actions}</div><p class="small" role="status" data-report-notice></p>`;
+ const body=preview?preview+'<details><summary>查看文字明细</summary><pre class="report-text"></pre></details>':sheet?`<div class="report-image">${sheet}</div><details><summary>查看文字明细</summary><pre class="report-text"></pre></details>`:'<pre class="report-text"></pre>';
+ content.innerHTML=`<header><h2>${title}</h2><button class="dialog-close" aria-label="关闭">×</button></header>${body}<p class="small">导出统计摘要，不含网站域名和原始时段。</p><div class="row report-formats" aria-label="导出格式">${actions}</div><p class="small" role="status" data-report-notice></p>`;
  content.querySelector('pre').textContent=text;
  content.querySelector('.dialog-close').onclick=()=>dialog.close();
  const notice=content.querySelector('[data-report-notice]');
