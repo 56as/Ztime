@@ -26,7 +26,8 @@ function rankInitialSvg(name,id){
 }
 
 const refreshGlyph='<svg class="review-refresh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5 M19.4 11a7.4 7.4 0 1 0-2 6.5"/></svg>';
-function refreshControl(attribute) {
+function refreshControl(attribute, page) {
+  if(page)return `<button ${attribute} class="sand-seal sand-motion" aria-label="刷新${page}" title="刷新${page}"><img src="./brand-icon.png" alt=""></button>`;
   return `<button ${attribute} class="refresh-control" aria-label="更新" title="更新">${refreshGlyph}</button>`;
 }
 
@@ -204,11 +205,11 @@ function showReference(key,detail=''){
   const panel=$('reference');
   panel.hidden=!referenceLabels[key];
   if(panel.hidden)return;
-  const src='reference/0.2.33/'+key+'.png';
+  const src='reference/0.2.34/'+key+'.png';
   $('reference-thumb').src=src;
   $('reference-caption').textContent=referenceLabels[key]+' · '+(detail||'默认视图');
   $('reference-difference').textContent=key.endsWith('-report')?'正式版支持 TXT、CSV、PDF 和 PNG，可展开查看文字明细。':'截图使用全部设备和默认布局。';
-  $('reference-title').textContent='Windows 0.2.33 · '+referenceLabels[key];
+  $('reference-title').textContent='Windows 0.2.34 · '+referenceLabels[key];
 }
 $('reference-thumb').onload=()=>{$('reference-open').hidden=false;$('reference-fallback').hidden=true;};
 $('reference-thumb').onerror=()=>{
@@ -601,10 +602,9 @@ function dressHourglassPage(d){
   header.classList.add('sand-header');
   header.querySelectorAll('.refresh-control,[data-action=refresh],[data-style-demo=refresh],[data-cal=refresh]').forEach(el=>el.remove());
   if(!header.querySelector('.sand-seal')){
-    const seal=d.createElement('button'),label='刷新'+header.querySelector('h1').textContent.trim();
-    seal.type='button';seal.className='sand-seal sand-motion';seal.title=label;
-    seal.setAttribute('aria-label',label);seal.dataset.styleNative='';
-    seal.innerHTML='<img src="brand-icon.png" alt="">';header.append(seal);
+    const title=header.querySelector('h1').textContent.trim();
+    header.insertAdjacentHTML('beforeend',refreshControl('data-style-native',title));
+    const seal=header.querySelector('.sand-seal');
     seal.addEventListener('click',()=>{
       if(picking)return;
       if(header.matches('.pd-header'))periodView?.refresh();
@@ -615,7 +615,7 @@ function dressHourglassPage(d){
         if(turn){turn.currentTime=0;turn.play();}
       }
       if(!seal.isConnected)d.querySelector('.pd-header .sand-seal')?.focus({preventScroll:true});
-      notice(d,'已刷新'+label.slice(2));
+      notice(d,'已刷新'+title);
     });
   }
   const logo=d.querySelector('.pd-brand img') || d.querySelector('.sidebar .brand img');
@@ -638,7 +638,7 @@ function applySecondDesktopDraft(d,pageId){
     nav.setAttribute('aria-label','主导航');
     nav.innerHTML=desktopNavButtons(pageId);
     const version=d.createElement('small');
-    version.id='desktop-version';version.textContent='版本 0.2.33';
+    version.id='desktop-version';version.textContent='版本 0.2.34';
     d.querySelector('.sidebar').append(version);
   }
 
@@ -653,7 +653,7 @@ function applySecondDesktopDraft(d,pageId){
     card.innerHTML='<h2>浏览器识别</h2><button data-action="design-extension">启用并生成连接码</button><p id="design-connection" hidden>连接码示意 · 在扩展弹窗中输入</p>';
     d.querySelector('.devices-view').append(card);
   }
-  const proposal=new URLSearchParams(location.search).get('proposal');
+  const proposal=new URLSearchParams(location.search).get('proposal') || 'hourglass';
   if(pageId==='behavior' && proposal==='hourglass'){
     d.body.classList.add('hourglass-study');
     const heading=d.querySelector('.behavior-summary .behavior-head');
@@ -1478,7 +1478,7 @@ function mountPeriodDashboard(d,onChange){
     const total=summary.firstElementChild;total.className='pd-total-value';
     summary.append(summary.querySelector('.pd-scope'),controls.querySelector('.pd-modes'),controls.querySelector('.pd-range'),total);
     controls.remove();
-    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.33';
+    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.34';
     root.querySelector('.pd-nav').append(version);
   }
   if(mobile){

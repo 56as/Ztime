@@ -1,6 +1,6 @@
 {
   "name": "time-ledger",
-  "version": "0.2.33",
+  "version": "0.2.34",
   "private": true,
   "description": "Local-first, free and open-source personal screen-time ledger for Windows and Android",
   "license": "MIT",

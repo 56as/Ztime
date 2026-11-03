@@ -23,7 +23,7 @@ try{
   store.write({id:day+'-'+i,deviceId:i===2?'phone-demo':device.id,appId:['notes.exe','chatgpt.exe','com.tencent.mm'][i],appName:name,start:end-(12+(day+i)*7%37)*60000,end});
  }
  browser=await chromium.launch({channel:process.env.ZTIME_BROWSER||'msedge'});
- const page=await browser.newPage({viewport:{width:1280,height:824}});
+ const page=await browser.newPage({viewport:{width:1280,height:824},reducedMotion:'reduce'});
  await page.route('**/api/summary*',async route=>{const r=await route.fetch(),s=await r.json();s.sync.addresses=['192.0.2.1'];await route.fulfill({response:r,json:s});});
  await page.goto(service.url);
  const out=path.resolve('design/review/reference',version);
@@ -38,7 +38,7 @@ try{
   await page.locator('#dialog[open] .report-image svg').waitFor();
   await shot(mode+'-report');await page.keyboard.press('Escape');
  }
- for(const [key,ready] of [['behavior','#purpose-chart'],['devices','#extension-settings, [data-action=pair]'],['settings','#timeZone + .desktop-choice-wheel']]){
+ for(const [key,ready] of [['behavior','#behavior-view:not([aria-busy]) #purpose-chart'],['devices','#extension-settings, [data-action=pair]'],['settings','#timeZone + .desktop-choice-wheel']]){
   await page.locator('[data-page='+key+']').click();await page.locator(ready).first().waitFor();await shot(key);
  }
  console.log('Windows '+version+' → '+out);
