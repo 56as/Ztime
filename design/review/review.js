@@ -622,11 +622,27 @@ function applySecondDesktopDraft(d,pageId){
   if(pageId==='behavior' && proposal==='hourglass'){
     d.body.classList.add('hourglass-study');
     const header=d.querySelector('.behavior > header');
-    header.querySelector('h1').insertAdjacentHTML('beforebegin','<small class="sand-signature">Ztime · 时间手记</small>');
     header.insertAdjacentHTML('beforeend','<div class="sand-seal"><img src="brand-icon.png" alt="Ztime 沙漏"></div>');
     const heading=d.querySelector('.behavior-summary .behavior-head');
     heading.insertAdjacentHTML('beforeend','<div class="sand-total"><small id="sand-period"></small><b id="sand-minutes"></b><span>分钟</span></div>');
     d.querySelector('[data-mode=day]').click();
+  }
+  if(proposal==='hourglass'){
+    const logo=d.querySelector('.sand-seal img') || [...d.querySelectorAll('.pd-brand img,.sidebar .brand img')].find(img=>img.offsetWidth);
+    if(logo){
+      const mark=logo.parentElement;
+      if(!mark.classList.contains('sand-seal')){
+        const frame=d.createElement('span');
+        frame.className='sand-icon';
+        logo.before(frame);frame.append(logo);
+      }
+      const frame=logo.parentElement;
+      frame.classList.add('sand-motion');
+      const visible=new IntersectionObserver(([entry])=>frame.classList.toggle('sand-paused',!entry.isIntersecting || d.hidden));
+      visible.observe(frame);
+      d.addEventListener('visibilitychange',()=>frame.classList.toggle('sand-paused',d.hidden || frame.getBoundingClientRect().bottom<=0));
+      d.defaultView.addEventListener('pagehide',()=>visible.disconnect(),{once:true});
+    }
   }
   if(pageId==='behavior' && ['motion','hourglass'].includes(proposal)){
     d.body.classList.add('behavior-motion');
@@ -881,6 +897,7 @@ function comparisonNote(note){
 function targetFor(note) {
   if(secondDraftNote(note)!==currentDraft())return null;
   try {
+    if(note.board==='desktop-behavior' && note.id===170)return doc().querySelector('.behavior > header h1');
     if(note.board==='desktop-devices' && note.id===148)return doc().querySelector('.paired-status');
     if(note.board==='desktop-settings' && note.id===149)return doc().querySelector('.preview-rules h2');
     if(note.board==='desktop-settings' && note.id===151)return doc().querySelector('#idle-schedule');

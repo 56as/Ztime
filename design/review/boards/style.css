@@ -691,3 +691,26 @@ body:has(#style-lab) #app {display:none}
 #style-lab button:active {transform:translateY(1px)}
 .study-ui output {min-height:17px;line-height:17px;color:var(--accent-ui);font-size:12px}
 @media(max-width:700px){.study-cards{grid-template-columns:1fr}.study-cover svg{height:115px}.study-edition{display:none}}
+
+/* Keep the cream tile still. The moving disc samples the same original icon. */
+.sand-motion {position:relative;display:inline-grid;place-items:center;isolation:isolate;line-height:0}
+.sand-icon {width:31px;height:31px;flex:none}
+.sand-motion img {display:block}
+.sand-motion::before {
+  content:"";position:absolute;inset:0;pointer-events:none;background:url("brand-icon.png") center/100% 100% no-repeat;
+  clip-path:circle(46%);animation:sand-turn 640ms cubic-bezier(.22,.72,.22,1) both;
+}
+.sand-seal.sand-motion::after {
+  content:"";position:absolute;pointer-events:none;width:2px;height:2px;border-radius:50%;left:calc(50% - 1px);top:52%;
+  background:#fbf6e9;opacity:0;animation:sand-drop 4400ms linear 750ms infinite;
+}
+@keyframes sand-turn {from{transform:rotate(-180deg)}to{transform:rotate(0)}}
+@keyframes sand-drop {
+  0%,6%,29%,38%,60%,100% {opacity:0}
+  0%,6%,38% {transform:translateY(0)}
+  10%,42% {opacity:.95}
+  25%,55% {opacity:.7}
+  29%,60%,100% {transform:translateY(9px)}
+}
+.sand-motion.sand-paused::after {animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.sand-motion::before,.sand-motion::after{animation:none;opacity:0}}

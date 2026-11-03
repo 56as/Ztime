@@ -68,11 +68,10 @@ body.desktop-v2.hourglass-study:not(.dark) {
 }
 .hourglass-study:not(.dark) .sidebar {background:#f8f5ec;border-color:var(--line)}
 .hourglass-study:not(.dark) .sidebar .nav button.active {color:var(--ink);background:#e6e1d5}
-.hourglass-study .behavior > header {position:relative;isolation:isolate;display:grid;grid-template-columns:1fr auto;min-height:128px;padding:20px 25px;box-sizing:border-box;overflow:hidden;border:1px solid var(--line);border-radius:22px;background:var(--sand,var(--surface))}
-.hourglass-study .sand-signature {font-size:12px;color:var(--muted);letter-spacing:.1em}
-.hourglass-study .behavior h1 {font-size:40px;line-height:1.2;letter-spacing:-.04em;margin:6px 0 0}
+.hourglass-study .behavior > header {position:relative;isolation:isolate;display:grid;grid-template-columns:1fr auto;min-height:67px;padding:7px 18px;box-sizing:border-box;overflow:hidden;border:1px solid var(--line);border-radius:22px;background:var(--sand,var(--surface))}
+.hourglass-study .behavior h1 {font-size:30px;line-height:1.2;letter-spacing:-.04em;margin:0}
 .hourglass-study .sand-seal {grid-area:1/2;align-self:center;justify-self:end;margin-right:2px}
-.hourglass-study .sand-seal img {display:block;width:96px;height:96px}
+.hourglass-study .sand-seal img {display:block;width:49px;height:49px}
 .hourglass-study #rules-open {grid-area:1/1;justify-self:end;margin-right:25px}
 .hourglass-study .behavior > header > div:first-child {grid-area:1/1;justify-self:start}
 .hourglass-study:not(.dark) :is(#rules-open,#purpose-form button) {border:0;border-radius:18px;background:#2f2f33;color:#fbf6e9;padding:8px 17px}
