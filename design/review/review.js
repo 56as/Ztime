@@ -25,6 +25,11 @@ function rankInitialSvg(name,id){
  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22"><rect width="22" height="22" rx="5" fill="#526982"/><text x="11" y="11" text-anchor="middle" dominant-baseline="central" font-family="system-ui,sans-serif" font-size="14" font-weight="600" fill="white">${letter}</text></svg>`;
 }
 
+const refreshGlyph='<svg class="review-refresh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5 M19.4 11a7.4 7.4 0 1 0-2 6.5"/></svg>';
+function refreshControl(attribute) {
+  return `<button ${attribute} class="refresh-control" aria-label="更新" title="更新">${refreshGlyph}</button>`;
+}
+
 // Presentation shared by the Windows renderer and its example-data review board.
 const html=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // The review board supplies example icons. The installed client supplies its local icon URL.
@@ -222,7 +227,6 @@ $('reference-thumb').onerror=()=>{
 $('reference-open').onclick=()=>{$('reference-full').src=$('reference-thumb').src;$('reference-dialog').showModal();};
 $('reference-close').onclick=()=>$('reference-dialog').close();
 let periodView=null;
-const refreshGlyph='<svg class="review-refresh-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 7v5h-5 M19.4 11a7.4 7.4 0 1 0-2 6.5"/></svg>';
 const desktopV2='desktop-v2';
 const secondDraftPrefix='电脑版第二版 · ';
 const secondDraftNote=note=>note.flow?.startsWith(secondDraftPrefix)===true;
@@ -765,6 +769,7 @@ frame.onload = () => {
   showCatalog(d,feature==='controls');periodView=null;
   for(const button of d.querySelectorAll('[data-action=refresh],[data-style-demo=refresh]')){
     button.innerHTML=refreshGlyph;
+    if(feature===desktopV2)button.classList.add('refresh-control');
     button.setAttribute('aria-label','更新');button.title='更新';button.style.order='99';
   }
   if(isDashboard(feature)||['devices','settings'].includes(page.value)){
@@ -1123,7 +1128,7 @@ function mountPeriodDashboard(d,onChange){
   const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
   const dateText=desktop?desktopPeriodLabel(mode,period,today):mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
   const previousIcons=desktop?[...root.querySelectorAll('.rank-label img')]:[];
-  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div>'+(desktop?desktopNavButtons('home'):'<button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button>')+'</nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">'+(desktop?'统计':'仪表盘')+'</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button>'+(desktop && reportNames[mode]?'<button data-cal="report" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/></svg>导出'+reportNames[mode]+'</button>':'')+'<button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
+  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div>'+(desktop?desktopNavButtons('home'):'<button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button>')+'</nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">'+(desktop?'统计':'仪表盘')+'</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button>'+(desktop && reportNames[mode]?'<button data-cal="report" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/></svg>'+reportNames[mode]+'</button>':'')+refreshControl('data-cal="refresh"')+'</div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
   '<section class="pd-summary"><div><small>'+(desktop?{all:'设备累计',phone:'手机累计',pc:'电脑累计'}[scope]:'设备累计')+'</small><h2>'+dur(sum)+'</h2></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
   (comparison?'<p class="pd-comp-label">'+label(comparison)+'</p><p>对比期累计　'+dur(compare)+'</p><strong>日均'+(Math.abs(delta)<0.5?'持平':(delta>0?'增加 ':'减少 ')+dur(Math.abs(delta)))+'</strong><p>本期日均 '+dur(sum/len(period))+' · 对比期日均 '+dur(compare/len(comparison))+'</p>':'<p>'+(mode==='year'?'比较上年同期的使用情况。':'可选另一月份的一段日期，比较日均用时。')+'</p>')+
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
