@@ -456,46 +456,89 @@ function mountIdleProposal(d,grid){
   if(new URLSearchParams(location.search).get('proposal')==='idle')requestAnimationFrame(()=>panel.scrollIntoView({block:'center'}));
 }
 
-function mountDayStartWheel(d,select){
-  const wheel=d.createElement('div');
-  wheel.id=select.id;
-  wheel.className='day-start-wheel';
-  wheel.tabIndex=0;
-  wheel.dataset.styleNative='';
-  wheel.setAttribute('role','listbox');
-  wheel.setAttribute('aria-label','每日起点');
-  for(const option of select.options){
-    const item=d.createElement('div');
-    item.id='review-hour-'+option.value;
-    item.setAttribute('role','option');
-    item.textContent=option.text;
-    wheel.append(item);
+// Keep the original select as the source for the board's existing change handlers.
+function mountDesktopWheels(d){
+  const rowHeight=32;
+  const initialized=new WeakSet();
+  const observed=new WeakMap();
+  let wheelSequence=0;
+  function mount(select){
+    if(initialized.has(select)||!select.options.length)return;
+    initialized.add(select);
+    const wheel=d.createElement('div');
+    wheel.className='desktop-choice-wheel';
+    wheel.tabIndex=0;
+    wheel.dataset.styleNative='';
+    wheel.setAttribute('role','listbox');
+    const label=select.getAttribute('aria-label')||select.labels?.[0]?.textContent.trim()||select.title||'选择';
+    wheel.setAttribute('aria-label',label);
+    const optionPrefix=select.id||'choice-'+(++wheelSequence);
+    const items=Array.from(select.options,(option,index)=>{
+      const item=d.createElement('div');
+      item.setAttribute('role','option');
+      item.id=optionPrefix+'-item-'+index;
+      item.textContent=option.text;
+      item.title=option.text;
+      wheel.append(item);
+      return item;
+    });
+    select.after(wheel);
+    select.hidden=true;
+    function highlight(index){
+      const last=wheel.querySelector('[aria-selected=true]');
+      last?.setAttribute('aria-selected','false');
+      items[index].setAttribute('aria-selected','true');
+      wheel.setAttribute('aria-activedescendant',items[index].id);
+      wheel.title=items[index].title;
+    }
+    function align(){
+      if(select.selectedIndex<0)return;
+      highlight(select.selectedIndex);
+      wheel.scrollTop=select.selectedIndex*rowHeight;
+    }
+    function choose(index){
+      if(picking||index<0||index>=items.length||!wheel.clientHeight)return;
+      if(index===select.selectedIndex)return;
+      const wasFocused=d.activeElement===wheel;
+      select.selectedIndex=index;
+      align();
+      select.dispatchEvent(new Event('change',{bubbles:true}));
+      if(wasFocused&&!wheel.isConnected && select.id){
+        queueMicrotask(()=>d.getElementById(select.id)?.nextElementSibling?.focus({preventScroll:true}));
+      }
+    }
+    // Rules and schedule fields can be mounted inside a collapsed section.
+    const sizeObserver=new ResizeObserver(()=>{if(wheel.clientHeight)align();});
+    sizeObserver.observe(wheel);
+    observed.set(wheel,sizeObserver);
+    select.addEventListener('change',align);
+    wheel.addEventListener('scrollend',()=>choose(Math.round(wheel.scrollTop/rowHeight)));
+    let search='',typedAt=0;
+    wheel.addEventListener('keydown',event=>{
+      const index=select.selectedIndex;
+      const targets={ArrowDown:index+1,ArrowUp:index-1,Home:0,End:items.length-1,PageDown:index+10,PageUp:index-10};
+      if(Object.hasOwn(targets,event.key)){
+        event.preventDefault();choose(Math.max(0,Math.min(items.length-1,targets[event.key])));
+      }else if(event.key.length===1&&!event.ctrlKey&&!event.metaKey){
+        search=(Date.now()-typedAt<800?search:'')+event.key.toLowerCase();typedAt=Date.now();
+        choose(Array.from(select.options).findIndex(option=>option.text.toLowerCase().startsWith(search)||option.value.toLowerCase().startsWith(search)));
+      }
+    });
+    align();
   }
-  select.replaceWith(wheel);
-  const items=[...wheel.children];
-  const rowHeight=items[0].offsetHeight;
-  function selectHour(hour){
-    for(const [index,item] of items.entries())item.setAttribute('aria-selected',String(index===hour));
-    wheel.setAttribute('aria-activedescendant',items[hour].id);
-    desktopPreview.dayStart=String(hour);
-    sessionStorage.setItem('ztime-review-start',desktopPreview.dayStart);
-  }
-  function move(hour){
-    const index=Math.max(0,Math.min(items.length-1,hour));
-    wheel.scrollTop=index*rowHeight;
-    selectHour(index);
-  }
-  move(Number(desktopPreview.dayStart));
-  wheel.addEventListener('scrollend',()=>move(Math.round(wheel.scrollTop/rowHeight)));
-  wheel.addEventListener('click',event=>{
-    const index=items.indexOf(event.target);
-    if(!picking && index!==-1){wheel.focus({preventScroll:true});move(index);}
+  const scan=(root,selector,visit)=>{
+    if(root.nodeType!==1)return;
+    if(root.matches(selector))visit(root);
+    root.querySelectorAll(selector).forEach(visit);
+  };
+  scan(d.body,'select',mount);
+  const observer=new MutationObserver(records=>{
+    for(const change of records){
+      change.removedNodes.forEach(node=>scan(node,'.desktop-choice-wheel',wheel=>observed.get(wheel)?.disconnect()));
+      change.addedNodes.forEach(node=>scan(node,'select',mount));
+    }
   });
-  wheel.addEventListener('keydown',event=>{
-    const hour=Number(desktopPreview.dayStart);
-    const next={ArrowUp:hour-1,ArrowDown:hour+1,Home:0,End:23};
-    if(Object.hasOwn(next,event.key)){event.preventDefault();move(next[event.key]);}
-  });
+  observer.observe(d.body,{childList:true,subtree:true});
 }
 
 function applySecondDesktopDraft(d,pageId){
@@ -535,8 +578,10 @@ function applySecondDesktopDraft(d,pageId){
   const day=d.getElementById('dayStart');day.value=desktopPreview.dayStart;
   const rules=day.closest('.panel');rules.classList.add('preview-rules');
   rules.querySelector('[data-action=save-settings]').remove();
-  mountDayStartWheel(d,day);
+
   rules.addEventListener('change',()=>{
+    desktopPreview.dayStart=day.value;
+    sessionStorage.setItem('ztime-review-start',day.value);
     desktopZone=d.getElementById('timeZone').value;
     sessionStorage.setItem('ztime-review-zone',desktopZone);
   });
@@ -780,6 +825,7 @@ function targetFor(note) {
     const replacement=mobileAnnotationTargets[note.board]?.[note.selector];
     if(replacement)return doc().querySelector(replacement);
     const el=doc().querySelector(note.selector);
+    if(el?.matches('select[hidden]') && el.nextElementSibling?.classList.contains('desktop-choice-wheel'))return el.nextElementSibling;
     if(!el && note.flow?.startsWith('仪表盘 · ') && note.label==='ZTIME / 使用概览')return doc().getElementById('pd-heading');
     return el;
   } catch { return null; }
@@ -932,7 +978,7 @@ frame.onload = () => {
       d.querySelectorAll('[data-page=home]').forEach(el=>{for(const n of el.childNodes)if(n.nodeType===3)n.textContent='仪表盘';});
     }
   }
-  if(feature===desktopV2)applySecondDesktopDraft(d,page.value);
+  if(feature===desktopV2){applySecondDesktopDraft(d,page.value);mountDesktopWheels(d);}
   if(frame.dataset.loaded==='mobile-settings')populateTimeZones(d);
   const anchor=feature==='extension'?d.getElementById('extension-settings'):feature==='report'?d.getElementById('design-report-preview'):feature==='data'?d.getElementById('design-settings-data'):null;
   if(anchor){anchor.hidden=false;anchor.scrollIntoView({block:'center'});}
