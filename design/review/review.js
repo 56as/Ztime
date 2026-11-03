@@ -169,10 +169,6 @@ function handleStyleDemo(d,el){
   case 'save':{
    const hint=d.querySelector('[data-save-hint]');if(hint)hint.textContent='示例起点：'+d.querySelector('[data-style-id=day-start]').value;
     if(d.body.dataset.reviewDevice==='mobile' && d.getElementById('timeZone'))mobileZone=d.getElementById('timeZone').value;
-   if(currentDraft() && d.getElementById('timeZone')){
-     desktopZone=d.getElementById('timeZone').value;
-     desktopPreview.dayStart=d.getElementById('dayStart').value;
-   }
    notice(d,'示例设置已保存');break;
   }
   case 'export':notice(d,'示例：'+button.textContent.trim().replace(/\s+/g,' ')+'（不会下载真实记录）');break;
@@ -234,8 +230,8 @@ const currentDraft=()=>frame.dataset.feature===desktopV2;
 const dashboardRoute=()=>device.value==='desktop'?desktopV2:'dashboard';
 const isDashboard = f=>['dashboard','calendar','layout',desktopV2].includes(f);
 
-let desktopZone='Asia/Hong_Kong';
-const desktopPreview={recording:true,startup:true,theme:'light',chart:'line',dayStart:'4'};
+let desktopZone=sessionStorage.getItem('ztime-review-zone')||'Asia/Hong_Kong';
+const desktopPreview={recording:true,startup:true,theme:'light',chart:'line',dayStart:sessionStorage.getItem('ztime-review-start')||'4'};
 function applyPreviewTheme(d){
   const dark=desktopPreview.theme==='dark';
   d.body.classList.toggle('dark',dark);
@@ -376,9 +372,23 @@ function mountIdleProposal(d,grid){
   const saved=JSON.parse(sessionStorage.getItem('ztime-review-idle')||'{}');
   const repeatAliases={'工作日':'weekdays','每天':'daily','周末':'weekends'};
   const config={auto:true,schedule:false,start:'12:00',end:'13:00',...saved,limit:Number(saved.limit)||5,repeat:repeatAliases[saved.repeat]||saved.repeat||'weekdays'};
+  const hours=panel.querySelector('#idle-hours');
+  const details=d.createElement('details');
+  details.className='schedule-editor';
+  const summary=d.createElement('summary');
+  hours.before(details);
+  details.append(summary,hours);
+  function updateSchedule(value){
+    details.hidden=!value.schedule;
+    if(!value.schedule)details.open=false;
+    const repeat=panel.querySelector('#idle-repeat').selectedOptions[0].textContent;
+    summary.textContent=repeat+' · '+value.start+'–'+(value.start>value.end?'次日 ':'')+value.end;
+  }
   bindTiming(panel,config,async(_path,_method,next)=>{
+    updateSchedule(next);
     sessionStorage.setItem('ztime-review-idle',JSON.stringify(next));return next;
   },message=>panel.querySelector('#idle-error').textContent=message);
+  updateSchedule(config);
   if(new URLSearchParams(location.search).get('proposal')==='idle')requestAnimationFrame(()=>panel.scrollIntoView({block:'center'}));
 }
 
@@ -396,6 +406,11 @@ function applySecondDesktopDraft(d,pageId){
 
   for(const [selector] of removedDesktopCopy['desktop-'+pageId]||[])d.querySelector(selector)?.remove();
   if(pageId==='devices'){
+    const status=d.querySelector('#lan-ready').parentElement;
+    const paired=d.querySelector('[data-unpair]').closest('.device').querySelector('.device-info');
+    status.className='paired-status';
+    status.querySelector('#lan-ready p').remove();
+    paired.append(status);
     const card=d.createElement('section');card.className='panel';card.id='extension-settings';
     card.innerHTML='<h2>浏览器识别</h2><button data-action="design-extension">启用并生成连接码</button><p id="design-connection" hidden>连接码示意 · 在扩展弹窗中输入</p>';
     d.querySelector('.devices-view').append(card);
@@ -413,6 +428,13 @@ function applySecondDesktopDraft(d,pageId){
   const input=d.getElementById('timeZone');input.outerHTML=zoneSelect(desktopZone);
   const day=d.getElementById('dayStart');day.value=desktopPreview.dayStart;
   const rules=day.closest('.panel');rules.classList.add('preview-rules');
+  rules.querySelector('[data-action=save-settings]').remove();
+  rules.addEventListener('change',()=>{
+    desktopPreview.dayStart=day.value;
+    desktopZone=d.getElementById('timeZone').value;
+    sessionStorage.setItem('ztime-review-start',desktopPreview.dayStart);
+    sessionStorage.setItem('ztime-review-zone',desktopZone);
+  });
   const pause=grid.querySelector('[data-action=pause]'), startup=grid.querySelector('[data-action=autostart]');
   const row=d.createElement('div');row.className='record-actions';pause.before(row);const p=startup.parentElement;
   previewSwitch(d,row,pause,'记录','recording');previewSwitch(d,row,startup,'开机自启','startup');p.remove();
@@ -619,6 +641,9 @@ function comparisonNote(note){
 function targetFor(note) {
   if(secondDraftNote(note)!==currentDraft())return null;
   try {
+    if(note.board==='desktop-devices' && note.id===148)return doc().querySelector('.paired-status');
+    if(note.board==='desktop-settings' && note.id===149)return doc().querySelector('.preview-rules h2');
+    if(note.board==='desktop-settings' && note.id===151)return doc().querySelector('#idle-schedule');
     if(note.board==='desktop-settings' && [140,144].includes(note.id))return doc().querySelector('#idle-proposal h2');
     if(note.board==='desktop-home' && currentDraft() && [9,91,127,129].includes(note.id))return doc().querySelector('.pd-summary .pd-modes');
     if(note.board==='desktop-home' && currentDraft() && note.id===10)return doc().querySelector('.pd-summary .pd-date');

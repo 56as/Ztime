@@ -438,7 +438,6 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 #design-settings-data > .row button {min-height:31px;padding:3px 8px;font-size:13px}
 .desktop-v2 .preview-rules {display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;align-items:center;row-gap:8px}
 .desktop-v2 .preview-rules h2 {margin:0}
-.desktop-v2 .preview-rules [data-action=save-settings] {grid-area:1/2;min-height:30px;padding:3px 12px;font-size:13px}
 .desktop-v2 .settings-view .fixed-setting.preview-rules .field {grid-column:1/-1;grid-template-columns:1fr minmax(96px,126px);gap:8px;margin:0;padding:8px 0}
 .desktop-v2 .preview-rules .field + .field {border-top:1px solid var(--line)}
 
@@ -539,3 +538,15 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 [data-review-device=mobile] .phone-timing label {display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px}
 [data-review-device=mobile] .phone-timing select {width:auto}
 [data-review-device=mobile] .sample-save {padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+
+.desktop-v2 .devices-view .paired-status h2 {margin:4px 0 0;font:500 12px/1.4 system-ui;color:var(--muted)}
+.desktop-v2 .paired-status p {margin:4px 0}
+.desktop-v2 .schedule-editor summary {cursor:pointer;padding:6px 0;text-align:end;color:var(--muted);font-size:13px}
+.desktop-v2 select,.desktop-v2 select::picker(select) {appearance:base-select}
+.desktop-v2 select::picker-icon {transition:rotate .16s ease}
+.desktop-v2 select:open::picker-icon {rotate:180deg}
+.desktop-v2 select::picker(select) {max-height:min(260px,45vh);overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.desktop-v2 select:open::picker(select) {animation:review-select-in .16s ease-out}
+.desktop-v2 select option {padding:5px 10px}
+@keyframes review-select-in {from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.desktop-v2 select:open::picker(select){animation:none}.desktop-v2 select::picker-icon{transition:none}}
