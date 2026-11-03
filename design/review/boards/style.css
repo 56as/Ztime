@@ -719,24 +719,26 @@ body.desktop-v2.hourglass-study:not(.dark) {
   --sand:#fbf6e9;--ink:#2f2f33;--bg:#f2efe7;--surface:#fffdf8;--text:#2f2f33;--muted:#706a60;--line:#d9d4c8;
   --accent:#2f2f33!important;--tint:#e8e3d7!important;background:var(--bg);color:var(--text)
 }
-.desktop-v2.hourglass-study :is(.app-shell,.pd-layout) {grid-template-columns:72px minmax(0,1fr)}
+.desktop-v2.hourglass-study :is(.app-shell,.pd-layout) {grid-template-columns:154px minmax(0,1fr)}
 .desktop-v2.hourglass-study .sidebar,.desktop-v2.hourglass-study #period-dashboard .pd-nav {
-  width:72px;box-sizing:border-box;padding:24px 10px;gap:5px;background:var(--sand,var(--surface));border-right:1px solid var(--line)
+  width:154px;box-sizing:border-box;padding:24px 12px;gap:5px;background:var(--sand,var(--surface));border-right:1px solid var(--line)
 }
 .desktop-v2.hourglass-study .sidebar .brand,.desktop-v2.hourglass-study #period-dashboard .pd-brand {
-  justify-content:center;display:flex;align-items:center;padding:0;margin:0 0 22px;gap:0;font-size:0
+  justify-content:flex-start;display:flex;align-items:center;padding:0 10px;margin:0 0 22px;gap:10px;font-size:21px;font-weight:700
 }
-.hourglass-study .sidebar .brand strong,.hourglass-study #desktop-version {display:none}
+.hourglass-study #desktop-version {display:none}
 .desktop-v2.hourglass-study .sidebar .nav button,.desktop-v2.hourglass-study #period-dashboard .pd-nav button {
-  display:flex;align-items:center;justify-content:center;padding:0;min-height:42px;width:100%;color:var(--muted);border-radius:11px
+  display:flex;align-items:center;justify-content:flex-start;gap:12px;padding:0 13px;min-height:42px;width:100%;color:var(--muted);border-radius:11px
 }
 .desktop-v2.hourglass-study .sidebar .nav button.active,.desktop-v2.hourglass-study #period-dashboard .pd-nav button.active {color:var(--text);background:var(--tint)}
-.hourglass-study .sand-header .statusbar,.hourglass-study .pd-header h1,.hourglass-study .page-header h1 {display:none}
+.hourglass-study .sand-header .statusbar {display:none}
 .desktop-v2.hourglass-study :is(.pd-header,.page-header.topbar) {
   display:flex;align-items:center;justify-content:space-between;min-height:67px;box-sizing:border-box;gap:12px;padding:7px 18px;
   border:1px solid var(--line);border-radius:22px;background:var(--sand,var(--surface));box-shadow:none
 }
-.hourglass-study :is(.pd-header,.page-header) > div:first-child:has(h1) {display:none}
+.hourglass-study .sand-header :is(.actions,.pd-tools) {margin-inline-start:auto}
+.hourglass-study button.sand-seal {padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;flex:none}
+.hourglass-study button.sand-seal:focus-visible {outline:2px solid currentColor;outline-offset:2px}
 .hourglass-study .sand-seal img {display:block;width:49px;height:49px}
 .hourglass-study .sand-icon img {width:31px;height:31px}
 .desktop-v2.hourglass-study :is(.panel,.pd-card,.pd-summary) {background:var(--surface);border:1px solid var(--line);border-radius:19px;box-shadow:none}

@@ -266,6 +266,7 @@ $('purpose-form').onsubmit=e=>{e.preventDefault();const name=$('purpose-name').v
   state.names.push(name);$('purpose-name').value='';save('已添加'+name+'。');
 };
 draw();
+document.addEventListener('hourglass-refresh',draw);
 document.addEventListener('reveal-behavior-note',event=>{
   const selector=event.detail;
   if(selector==='#purpose-chart > button:nth-of-type(3)'){mode='week';anchor=demoToday;}

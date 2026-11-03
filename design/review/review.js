@@ -598,8 +598,24 @@ function dressHourglassPage(d){
   const header=d.querySelector('.pd-header') || d.querySelector('.page-header,.behavior > header');
   if(!header)return;
   header.classList.add('sand-header');
+  header.querySelectorAll('.refresh-control,[data-action=refresh],[data-style-demo=refresh],[data-cal=refresh]').forEach(el=>el.remove());
   if(!header.querySelector('.sand-seal')){
-    header.insertAdjacentHTML('beforeend','<div class="sand-seal sand-motion"><img src="brand-icon.png" alt="Ztime 沙漏"></div>');
+    const seal=d.createElement('button'),label='刷新'+header.querySelector('h1').textContent.trim();
+    seal.type='button';seal.className='sand-seal sand-motion';seal.title=label;
+    seal.setAttribute('aria-label',label);seal.dataset.styleNative='';
+    seal.innerHTML='<img src="brand-icon.png" alt="">';header.append(seal);
+    seal.addEventListener('click',()=>{
+      if(picking)return;
+      if(header.matches('.pd-header'))periodView?.refresh();
+      else {
+        d.dispatchEvent(new d.defaultView.Event('hourglass-refresh'));
+        drawSync();applyPreviewTheme(d);updatePreviewRecording(d);
+        const turn=seal.getAnimations({subtree:true}).find(a=>a.animationName==='sand-turn');
+        if(turn){turn.currentTime=0;turn.play();}
+      }
+      if(!seal.isConnected)d.querySelector('.pd-header .sand-seal')?.focus({preventScroll:true});
+      notice(d,'已刷新'+label.slice(2));
+    });
   }
   const logo=d.querySelector('.pd-brand img') || d.querySelector('.sidebar .brand img');
   if(logo && !logo.closest('.sand-icon')){
@@ -610,7 +626,6 @@ function dressHourglassPage(d){
     if(button.hasAttribute('title'))continue;
     const label=button.textContent.trim();
     button.setAttribute('aria-label',label);button.title=label;
-    for(const node of [...button.childNodes])if(node.nodeType===3)node.remove();
   }
 }
 function applySecondDesktopDraft(d,pageId){
@@ -903,6 +918,7 @@ function comparisonNote(note){
 function targetFor(note) {
   if(secondDraftNote(note)!==currentDraft())return null;
   try {
+    if([146,172].includes(note.id) && doc().body.classList.contains('hourglass-study') && doc().querySelector('.sand-header .sand-seal'))return doc().querySelector('.sand-header .sand-seal');
     if(note.board==='desktop-behavior' && note.id===170)return doc().querySelector('.behavior > header h1');
     if(note.board==='desktop-devices' && note.id===148)return doc().querySelector('.paired-status');
     if(note.board==='desktop-settings' && note.id===149)return doc().querySelector('.preview-rules h2');
@@ -1544,5 +1560,5 @@ function mountPeriodDashboard(d,onChange){
   else if(['period','comparison'].includes(t)&&sane(mo)&&[start,end].every(x=>/^(?:\d{4}-\d{2}-\d{2})?$/.test(x)))picker={target:t,month:first(+mo),start,end,second:second==='1',error:''};
   draw();
  }
- draw();return {root,act,describeState,restore,open(feature){if(feature==='layout'){returnFocus='layout';layoutDraft=structuredClone(layout);}else{promptPicker('period');returnFocus='dates';}draw();}};
+ draw();return {root,act,refresh:draw,describeState,restore,open(feature){if(feature==='layout'){returnFocus='layout';layoutDraft=structuredClone(layout);}else{promptPicker('period');returnFocus='dates';}draw();}};
 }
