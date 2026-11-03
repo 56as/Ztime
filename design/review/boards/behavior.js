@@ -25,7 +25,7 @@ for(const table of [state.rules,state.exceptions]){
 }
 sessionStorage.setItem(storage,JSON.stringify(state));
 const countedSamples=samples.filter(s=>s.minutes>=1);
-let filter=null,device='全部',mode='week',anchor=demoToday;
+let filter=null,device='全部',mode='day',anchor=demoToday;
 let chartStyle='line',selectedId=null;
 const date=s=>new Date(s+'T12:00:00Z');
 const key=d=>d.toISOString().slice(0,10);

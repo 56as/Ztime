@@ -584,6 +584,19 @@ function applySecondDesktopDraft(d,pageId){
     card.innerHTML='<h2>浏览器识别</h2><button data-action="design-extension">启用并生成连接码</button><p id="design-connection" hidden>连接码示意 · 在扩展弹窗中输入</p>';
     d.querySelector('.devices-view').append(card);
   }
+  if(pageId==='behavior' && new URLSearchParams(location.search).get('proposal')==='motion'){
+    d.body.classList.add('behavior-motion');
+    const chart=d.getElementById('purpose-chart');
+    let previous=chart.className;
+    new MutationObserver(()=>{
+      if(chart.className===previous)return;
+      previous=chart.className;
+      if(d.defaultView.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+      chart.getAnimations().forEach(animation=>animation.cancel());
+      chart.animate([{opacity:.55,transform:'translateY(3px)'},{opacity:1,transform:'none'}],
+        {duration:170,easing:'cubic-bezier(.2,.8,.2,1)'});
+    }).observe(chart,{attributes:true,attributeFilter:['class']});
+  }
   if(pageId==='behavior' && new URLSearchParams(location.search).get('proposal')==='short'){
     d.querySelector('[data-mode=day]').click();
     requestAnimationFrame(()=>d.getElementById('session-list').scrollIntoView({block:'center'}));
