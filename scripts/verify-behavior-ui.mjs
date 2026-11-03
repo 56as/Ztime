@@ -26,7 +26,12 @@ try{
  assert.equal(await page.locator('main h1').innerText(),'统计');
  assert.deepEqual(await page.locator('.nav button').allTextContents(),['统计','行为','设备','设置']);
  await page.getByRole('button',{name:'行为',exact:true}).click();
+ await page.locator('#period-modes [data-mode=day][aria-pressed=true]').waitFor();
  await page.locator('#anchor-date').fill(day);
+ await page.locator('.timeline-day .timeline-column').first().waitFor();
+ assert.equal(await page.locator('.timeline-column').count(),24);
+ await page.locator('[data-mode=week]').click();
+ await page.locator('#chart-title').filter({hasText:'每日行为分布'}).waitFor();
  await page.locator('#purpose-totals').filter({hasText:'10 分钟'}).waitFor();
  assert.equal(await page.locator('#sum,.chart-week .bar-row small').count(),0);
  assert.equal(await page.locator('.bar-row').first().evaluate(el=>getComputedStyle(el).display),'grid');
