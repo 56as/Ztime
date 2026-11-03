@@ -286,6 +286,56 @@ function applyMobileTheme(d){
   d.body.classList.toggle('dark',dark);
   d.body.classList.toggle('light',!dark);
 }
+function mobileWheel(select,key){
+  const d=select.ownerDocument, options=Array.from(select.options);
+  const label=select.labels[0].textContent;
+  const trigger=d.createElement('button');
+  trigger.type='button';trigger.id=select.id;trigger.className='wheel-value';
+  trigger.dataset.styleNative='';trigger.setAttribute('aria-haspopup','dialog');
+  let index=Math.max(0,options.findIndex(o=>o.value===(sessionStorage.getItem(key)??select.value)));
+  const update=()=>{
+    trigger.textContent=options[index].text;
+    trigger.setAttribute('aria-label',label+'，'+options[index].text);
+  };
+  update();select.replaceWith(trigger);
+  trigger.onclick=()=>{
+    if(picking)return;
+    const dialog=d.createElement('dialog');
+    dialog.className='wheel-sheet';dialog.dataset.styleNative='';
+    dialog.setAttribute('aria-label','选择'+label);
+    dialog.innerHTML='<header><strong></strong><button type="button">完成</button></header><div class="wheel-window"><div class="wheel-list" tabindex="0" role="listbox"></div></div>';
+    dialog.querySelector('strong').textContent=label;
+    const list=dialog.querySelector('.wheel-list');
+    list.setAttribute('aria-label',label);
+    for(const [i,option] of options.entries()){
+      const row=d.createElement('div');row.setAttribute('role','option');
+      row.id=trigger.id+'-choice-'+i;row.textContent=option.text;list.append(row);
+    }
+    d.body.append(dialog);dialog.showModal();
+    const height=list.firstElementChild.offsetHeight;
+    function selectRow(i){
+      list.children[index].removeAttribute('aria-selected');
+      index=Math.max(0,Math.min(options.length-1,i));
+      list.children[index].setAttribute('aria-selected','true');
+      list.setAttribute('aria-activedescendant',list.children[index].id);
+      sessionStorage.setItem(key,options[index].value);update();
+    }
+    function move(i){selectRow(i);list.scrollTop=index*height;}
+    move(index);list.focus({preventScroll:true});
+    list.onscroll=()=>selectRow(Math.round(list.scrollTop/height));
+    list.onclick=e=>{
+      const row=e.target.closest('[role=option]');
+      if(row)move(Array.prototype.indexOf.call(list.children,row));
+    };
+    list.onkeydown=e=>{
+      const next={ArrowDown:index+1,ArrowUp:index-1,Home:0,End:options.length-1};
+      if(Object.hasOwn(next,e.key)){e.preventDefault();move(next[e.key]);}
+      if(e.key==='Enter')dialog.close();
+    };
+    dialog.querySelector('button').onclick=()=>dialog.close();
+    dialog.onclose=()=>{dialog.remove();trigger.focus({preventScroll:true});};
+  };
+}
 function populateTimeZones(d){
   const select=d.getElementById('timeZone');
   const common=new Map([['Asia/Hong_Kong','香港'],['Asia/Shanghai','上海（北京时间）'],['Asia/Taipei','台北'],['Asia/Singapore','新加坡'],['Asia/Tokyo','东京'],['Europe/London','伦敦'],['America/New_York','纽约'],['UTC','协调世界时']]);
@@ -299,11 +349,9 @@ function populateTimeZones(d){
     for(const [id,label] of zones)group.append(new Option(label,id));
     select.append(group);
   }
-  select.value=sessionStorage.getItem('mobile-review-zone')||'Asia/Hong_Kong';
-  select.onchange=()=>sessionStorage.setItem('mobile-review-zone',select.value);
-  const day=d.getElementById('dayStart');
-  day.value=sessionStorage.getItem('mobile-review-day')||day.value;
-  day.onchange=()=>sessionStorage.setItem('mobile-review-day',day.value);
+  select.value='Asia/Hong_Kong';
+  mobileWheel(select,'mobile-review-zone');
+  mobileWheel(d.getElementById('dayStart'),'mobile-review-day');
   const theme=d.getElementById('theme');
   theme.value=sessionStorage.getItem('mobile-review-theme')||'0';
   theme.setAttribute('aria-valuetext',theme.value==='1'?'深色':'浅色');
@@ -408,6 +456,48 @@ function mountIdleProposal(d,grid){
   if(new URLSearchParams(location.search).get('proposal')==='idle')requestAnimationFrame(()=>panel.scrollIntoView({block:'center'}));
 }
 
+function mountDayStartWheel(d,select){
+  const wheel=d.createElement('div');
+  wheel.id=select.id;
+  wheel.className='day-start-wheel';
+  wheel.tabIndex=0;
+  wheel.dataset.styleNative='';
+  wheel.setAttribute('role','listbox');
+  wheel.setAttribute('aria-label','每日起点');
+  for(const option of select.options){
+    const item=d.createElement('div');
+    item.id='review-hour-'+option.value;
+    item.setAttribute('role','option');
+    item.textContent=option.text;
+    wheel.append(item);
+  }
+  select.replaceWith(wheel);
+  const items=[...wheel.children];
+  const rowHeight=items[0].offsetHeight;
+  function selectHour(hour){
+    for(const [index,item] of items.entries())item.setAttribute('aria-selected',String(index===hour));
+    wheel.setAttribute('aria-activedescendant',items[hour].id);
+    desktopPreview.dayStart=String(hour);
+    sessionStorage.setItem('ztime-review-start',desktopPreview.dayStart);
+  }
+  function move(hour){
+    const index=Math.max(0,Math.min(items.length-1,hour));
+    wheel.scrollTop=index*rowHeight;
+    selectHour(index);
+  }
+  move(Number(desktopPreview.dayStart));
+  wheel.addEventListener('scrollend',()=>move(Math.round(wheel.scrollTop/rowHeight)));
+  wheel.addEventListener('click',event=>{
+    const index=items.indexOf(event.target);
+    if(!picking && index!==-1){wheel.focus({preventScroll:true});move(index);}
+  });
+  wheel.addEventListener('keydown',event=>{
+    const hour=Number(desktopPreview.dayStart);
+    const next={ArrowUp:hour-1,ArrowDown:hour+1,Home:0,End:23};
+    if(Object.hasOwn(next,event.key)){event.preventDefault();move(next[event.key]);}
+  });
+}
+
 function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2','desk-ui');
   applyPreviewTheme(d);updatePreviewRecording(d);
@@ -445,10 +535,9 @@ function applySecondDesktopDraft(d,pageId){
   const day=d.getElementById('dayStart');day.value=desktopPreview.dayStart;
   const rules=day.closest('.panel');rules.classList.add('preview-rules');
   rules.querySelector('[data-action=save-settings]').remove();
+  mountDayStartWheel(d,day);
   rules.addEventListener('change',()=>{
-    desktopPreview.dayStart=day.value;
     desktopZone=d.getElementById('timeZone').value;
-    sessionStorage.setItem('ztime-review-start',desktopPreview.dayStart);
     sessionStorage.setItem('ztime-review-zone',desktopZone);
   });
   const pause=grid.querySelector('[data-action=pause]'), startup=grid.querySelector('[data-action=autostart]');
