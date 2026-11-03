@@ -781,6 +781,13 @@ frame.onload = () => {
       d.body.classList.add('unified');
       d.querySelector('main')?.classList.add(page.value+'-view');
       if(page.value==='settings'){
+        if(device.value==='mobile'){
+          d.querySelector('.settings-grid .panel').insertAdjacentHTML('beforeend',`<details class="phone-timing"><summary>本机计时</summary>
+            <p>使用情况访问授权后，仅统计屏幕可交互、已解锁且应用在前台的时间。未授权时无法读取本机使用记录。</p>
+            <details><summary>屏蔽时段（示例）</summary><label>重复 <select data-style-native><option>关闭</option><option>工作日（周一至周五）</option><option>每天</option><option>周末</option></select></label>
+            <label>从 <input data-style-native type="time" value="22:00"></label><label>至 <input data-style-native type="time" value="07:00"></label>
+            <p>按本机统计时区，结束早于开始时跨至次日。仅排除本机记录的重叠部分。</p></details></details>`);
+        }
         const priorities=['统计规则','记录与外观','浏览器识别','我的数据','Ztime'];
         for(const card of d.querySelectorAll('.settings-grid > .panel')){
           const rank=priorities.indexOf(card.querySelector('h2')?.textContent);
@@ -945,9 +952,9 @@ function mountPeriodDashboard(d,onChange){
   ['VS Code','pc','code'],['Tailscale','pc','tailscale'],['任务管理器','pc','taskmgr'],
   ['照片','pc','photos'],['Setup','pc',null],['相机','phone',null]
  ];
- if(desktop)apps.splice(0,apps.length,...desktopExamples);
+ if(desktop || mobile)apps.splice(0,apps.length,...desktopExamples);
  const base=(n,i)=>{const q=Math.abs((n*(19+i*8)+Math.floor(n/7)*(i+11))%167);if(i>=4)return 2+q%14;return [40,19,35,10][i]+q%[95,45,85,35][i];};
- const vector=r=>{const totals=apps.map(()=>0);for(let n=r[0];n<=r[1];n++)for(let i=0;i<apps.length;i++)if(scope==='all'||scope===apps[i][1])totals[i]+=base(n,i);return totals;};
+ const vector=r=>{const totals=apps.map(()=>0);if(mobile && new URLSearchParams(location.search).get('sample')==='empty')return totals;for(let n=r[0];n<=r[1];n++)for(let i=0;i<apps.length;i++)if(scope==='all'||scope===apps[i][1])totals[i]+=base(n,i);return totals;};
  const total=v=>v.reduce((a,b)=>a+b,0),dur=m=>{const v=Math.round(m);return v>=60?Math.floor(v/60)+' 小时 '+v%60+' 分钟':v+' 分钟';};
  function hourlyUsage(day){
    const totals=vector([day,day]);
@@ -981,8 +988,11 @@ function mountPeriodDashboard(d,onChange){
      svg.querySelectorAll('circle').forEach((circle,i)=>circle.setAttribute('r',i===index?'5':'2.3'));
      slider.setAttribute('aria-valuetext',bin.detail+' · '+(bin.minutes===null?'尚未到达':dur(bin.minutes)));
      const rows=(bin.values||[]).map((minutes,i)=>({minutes,i})).filter(r=>r.minutes).sort((a,b)=>b.minutes-a.minutes);
+     const list=items=>'<ul>'+items.map(({minutes,i})=>'<li><span>'+html(apps[i][0])+' <small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small></span><b>'+dur(minutes)+'</b></li>').join('')+'</ul>';
+     const shortRows=rows.filter(row=>row.minutes<5);
      detail.innerHTML='<div class="point-total"><strong>'+bin.detail+'</strong><b>'+(bin.minutes===null?'尚未到达':dur(bin.minutes))+'</b></div>'+
-       (rows.length?'<ul>'+rows.map(({minutes,i})=>'<li><span>'+apps[i][0]+' <small>'+(apps[i][1]==='pc'?'电脑':'手机')+'</small></span><b>'+dur(minutes)+'</b></li>').join('')+'</ul>':bin.minutes===0?'<p>这段时间没有使用记录。</p>':'');
+       (rows.length?list(rows.filter(row=>row.minutes>=5)):bin.minutes===0?'<p>这段时间没有使用记录。</p>':'')+
+       (shortRows.length?'<details><summary>短于 5 分钟的应用明细（'+shortRows.length+'）</summary>'+list(shortRows)+'</details>':'');
    }
    slider.oninput=slider.onclick=()=>{if(!picking){inspect(Number(slider.value));onChange();}};
    if(pointIndex!==null && series[pointIndex])inspect(pointIndex);
@@ -1086,10 +1096,10 @@ function mountPeriodDashboard(d,onChange){
  }
  const reportNames={day:'日报',week:'周报',month:'月报',year:'年报'};
  const entryPeriod=new URLSearchParams(location.search).get('period');
- if(desktop && Object.hasOwn(reportNames,entryPeriod))choose(entryPeriod,today);
+ if((desktop || mobile) && Object.hasOwn(reportNames,entryPeriod))choose(entryPeriod,today);
  function reportPanel(values,series){
    const used=series.filter(bin=>bin.minutes!=null);
-   const peak=used.reduce((best,bin)=>!best||bin.minutes>best.minutes?bin:best,null);
+   const peak=used.filter(bin=>bin.minutes>0).reduce((best,bin)=>!best||bin.minutes>best.minutes?bin:best,null);
    const max=Math.max(1,...used.map(bin=>bin.minutes));
    const bars=used.map((bin,i)=>`<div title="${html(bin.detail)} · ${dur(bin.minutes)}"><i style="height:${100*bin.minutes/max}%"></i><small>${i%Math.ceil(used.length/6)===0?html(bin.label):''}</small></div>`).join('');
    const appsByTime=values.map((minutes,i)=>({name:apps[i][0],minutes})).filter(a=>a.minutes>0).sort((a,b)=>b.minutes-a.minutes).slice(0,3);
@@ -1100,7 +1110,7 @@ function mountPeriodDashboard(d,onChange){
      <small class="report-scale">${Number((max/60).toFixed(2))} 小时</small><div class="report-bars" role="img" aria-label="用时分布，单位小时">${bars}</div>
      ${peak?`<p>${html(peak.detail)} 用时最多，共 ${dur(peak.minutes)}。</p>`:''}
      <h4>主要应用</h4>${appsByTime.map(a=>`<div class="report-app"><span>${html(a.name)}</span><b>${dur(a.minutes)}</b></div>`).join('')}
-     <footer><h4>导出格式</h4>${['TXT','CSV','PDF','PNG'].map(fmt=>`<button data-cal="report-format" data-format="${fmt}">${fmt}</button>`).join(' ')}<small role="status">设计稿演示 · 使用示例数据</small></footer></section>`;
+     <footer><h4>${mobile?'保存为':'导出格式'}</h4>${['TXT','CSV','PDF','PNG'].map(fmt=>`<button data-cal="report-format" data-format="${fmt}">${fmt}</button>`).join(' ')}<small role="status">设计稿演示 · 使用示例数据</small>${mobile?'<div class="sample-save" hidden><p>保存到下载文件夹（演示）</p><b></b><div><button data-cal="cancel-save">取消</button><button data-cal="confirm-save">保存</button></div></div>':''}</footer></section>`;
  }
  function draw(){
   if(desktop && currentDraft()){
@@ -1114,7 +1124,7 @@ function mountPeriodDashboard(d,onChange){
   const bars=series.map((s,i)=>{const display=series.length<=12||i%Math.ceil(series.length/8)===0||i===series.length-1;return '<div class="pd-col" title="'+s.label+(barUnit==='月'?'':barUnit)+' · '+(s.minutes===null?'尚未到达':dur(s.minutes))+'"><div class="pd-track"><i style="height:'+((s.minutes||0)*100/max)+'%"></i></div><small>'+(display?s.label:'&nbsp;')+'</small></div>';}).join('');
   const presetButtons=Object.entries({day:'日',week:'周',month:'月',year:'年'}).map(([k,v])=>'<button data-cal="mode" data-mode="'+k+'" aria-pressed="'+(mode===k)+'" data-style-id="pd-'+k+'">'+v+'</button>').join('');
   function icon(i){
-   if(!desktop)return '';
+
    const name=desktopExamples[i][2];
    if(!name)return '<span aria-hidden="true" class="review-app-icon">'+rankInitialSvg(desktopExamples[i][0])+'</span>';
    const src=name==='brand-icon.png'?name:'rank-icons/'+name+'.png';
@@ -1122,13 +1132,13 @@ function mountPeriodDashboard(d,onChange){
   }
   const ranking=v.map((m,i)=>({m,i})).filter(o=>o.m).sort((a,b)=>b.m-a.m).map(({m,i})=>{
    const name=apps[i][0],device=apps[i][1]==='pc'?'电脑':'手机',percent=100*m/Math.max(...v);
-   if(desktop)return desktopRankRow({name,icon:icon(i),device,percent,minutes:m});
+   if(desktop || mobile)return desktopRankRow({name,icon:icon(i),device,percent,minutes:m});
    return '<div class="pd-app"><span>'+name+'</span><small>'+device+'</small><b>'+dur(m)+'</b><i class="rank-track"><i style="width:'+percent+'%"></i></i></div>';
   }).join('');
   const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
   const dateText=desktop?desktopPeriodLabel(mode,period,today):mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
   const previousIcons=desktop?[...root.querySelectorAll('.rank-label img')]:[];
-  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div>'+(desktop?desktopNavButtons('home'):'<button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button>')+'</nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">'+(desktop?'统计':'仪表盘')+'</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button>'+(desktop && reportNames[mode]?'<button data-cal="report" aria-haspopup="dialog">'+reportNames[mode]+'</button>':'')+refreshControl('data-cal="refresh"')+'</div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
+  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div>'+(desktop?desktopNavButtons('home'):'<button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button>')+'</nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">'+(desktop?'统计':'仪表盘')+'</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button>'+((desktop || mobile) && reportNames[mode]?'<button data-cal="report" aria-haspopup="dialog">'+reportNames[mode]+'</button>':'')+refreshControl('data-cal="refresh"')+'</div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
   '<section class="pd-summary"><div><small>'+(desktop?{all:'设备累计',phone:'手机累计',pc:'电脑累计'}[scope]:'设备累计')+'</small><h2>'+dur(sum)+'</h2></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
   (comparison?'<p class="pd-comp-label">'+label(comparison)+'</p><p>对比期累计　'+dur(compare)+'</p><strong>日均'+(Math.abs(delta)<0.5?'持平':(delta>0?'增加 ':'减少 ')+dur(Math.abs(delta)))+'</strong><p>本期日均 '+dur(sum/len(period))+' · 对比期日均 '+dur(compare/len(comparison))+'</p>':'<p>'+(mode==='year'?'比较上年同期的使用情况。':'可选另一月份的一段日期，比较日均用时。')+'</p>')+
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
@@ -1177,7 +1187,16 @@ function mountPeriodDashboard(d,onChange){
   if(['mode','prev','next','apply-year','apply','scope'].includes(a))pointIndex=null;
   const wasOpen=!!picker || !!layoutDraft;
   if(['layout','dates','compare','report'].includes(a))returnFocus=a;
-  if(a==='report' && desktop && reportNames[mode])picker={target:'report'};
+  if(a==='report' && (desktop || mobile) && reportNames[mode])picker={target:'report'};
+  if(mobile && ['report-format','confirm-save','cancel-save'].includes(a)){
+    const panel=root.querySelector('.sample-save'), status=root.querySelector('.pd-report [role=status]');
+    panel.hidden=a!=='report-format';
+    if(!panel.hidden){
+      panel.querySelector('b').textContent='Ztime-'+reportNames[mode]+'-'+iso(period[0])+'.'+button.dataset.format.toLowerCase();
+      status.textContent='请选择保存位置';panel.scrollIntoView({block:'nearest'});
+    }else status.textContent=a==='confirm-save'?'演示保存完成 · '+panel.querySelector('b').textContent:'已取消，可重新选择格式';
+    return true;
+  }
   if(a==='report-format'){
     root.querySelector('.pd-report [role=status]').textContent='示例文件 · Ztime-'+reportNames[mode]+'-'+iso(period[0])+'.'+button.dataset.format.toLowerCase();
     return true;
@@ -1227,7 +1246,7 @@ function mountPeriodDashboard(d,onChange){
   mode=m;period=[+a,+b];scope=sc;comparison=sane(c)&&sane(e)&&+e>=+c&&+e-+c<=366?[+c,+e]:null;picker=null;
   pointIndex=mobile && /^\d+$/.test(point) && +point<bins().length?+point:null;
   layoutDraft=t==='layout'?structuredClone(layout):null;
-  if(t==='report' && desktop && reportNames[mode]){picker={target:t};returnFocus='report';}
+  if(t==='report' && (desktop || mobile) && reportNames[mode]){picker={target:t};returnFocus='report';}
   else if(t==='year')picker={target:t};
   else if(['period','comparison'].includes(t)&&sane(mo)&&[start,end].every(x=>/^(?:\d{4}-\d{2}-\d{2})?$/.test(x)))picker={target:t,month:first(+mo),start,end,second:second==='1',error:''};
   draw();

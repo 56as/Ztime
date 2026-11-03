@@ -528,3 +528,14 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .timing-card .idle-rule {justify-content:flex-start}
 .timing-card #idle-hours :is(input,select) {box-sizing:border-box;min-height:32px;height:32px;margin:0;padding:0 8px;font:400 13px/1 system-ui;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--text)}
 /* @generated timing:end */
+
+[data-review-device=mobile] #period-dashboard .pd-tools [data-cal=report] {white-space:nowrap;background:#e6f0ff;color:#18599c;padding-inline:9px}
+[data-review-device=mobile] :is(.pd-tools,.page-header) .review-refresh-icon {display:block;width:18px;height:18px;min-width:18px;flex:none}
+[data-review-device=mobile] .pd-app.desktop-rank-row {grid-template-columns:minmax(0,1fr) auto auto;row-gap:2px}
+[data-review-device=mobile] .desktop-rank-row small {grid-column:2}
+[data-review-device=mobile] .desktop-rank-row b {grid-column:3}
+[data-review-device=mobile] .desktop-rank-row .rank-track {grid-column:1/-1;margin-left:26px;width:calc(100% - 26px)}
+[data-review-device=mobile] .phone-timing {grid-column:1/-1;margin-top:6px}
+[data-review-device=mobile] .phone-timing label {display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px}
+[data-review-device=mobile] .phone-timing select {width:auto}
+[data-review-device=mobile] .sample-save {padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
