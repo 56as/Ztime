@@ -1,7 +1,7 @@
 // Only these bundled files are served to the local renderer.
 const paths=[
  'web/index.html',
- 'web/app.js',
+ 'web/app.js','web/desktop-wheels.js','web/desktop-wheels.css','web/phone-timing.js','web/phone-wheel.js',
  'web/desktop-settings.js','web/timing-settings.js','web/timing-settings.css',
  'web/behavior-view.js','web/behavior-chart.js','web/behavior-timeline.js','web/behavior.css',
  'web/dashboard.js',

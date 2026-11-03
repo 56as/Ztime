@@ -149,7 +149,7 @@ try{
     const controls=el.querySelector('.record-actions').getBoundingClientRect();
     const [json,csv,del]=Array.from(el.querySelector('.record-data .row').children,c=>c.getBoundingClientRect());
     return appearance.top===rules.top && json.left>=controls.right && json.bottom<=csv.top && csv.bottom<=del.top &&
-      el.querySelector('#timeZone').getBoundingClientRect().width<=135;
+      el.querySelector('#timeZone + .desktop-choice-wheel').getBoundingClientRect().width<=135;
   }));
   await click('[data-switch=recording]');await page.waitForFunction(()=>document.querySelector('[data-switch=recording]').getAttribute('aria-checked')==='false');
   assert.equal(service.store.get('paused'),true);
@@ -163,7 +163,10 @@ try{
     const download=page.waitForEvent('download');await click('[data-export='+type+']');assert.ok((await download).suggestedFilename().endsWith('.'+type));
   }
   await click('[data-action=delete-data]');await page.locator('#dialog[open] [data-cancel]').click();
-  await page.locator('#timeZone').selectOption('Europe/Paris');await click('[data-action=save-settings]');
+  await click('#timeZone + .desktop-choice-wheel');
+  assert.equal(await page.locator('#timeZone').evaluate(e=>getComputedStyle(e,'::picker(select)').scrollbarWidth),'none');
+  const saved=page.waitForResponse(r=>r.url().endsWith('/api/settings')&&r.request().method()==='PUT');
+  await click('#timeZone option[value="Europe/Paris"]');await saved;
   await page.waitForFunction(()=>document.querySelector('#timeZone')?.value==='Europe/Paris');
   assert.equal(service.store.get('settings').timeZone,'Europe/Paris');
   assert.deepEqual(await page.locator('.appearance-options button').allTextContents(),['浅色','深色']);

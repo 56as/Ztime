@@ -4,6 +4,8 @@ const check=process.argv.includes('--check');
 for(const [source,target,css,feature] of [
  ['web/desktop-insights.js','design/review/review.js',false],
  ['web/desktop-insights.css','design/review/boards/style.css',true],
+ ['web/desktop-wheels.js','design/review/review.js',false,'wheels'],
+ ['web/desktop-wheels.css','design/review/boards/style.css',true,'wheels'],
  ['web/timing-settings.js','design/review/review.js',false,'timing'],
  ['web/timing-settings.css','design/review/boards/style.css',true,'timing']
 ]){

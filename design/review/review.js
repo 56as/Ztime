@@ -395,8 +395,8 @@ function timingCard(id='timing-card'){
  <div class="idle-rule"><label for="idle-auto">排除待机</label>
  <div id="idle-limit" role="radiogroup" aria-label="待机判定时间">${options}</div><input id="idle-auto" type="checkbox" role="switch"></div>
  <div class="idle-rule"><label for="idle-schedule">屏蔽时段</label><input id="idle-schedule" type="checkbox" role="switch"></div>
- <div id="idle-hours" hidden><select id="idle-repeat" aria-label="重复日期"><option value="weekdays">工作日</option><option value="daily">每天</option><option value="weekends">周末</option></select>
- <input id="idle-start" aria-label="开始时间" type="time"><span>至</span><input id="idle-end" aria-label="结束时间" type="time"><small id="idle-next"></small></div>
+ <details class="schedule-editor" hidden><summary></summary><div id="idle-hours" hidden><select id="idle-repeat" aria-label="重复日期"><option value="weekdays">工作日</option><option value="daily">每天</option><option value="weekends">周末</option></select>
+ <input id="idle-start" aria-label="开始时间" type="time"><span>至</span><input id="idle-end" aria-label="结束时间" type="time"><small id="idle-next"></small></div></details>
  <small id="idle-error" role="status"></small></section>`;
 }
 
@@ -410,6 +410,10 @@ function bindTiming(card,config,api,onError){
   radios.forEach(radio=>{radio.checked=Number(radio.value)===value.limit;});
   group.style.setProperty('--choice',timingLimits.indexOf(value.limit));
   group.hidden=!value.auto;el('hours').hidden=!value.schedule;
+  const editor=card.querySelector('.schedule-editor');
+  editor.hidden=!value.schedule;
+  if(!value.schedule)editor.open=false;
+  editor.querySelector('summary').textContent=el('repeat').selectedOptions[0].textContent+' · '+value.start+'–'+(value.start>value.end?'次日 ':'')+value.end;
   el('next').textContent=value.start>value.end?'次日':'';
  }
  render(config);
@@ -436,28 +440,15 @@ function mountIdleProposal(d,grid){
   const saved=JSON.parse(sessionStorage.getItem('ztime-review-idle')||'{}');
   const repeatAliases={'工作日':'weekdays','每天':'daily','周末':'weekends'};
   const config={auto:true,schedule:false,start:'12:00',end:'13:00',...saved,limit:Number(saved.limit)||5,repeat:repeatAliases[saved.repeat]||saved.repeat||'weekdays'};
-  const hours=panel.querySelector('#idle-hours');
-  const details=d.createElement('details');
-  details.className='schedule-editor';
-  const summary=d.createElement('summary');
-  hours.before(details);
-  details.append(summary,hours);
-  function updateSchedule(value){
-    details.hidden=!value.schedule;
-    if(!value.schedule)details.open=false;
-    const repeat=panel.querySelector('#idle-repeat').selectedOptions[0].textContent;
-    summary.textContent=repeat+' · '+value.start+'–'+(value.start>value.end?'次日 ':'')+value.end;
-  }
   bindTiming(panel,config,async(_path,_method,next)=>{
-    updateSchedule(next);
     sessionStorage.setItem('ztime-review-idle',JSON.stringify(next));return next;
   },message=>panel.querySelector('#idle-error').textContent=message);
-  updateSchedule(config);
   if(new URLSearchParams(location.search).get('proposal')==='idle')requestAnimationFrame(()=>panel.scrollIntoView({block:'center'}));
 }
 
+// @generated wheels:start
 // Keep the original select as the source for the board's existing change handlers.
-function mountDesktopWheels(d){
+function mountDesktopWheels(d,isPicking=()=>false){
   const rowHeight=32;
   const initialized=new WeakSet();
   const observed=new WeakMap();
@@ -497,7 +488,7 @@ function mountDesktopWheels(d){
       wheel.scrollTop=select.selectedIndex*rowHeight;
     }
     function choose(index){
-      if(picking||index<0||index>=items.length||!wheel.clientHeight)return;
+      if(isPicking()||index<0||index>=items.length||!wheel.clientHeight)return;
       if(index===select.selectedIndex)return;
       const wasFocused=d.activeElement===wheel;
       select.selectedIndex=index;
@@ -516,7 +507,7 @@ function mountDesktopWheels(d){
     wheel.setAttribute('aria-haspopup','listbox');
     wheel.setAttribute('aria-expanded','false');
     function openChoices(){
-      if(picking||select.disabled||!select.hidden)return;
+      if(isPicking()||select.disabled||!select.hidden)return;
       const rect=wheel.getBoundingClientRect();
       const style=select.style;
       style.setProperty('--wheel-left',rect.left+'px');
@@ -568,6 +559,7 @@ function mountDesktopWheels(d){
   });
   observer.observe(d.body,{childList:true,subtree:true});
 }
+// @generated wheels:end
 
 function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2','desk-ui');
@@ -1006,7 +998,7 @@ frame.onload = () => {
       d.querySelectorAll('[data-page=home]').forEach(el=>{for(const n of el.childNodes)if(n.nodeType===3)n.textContent='仪表盘';});
     }
   }
-  if(feature===desktopV2){applySecondDesktopDraft(d,page.value);mountDesktopWheels(d);}
+  if(feature===desktopV2){applySecondDesktopDraft(d,page.value);mountDesktopWheels(d,()=>picking);}
   if(frame.dataset.loaded==='mobile-settings')populateTimeZones(d);
   const anchor=feature==='extension'?d.getElementById('extension-settings'):feature==='report'?d.getElementById('design-report-preview'):feature==='data'?d.getElementById('design-settings-data'):null;
   if(anchor){anchor.hidden=false;anchor.scrollIntoView({block:'center'});}

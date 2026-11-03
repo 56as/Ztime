@@ -31,7 +31,7 @@ try{
   }
   await page.reload();await page.locator('[data-page=settings]').click();assert.ok(await page.getByRole('radio',{name:'5 分钟',exact:true}).isChecked());
   await page.locator('#idle-auto').uncheck();assert.ok(!await page.locator('#idle-limit').isVisible());await page.locator('#idle-auto').check();
-  await page.locator('#idle-schedule').check();await page.getByLabel('开始时间').fill('22:00');await page.getByLabel('结束时间').fill('07:00');await page.getByText('次日',{exact:true}).waitFor();
+  await page.locator('#idle-schedule').check();await page.locator('.schedule-editor summary').click();await page.getByLabel('开始时间').fill('22:00');await page.getByLabel('结束时间').fill('07:00');await page.getByText('次日',{exact:true}).waitFor();
  }
  const config=await page.evaluate(async()=>(await(await fetch('/api/summary')).json()).timing);
  await choose(frame,config.limit);await frame.locator('#idle-auto').setChecked(config.auto);

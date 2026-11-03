@@ -22,3 +22,5 @@
 .timing-card #idle-limit label {margin:0;padding:0;min-width:0}
 .timing-card .idle-rule {justify-content:flex-start}
 .timing-card #idle-hours :is(input,select) {box-sizing:border-box;min-height:32px;height:32px;margin:0;padding:0 8px;font:400 13px/1 system-ui;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--text)}
+
+.timing-card .schedule-editor summary {cursor:pointer;padding:6px 0;text-align:end;color:var(--muted);font-size:13px}

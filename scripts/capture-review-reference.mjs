@@ -38,7 +38,7 @@ try{
   await page.locator('#dialog[open] .report-image svg').waitFor();
   await shot(mode+'-report');await page.keyboard.press('Escape');
  }
- for(const [key,ready] of [['behavior','#purpose-chart'],['devices','#extension-settings, [data-action=pair]'],['settings','#timeZone']]){
+ for(const [key,ready] of [['behavior','#purpose-chart'],['devices','#extension-settings, [data-action=pair]'],['settings','#timeZone + .desktop-choice-wheel']]){
   await page.locator('[data-page='+key+']').click();await page.locator(ready).first().waitFor();await shot(key);
  }
  console.log('Windows '+version+' → '+out);

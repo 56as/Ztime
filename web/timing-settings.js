@@ -6,8 +6,8 @@ export function timingCard(id='timing-card'){
  <div class="idle-rule"><label for="idle-auto">排除待机</label>
  <div id="idle-limit" role="radiogroup" aria-label="待机判定时间">${options}</div><input id="idle-auto" type="checkbox" role="switch"></div>
  <div class="idle-rule"><label for="idle-schedule">屏蔽时段</label><input id="idle-schedule" type="checkbox" role="switch"></div>
- <div id="idle-hours" hidden><select id="idle-repeat" aria-label="重复日期"><option value="weekdays">工作日</option><option value="daily">每天</option><option value="weekends">周末</option></select>
- <input id="idle-start" aria-label="开始时间" type="time"><span>至</span><input id="idle-end" aria-label="结束时间" type="time"><small id="idle-next"></small></div>
+ <details class="schedule-editor" hidden><summary></summary><div id="idle-hours" hidden><select id="idle-repeat" aria-label="重复日期"><option value="weekdays">工作日</option><option value="daily">每天</option><option value="weekends">周末</option></select>
+ <input id="idle-start" aria-label="开始时间" type="time"><span>至</span><input id="idle-end" aria-label="结束时间" type="time"><small id="idle-next"></small></div></details>
  <small id="idle-error" role="status"></small></section>`;
 }
 
@@ -21,6 +21,10 @@ export function bindTiming(card,config,api,onError){
   radios.forEach(radio=>{radio.checked=Number(radio.value)===value.limit;});
   group.style.setProperty('--choice',timingLimits.indexOf(value.limit));
   group.hidden=!value.auto;el('hours').hidden=!value.schedule;
+  const editor=card.querySelector('.schedule-editor');
+  editor.hidden=!value.schedule;
+  if(!value.schedule)editor.open=false;
+  editor.querySelector('summary').textContent=el('repeat').selectedOptions[0].textContent+' · '+value.start+'–'+(value.start>value.end?'次日 ':'')+value.end;
   el('next').textContent=value.start>value.end?'次日':'';
  }
  render(config);

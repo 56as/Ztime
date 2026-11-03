@@ -106,13 +106,11 @@
 .desk-ui .record-data > .row button {min-height:31px;padding:3px 8px;font-size:13px}
 .desk-ui .stat-rules {display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;align-items:center;row-gap:8px}
 .desk-ui .stat-rules h2 {margin:0}
-.desk-ui .stat-rules [data-action=save-settings] {grid-area:1/2;min-height:30px;padding:3px 12px;font-size:13px}
 .desk-ui .settings-view .fixed-setting.stat-rules .field {grid-column:1/-1;grid-template-columns:1fr minmax(96px,126px);gap:8px;margin:0;padding:8px 0}
 .desk-ui .stat-rules .field + .field {border-top:1px solid var(--line)}
 
 .desk-ui .settings-view .fixed-setting .field :is(label,select) {font:500 14px/normal system-ui,"Microsoft YaHei",sans-serif;color:var(--text);letter-spacing:normal}
 .desk-ui .settings-view .fixed-setting .field select {height:36px;padding:0 10px;background-color:var(--bg)}
-.desk-ui .settings-view [data-action=save-settings] {display:block;margin-inline-start:auto}
 .desk-ui .settings-view .fixed-setting .field {grid-template-columns:minmax(60px,max-content) minmax(0,132px)}
 .desk-ui .settings-view #dayStart,.desk-ui .settings-view #timeZone {width:100%}
 .desk-ui .settings-view .record-actions {display:grid;grid-template-columns:max-content;gap:0}

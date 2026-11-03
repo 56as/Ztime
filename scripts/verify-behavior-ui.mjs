@@ -15,6 +15,11 @@ try{
  browser=await chromium.launch({channel:process.env.ZTIME_BROWSER||'msedge'});
  const page=await browser.newPage({viewport:{width:1000,height:740}}),errors=[];
  page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(7000);
+ async function choose(label,value){
+   await page.getByRole('listbox',{name:label,exact:true}).click();
+   const options=page.locator('select:open option');
+   await (typeof value==='string'?options.filter({hasText:value}).first():options.nth(value.index)).click();
+ }
  await page.goto(service.url);
  assert.equal(await page.locator('main h1').innerText(),'统计');
  assert.deepEqual(await page.locator('.nav button').allTextContents(),['统计','行为','设备','设置']);
@@ -24,19 +29,19 @@ try{
  assert.equal(await page.locator('#sum,.chart-week .bar-row small').count(),0);
  assert.equal(await page.locator('.bar-row').first().evaluate(el=>getComputedStyle(el).display),'grid');
  await page.locator('#rules-open').click();
- await page.getByLabel('词典 · 电脑默认行为').selectOption('学习');
+ await choose('词典 · 电脑默认行为','学习');
  const category=name=>page.locator('#purpose-totals button').filter({hasText:name});
  await category('学习').filter({hasText:'10 分钟'}).waitFor();
  assert.equal(await page.locator('.timeline-column').count(),7);
  await page.locator('[data-short]').click();
- await page.getByLabel('选择原始时段').selectOption({index:1});
+ await choose('选择原始时段',{index:1});
  await page.getByRole('button',{name:'柱状图',exact:true}).click();
  assert.equal(await page.locator('.timeline-column:enabled').first().getAttribute('aria-pressed'),'true');
- await page.getByLabel('调整词典本段用途').selectOption('工作');
+ await choose('调整词典本段用途','工作');
  await category('学习').filter({hasText:'8 分钟'}).waitFor();
  await page.getByLabel('新行为').fill('翻译');await page.getByRole('button',{name:'添加',exact:true}).click();
  await page.locator('#purpose-palette span').filter({hasText:'翻译'}).waitFor();
- await page.getByLabel('词典 · 电脑默认行为').selectOption('翻译');
+ await choose('词典 · 电脑默认行为','翻译');
  await category('翻译').filter({hasText:'8 分钟'}).waitFor();
  await category('工作').click();
  await page.locator('[data-short]').click();
@@ -68,8 +73,8 @@ try{
  assert.equal(await page.locator('.timeline-column:enabled').count(),1);
  await page.locator('[data-short]').click();
  assert.equal(await page.getByLabel('选择原始时段').locator('option').count(),35);
- await page.getByLabel('选择原始时段').selectOption({index:34});
- await page.getByLabel('调整阅读本段用途').selectOption('社交');
+ await choose('选择原始时段',{index:34});
+ await choose('调整阅读本段用途','社交');
  await category('社交').filter({hasText:'1 分钟'}).waitFor();
  assert.equal(await page.locator('.timeline-column:enabled').first().getAttribute('aria-pressed'),'true');
  assert.deepEqual(errors,[]);console.log('Passed desktop navigation, default rules, custom behavior, override, undo, filter and year-to-day drilldown.');

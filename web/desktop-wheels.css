@@ -1,0 +1,46 @@
+.desk-ui select.wheel-picker-anchor,.desk-ui select.wheel-picker-anchor::picker(select) {appearance:base-select}
+.desk-ui select.wheel-picker-anchor::picker(select) {max-height:min(260px,45vh);overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.desk-ui select.wheel-picker-anchor option {padding:5px 10px}
+/* Keep the menu anchored while its surface appears and dismisses. */
+.desk-ui .settings-view select::picker-icon {transition:none}
+.desk-ui .settings-view select::picker(select) {
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 90ms ease-in,display 90ms allow-discrete,overlay 90ms allow-discrete;
+}
+.desk-ui .settings-view select:open::picker(select) {
+  opacity:1;
+  pointer-events:auto;
+  animation:none;
+  transition-duration:140ms;
+  transition-timing-function:cubic-bezier(.1,.9,.2,1);
+}
+@starting-style {
+  .desk-ui .settings-view select:open::picker(select) {opacity:0}
+}
+@media (prefers-reduced-motion:reduce) {
+  .desk-ui .settings-view select::picker(select) {transition:none}
+}
+
+.desk-ui .desktop-choice-wheel {
+  box-sizing:border-box;height:32px;min-width:0;max-width:100%;width:fit-content;min-inline-size:6em;
+  overflow-y:auto;overflow-x:hidden;scroll-snap-type:y mandatory;overscroll-behavior-y:contain;scrollbar-width:none;
+  border-radius:8px;background:var(--bg);color:var(--text);text-align:center;
+  font:500 14px/32px system-ui;font-variant-numeric:tabular-nums;
+}
+.desk-ui .desktop-choice-wheel [role=option] {
+  box-sizing:border-box;height:32px;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;scroll-snap-align:start;
+}
+.desk-ui :is(.preview-rules,.stat-rules) .desktop-choice-wheel {width:100%}
+.desk-ui .bucket-detail .desktop-choice-wheel {max-width:65%}
+.desk-ui .desktop-choice-wheel:focus-visible {outline:2px solid var(--accent);outline-offset:2px}
+.desk-ui select[hidden] {display:none!important}
+
+.desk-ui select.wheel-picker-anchor {
+  position:fixed!important;left:var(--wheel-left);top:var(--wheel-top);
+  width:var(--wheel-width)!important;height:32px!important;margin:0;
+  opacity:0;pointer-events:none;
+}
+.desk-ui .desktop-choice-wheel {cursor:pointer}
+.desk-ui select.wheel-picker-anchor::picker(select) {pointer-events:auto}
+.desk-ui :is(.preview-rules,.stat-rules) select.wheel-picker-anchor::picker(select) {scrollbar-width:none}
