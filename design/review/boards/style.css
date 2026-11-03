@@ -465,11 +465,11 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .desktop-hour-chart svg {background:none;overflow:visible}
 .desktop-v2 .desktop-hour-chart circle {pointer-events:none}
 .desktop-v2 .desktop-hour-chart:has(rect[rx]) g:not([aria-expanded=true]):not(:focus-visible) circle {opacity:0}
-.desktop-v2.dark #period-dashboard {--pd-blue:var(--accent);--pd-ink:var(--text);--pd-tint:var(--tint);background:var(--bg)}
-.desktop-v2.dark #period-dashboard :is(.pd-nav,.pd-card,.pd-controls,.pd-summary,.pd-range,.pd-picker,.pd-modal,[aria-pressed=true]) {background:var(--surface);border-color:var(--line)}
-.desktop-v2.dark #period-dashboard :is(.pd-summary h2,.pd-summary small,.pd-app small,.pd-help) {color:var(--text)}
-.desktop-v2.dark #period-dashboard :is(.pd-modes,.pd-scope) {background:var(--bg)}
-.desktop-v2.dark #period-dashboard button:not(:disabled):hover {background:var(--tint)}
+:is(.desktop-v2,[data-review-device=mobile]).dark #period-dashboard {--pd-blue:var(--accent);--pd-ink:var(--text);--pd-tint:var(--tint);background:var(--bg)}
+:is(.desktop-v2,[data-review-device=mobile]).dark #period-dashboard :is(.pd-nav,.pd-card,.pd-controls,.pd-summary,.pd-range,.pd-picker,.pd-modal,[aria-pressed=true]) {background:var(--surface);border-color:var(--line)}
+:is(.desktop-v2,[data-review-device=mobile]).dark #period-dashboard :is(.pd-summary h2,.pd-summary small,.pd-app small,.pd-help) {color:var(--text)}
+:is(.desktop-v2,[data-review-device=mobile]).dark #period-dashboard :is(.pd-modes,.pd-scope) {background:var(--bg)}
+:is(.desktop-v2,[data-review-device=mobile]).dark #period-dashboard button:not(:disabled):hover {background:var(--tint)}
 @media (min-width:820px) {
   .desktop-v2 .settings-grid {grid-template-columns:minmax(0,.85fr) minmax(306px,1.15fr)}
   .desktop-v2 #design-settings-data .row button {padding-inline:8px}
@@ -542,11 +542,41 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .devices-view .paired-status h2 {margin:4px 0 0;font:500 12px/1.4 system-ui;color:var(--muted)}
 .desktop-v2 .paired-status p {margin:4px 0}
 .desktop-v2 .schedule-editor summary {cursor:pointer;padding:6px 0;text-align:end;color:var(--muted);font-size:13px}
-.desktop-v2 select,.desktop-v2 select::picker(select) {appearance:base-select}
-.desktop-v2 select::picker-icon {transition:rotate .16s ease}
-.desktop-v2 select:open::picker-icon {rotate:180deg}
-.desktop-v2 select::picker(select) {max-height:min(260px,45vh);overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
-.desktop-v2 select:open::picker(select) {animation:review-select-in .16s ease-out}
-.desktop-v2 select option {padding:5px 10px}
+:is(.desktop-v2,[data-review-device=mobile]) select,:is(.desktop-v2,[data-review-device=mobile]) select::picker(select) {appearance:base-select}
+:is(.desktop-v2,[data-review-device=mobile]) select::picker-icon {transition:rotate .16s ease}
+:is(.desktop-v2,[data-review-device=mobile]) select:open::picker-icon {rotate:180deg}
+:is(.desktop-v2,[data-review-device=mobile]) select::picker(select) {max-height:min(260px,45vh);overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+:is(.desktop-v2,[data-review-device=mobile]) select:open::picker(select) {animation:review-select-in .16s ease-out}
+:is(.desktop-v2,[data-review-device=mobile]) select option {padding:5px 10px}
 @keyframes review-select-in {from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-@media(prefers-reduced-motion:reduce){.desktop-v2 select:open::picker(select){animation:none}.desktop-v2 select::picker-icon{transition:none}}
+@media(prefers-reduced-motion:reduce){:is(.desktop-v2,[data-review-device=mobile]) select:open::picker(select){animation:none}:is(.desktop-v2,[data-review-device=mobile]) select::picker-icon{transition:none}}
+
+.phone-pair-status {margin-top:8px;color:var(--muted)}
+[data-review-device=mobile].unified .phone-pair-status h2 {font-size:13px;margin:0}
+.phone-theme {position:relative;isolation:isolate;display:grid;grid-template-columns:1fr 1fr;align-items:center;height:32px;background:var(--bg);border:1px solid var(--line);border-radius:10px;text-align:center;color:var(--text);font-size:13px}
+.phone-theme::before {content:'';position:absolute;z-index:-1;inset:2px auto 2px 2px;width:calc(50% - 2px);border-radius:8px;background:var(--surface);box-shadow:0 1px 4px #0003;transition:transform .16s ease-out}
+.dark .phone-theme::before {transform:translateX(100%)}
+.phone-theme input {position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0}
+.phone-theme:focus-within {outline:2px solid var(--accent)}
+@media(prefers-reduced-motion:reduce){.phone-theme::before{transition:none}}
+
+/* Keep the menu anchored while its surface appears and dismisses. */
+.desktop-v2 .settings-view select::picker-icon {transition:none}
+.desktop-v2 .settings-view select::picker(select) {
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 90ms ease-in,display 90ms allow-discrete,overlay 90ms allow-discrete;
+}
+.desktop-v2 .settings-view select:open::picker(select) {
+  opacity:1;
+  pointer-events:auto;
+  animation:none;
+  transition-duration:140ms;
+  transition-timing-function:cubic-bezier(.1,.9,.2,1);
+}
+@starting-style {
+  .desktop-v2 .settings-view select:open::picker(select) {opacity:0}
+}
+@media (prefers-reduced-motion:reduce) {
+  .desktop-v2 .settings-view select::picker(select) {transition:none}
+}

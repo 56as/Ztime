@@ -168,7 +168,6 @@ function handleStyleDemo(d,el){
   case 'refresh':notice(d,'已更新示例视图');break;
   case 'save':{
    const hint=d.querySelector('[data-save-hint]');if(hint)hint.textContent='示例起点：'+d.querySelector('[data-style-id=day-start]').value;
-    if(d.body.dataset.reviewDevice==='mobile' && d.getElementById('timeZone'))mobileZone=d.getElementById('timeZone').value;
    notice(d,'示例设置已保存');break;
   }
   case 'export':notice(d,'示例：'+button.textContent.trim().replace(/\s+/g,' ')+'（不会下载真实记录）');break;
@@ -281,7 +280,12 @@ function appearanceChoices(d){
     options.append(button);
   }
 }
-let mobileZone='Asia/Hong_Kong';
+
+function applyMobileTheme(d){
+  const dark=sessionStorage.getItem('mobile-review-theme')==='1';
+  d.body.classList.toggle('dark',dark);
+  d.body.classList.toggle('light',!dark);
+}
 function populateTimeZones(d){
   const select=d.getElementById('timeZone');
   const common=new Map([['Asia/Hong_Kong','香港'],['Asia/Shanghai','上海（北京时间）'],['Asia/Taipei','台北'],['Asia/Singapore','新加坡'],['Asia/Tokyo','东京'],['Europe/London','伦敦'],['America/New_York','纽约'],['UTC','协调世界时']]);
@@ -295,7 +299,19 @@ function populateTimeZones(d){
     for(const [id,label] of zones)group.append(new Option(label,id));
     select.append(group);
   }
-  select.value=mobileZone;
+  select.value=sessionStorage.getItem('mobile-review-zone')||'Asia/Hong_Kong';
+  select.onchange=()=>sessionStorage.setItem('mobile-review-zone',select.value);
+  const day=d.getElementById('dayStart');
+  day.value=sessionStorage.getItem('mobile-review-day')||day.value;
+  day.onchange=()=>sessionStorage.setItem('mobile-review-day',day.value);
+  const theme=d.getElementById('theme');
+  theme.value=sessionStorage.getItem('mobile-review-theme')||'0';
+  theme.setAttribute('aria-valuetext',theme.value==='1'?'深色':'浅色');
+  theme.oninput=()=>{
+    sessionStorage.setItem('mobile-review-theme',theme.value);
+    theme.setAttribute('aria-valuetext',theme.value==='1'?'深色':'浅色');
+    applyMobileTheme(d);
+  };
 }
 
 // Former copy anchors remain navigable after the text has been removed from this draft.
@@ -670,6 +686,8 @@ function targetFor(note) {
     if(secondDraftNote(note) && note.board==='desktop-settings' && note.selector==='#design-settings-data > section:nth-of-type(1)')return doc().querySelector('#design-settings-data [data-action=delete-data]');
     const moved=secondDraftNote(note) && removedDesktopCopy[note.board]?.find(([selector])=>selector===note.selector);
     if(moved)return doc().querySelector(moved[1]);
+    if(note.board==='mobile-settings' && note.id===152)return doc().querySelector('#dayStart');
+    if(note.board==='mobile-devices' && note.id===155)return doc().querySelector('.phone-pair-status');
     const replacement=mobileAnnotationTargets[note.board]?.[note.selector];
     if(replacement)return doc().querySelector(replacement);
     const el=doc().querySelector(note.selector);
@@ -789,6 +807,7 @@ frame.onload = () => {
   const d = doc();
   frame.dataset.loaded = d.location.pathname.split('/').pop().replace('.html','');
   d.body.dataset.reviewDevice = device.value;
+  if(device.value==='mobile')applyMobileTheme(d);
   originals=new Map();drawSync();applyTrials();
   const feature=frame.dataset.feature;
   showCatalog(d,feature==='controls');periodView=null;
