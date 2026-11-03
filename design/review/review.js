@@ -184,7 +184,8 @@ function handleStyleDemo(d,el){
 
 
 const $ = id => document.getElementById(id);
-const frame = $('frame'), device = $('device'), page = $('page');
+let frame = $('frame'), pendingFrame;
+const device = $('device'), page = $('page');
 const titles = Object.fromEntries([...page.options].map(option => [option.value, option.text]));
 const flowTitles = {invite:'电脑生成配对信息',scan:'手机扫码',confirm:'确认目标设备',wait:'等待确认',request:'电脑审批',success:'配对成功',refused:'配对被拒绝',timeout:'等待超时'};
 function pageTitle(id) {
@@ -807,7 +808,28 @@ function showBoard(key, feature = "") {
   showReference(feature===desktopV2?id:null);
   clearEditor(); frame.dataset.feature=feature; resize();
   location.hash = feature?key+'/'+feature:key;
-  frame.src = 'boards/' + key + '.html';
+  pendingFrame?.remove();
+  const next = document.createElement('iframe');
+  pendingFrame = next;
+  next.title = frame.title;
+  next.style.cssText = frame.style.cssText;
+  next.style.visibility = 'hidden';
+  next.src = 'boards/' + key + '.html';
+  frame.inert = true;
+  next.onload = () => {
+    if (next !== pendingFrame) return;
+    const previous = frame;
+    previous.removeAttribute('id');
+    frame = next;
+    frame.id = 'frame';
+    frame.dataset.feature = feature;
+    initializeBoard();
+    resize();
+    next.style.visibility = '';
+    previous.remove();
+    pendingFrame = null;
+  };
+  $('mount').append(next);
 }
 function changeBoard(key, action, feature = "") {
   const previous = frame.dataset.loaded;
@@ -1067,7 +1089,7 @@ async function load() {
   if (!r.ok) throw new Error('无法读取本地批注');
   notes = await r.json(); applyTrials(); renderList();
 }
-frame.onload = () => {
+function initializeBoard() {
   const d = doc();
   frame.dataset.loaded = d.location.pathname.split('/').pop().replace('.html','');
   d.body.dataset.reviewDevice = device.value;
@@ -1175,7 +1197,7 @@ frame.onload = () => {
   frame.contentWindow.addEventListener('resize',pins);
   renderList();
   if (jumpTo && noteBoard(jumpTo) === frame.dataset.loaded) { const n=jumpTo; jumpTo=null; locate(n); }
-};
+}
 $('annotate').onclick = () => {
   if (!allowLeave()) return;
   const enabled=!picking || trialMode; clearEditor(); trialMode=false;setPicking(enabled);

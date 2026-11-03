@@ -737,7 +737,8 @@ body.desktop-v2.hourglass-study:not(.dark) {
   border:1px solid var(--line);border-radius:22px;background:var(--sand,var(--surface));box-shadow:none
 }
 .hourglass-study .sand-header :is(.actions,.pd-tools) {margin-inline-start:auto}
-.hourglass-study button.sand-seal {padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;flex:none}
+.desktop-v2.hourglass-study :is(#period-dashboard,.sand-header) button.sand-seal,
+.desktop-v2.hourglass-study :is(#period-dashboard,.sand-header) button.sand-seal:is(:hover,:active,:focus) {width:49px;height:49px;min-height:0;box-shadow:none;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;flex:none}
 .hourglass-study button.sand-seal:focus-visible {outline:2px solid currentColor;outline-offset:2px}
 .hourglass-study .sand-seal img {display:block;width:49px;height:49px}
 .hourglass-study .sand-icon img {width:31px;height:31px}
@@ -750,7 +751,9 @@ body.desktop-v2.hourglass-study:not(.dark) {
 @keyframes sand-sidebar-turn {0%{transform:rotate(-180deg);animation-timing-function:cubic-bezier(.22,.72,.22,1)} 8%,100%{transform:rotate(0)}}
 .sand-paused .sand-motion::before,.sand-paused .sand-motion::after {animation-play-state:paused}
 @media(prefers-reduced-motion:reduce){.hourglass-study .sand-icon::before {animation:none}}
-.hourglass-study #period-dashboard .rank-track {background:var(--bg)}
-.hourglass-study #period-dashboard .rank-track i,.hourglass-study #period-dashboard .rank-track span {background:var(--muted)}
+.hourglass-study:not(.dark) {--chart-jade:#168e85;--chart-track:#e2f2ed}
+.hourglass-study:not(.dark) .usage-chart {color:var(--chart-jade)}
+.hourglass-study:not(.dark) #period-dashboard .rank-track {background:var(--chart-track)}
+.hourglass-study #period-dashboard .rank-track i,.hourglass-study #period-dashboard .rank-track span {background:var(--chart-jade,var(--muted))}
 .hourglass-study .settings-view button[data-export] {background:var(--bg);color:var(--text);border:1px solid var(--line)}
 body.desktop-v2.unified.hourglass-study .devices-view > .page-header + .panel {border-top:1px solid var(--line)}

@@ -51,10 +51,10 @@ function tally(rows){
   return [...totals].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'zh'));
 }
 function color(name){
-  if(document.body.classList.contains('hourglass-study')){
-    const inks=['#444346','#817363','#66756e','#ab7965','#796d80','#918865','#637584'];
+  if(document.body.matches('.hourglass-study:not(.dark)')){
+    const inks=['#168e85','#478bd2','#a57bd3','#df9448','#62ae71','#d77b8c','#a59b42'];
     const index=state.names.indexOf(name);
-    return index<0?'#aaa298':inks[index%inks.length];
+    return index<0?'#98a6b1':inks[index%inks.length];
   }
   if(name===missing)return '#969da9';
   const i=state.names.indexOf(name);
