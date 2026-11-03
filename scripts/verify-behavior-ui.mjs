@@ -17,7 +17,9 @@ try{
  page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(7000);
  async function choose(label,value){
    await page.getByRole('listbox',{name:label,exact:true}).click();
-   const options=page.locator('select:open option');
+   const menu=page.locator('select:open');
+   assert.equal(await menu.evaluate(e=>getComputedStyle(e,'::picker(select)').scrollbarWidth),'none',label);
+   const options=menu.locator('option');
    await (typeof value==='string'?options.filter({hasText:value}).first():options.nth(value.index)).click();
  }
  await page.goto(service.url);

@@ -163,6 +163,17 @@ try{
     const download=page.waitForEvent('download');await click('[data-export='+type+']');assert.ok((await download).suggestedFilename().endsWith('.'+type));
   }
   await click('[data-action=delete-data]');await page.locator('#dialog[open] [data-cancel]').click();
+  await click('#dayStart + .desktop-choice-wheel');
+  const offsets=await page.locator('#dayStart').evaluate(select=>{
+    const wheel=select.nextElementSibling.getBoundingClientRect();
+    return Array.from(select.options,option=>{
+      const range=document.createRange();range.selectNodeContents(option);
+      const label=range.getBoundingClientRect();
+      return Math.abs((label.left+label.right-wheel.left-wheel.right)/2);
+    });
+  });
+  assert.ok(offsets.every(offset=>offset<1),'hour labels align with the collapsed value: '+Math.max(...offsets));
+  await page.keyboard.press('Escape');
   await click('#timeZone + .desktop-choice-wheel');
   assert.equal(await page.locator('#timeZone').evaluate(e=>getComputedStyle(e,'::picker(select)').scrollbarWidth),'none');
   const saved=page.waitForResponse(r=>r.url().endsWith('/api/settings')&&r.request().method()==='PUT');

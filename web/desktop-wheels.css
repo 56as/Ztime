@@ -43,4 +43,11 @@
 }
 .desk-ui .desktop-choice-wheel {cursor:pointer}
 .desk-ui select.wheel-picker-anchor::picker(select) {pointer-events:auto}
-.desk-ui :is(.preview-rules,.stat-rules) select.wheel-picker-anchor::picker(select) {scrollbar-width:none}
+.desk-ui select.wheel-picker-anchor::picker(select) {scrollbar-width:none}
+.desk-ui #dayStart.wheel-picker-anchor::picker(select) {
+  box-sizing:border-box;width:var(--wheel-width);
+}
+.desk-ui #dayStart.wheel-picker-anchor option {
+  position:relative;justify-content:center;text-align:center;font-variant-numeric:tabular-nums;
+}
+.desk-ui #dayStart.wheel-picker-anchor option::checkmark {position:absolute;inset-inline-start:8px}
