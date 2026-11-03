@@ -51,7 +51,7 @@ export function openPeriodReport(selection,dialog,weekly){
  const week=weekly&&scopedWeek(weekly,scope);
  if(week)lines.push('',weekReport(week).content);
  const text=lines.join('\r\n');
- const csv=week?reportCsv(reportData(week)):rows.map(row=>row.map(safeField).join(',')).join('\r\n')+'\r\n';
+ const csv=week?reportCsv(reportData(week),scope):rows.map(row=>row.map(safeField).join(',')).join('\r\n')+'\r\n';
  const label=(y,value,size)=>`<text x="24" y="${y}" font-size="${size}">${esc(value)}</text>`;
  const sheet=`<svg xmlns="http://www.w3.org/2000/svg" width="520" height="520" font-family="Microsoft YaHei,sans-serif" fill="#23354a"><rect width="100%" height="100%" fill="#fff"/>${label(48,'Ztime · '+name,26)}${label(80,range,15)}${label(124,total,26)}${label(165,chartTitle,18)}<g transform="translate(24,180)">${chart}</g>${label(343,observation,16)}${label(385,'主要应用',19)}${top.map((app,i)=>label(418+i*30,Array.from(app.name).slice(0,16).join('')+'　'+reportDuration(app.duration),16)).join('')}</svg>`;
  const formats=['txt','csv','pdf','png'].map(id=>[id,id.toUpperCase()]);
