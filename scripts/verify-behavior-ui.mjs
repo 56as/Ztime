@@ -46,7 +46,7 @@ try{
  assert.equal(await page.locator('.timeline-column:enabled').first().getAttribute('aria-pressed'),'true');
  await choose('调整词典本段用途','工作');
  await category('学习').filter({hasText:'8 分钟'}).waitFor();
- await page.getByLabel('新行为').fill('翻译');await page.getByRole('button',{name:'添加',exact:true}).click();
+ await page.getByLabel('新行为',{exact:true}).fill('翻译');await page.getByRole('button',{name:'添加',exact:true}).click();
  await page.locator('#purpose-palette span').filter({hasText:'翻译'}).waitFor();
  await choose('词典 · 电脑默认行为','翻译');
  await category('翻译').filter({hasText:'8 分钟'}).waitFor();

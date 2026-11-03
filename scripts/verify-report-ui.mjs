@@ -14,13 +14,14 @@ try{
  }
  browser=await chromium.launch({channel:process.env.ZTIME_BROWSER||'msedge',headless:true});const page=await browser.newPage(),errors=[];
  page.on('pageerror',e=>errors.push(e.message));await page.goto(service.url);
- for(const tab of ['dashboard','devices','settings']){
+ for(const tab of ['dashboard','behavior','devices','settings']){
   await page.click('[data-page='+tab+']');
-  const size=await page.locator('.refresh-control:visible').first().evaluate(button=>{
-   const icon=button.querySelector('svg').getBoundingClientRect();
+  await page.locator('main.'+tab+'-view .sand-seal').waitFor();
+  const size=await page.locator('.sand-seal:visible').first().evaluate(button=>{
+   const icon=button.querySelector('img').getBoundingClientRect();
    return [button.offsetWidth,button.offsetHeight,icon.width,icon.height];
   });
-  assert.deepEqual(size,[36,36,18,18],tab+' refresh control');
+  assert.deepEqual(size,[49,49,49,49],tab+' refresh control');
  }
  await page.click('[data-page=settings]');await page.click('[data-action=delete-data]');
  assert.equal(await page.locator('#dialog .danger').isDisabled(),true);await page.click('#dialog [data-cancel]');

@@ -1,3 +1,4 @@
+import {refreshControl} from './refresh-control.js';
 import {createTimeline} from './behavior-timeline.js';
 import {behaviorDateLabel} from './shared/behavior.js';
 import {addDays} from './shared/time.js';
@@ -41,7 +42,9 @@ export function mountBehavior(host,{api,onError,date,settings,sequence}){
  function selectFilter(name){filter=name;timeline.reset();draw();}
  function draw(){
   const {first,last,rows,names,apps,mode,anchor}=data,options=[...names,missing];
-  const color=name=>name===missing?'#969da9':['#397acb','#348b74','#9a6db0','#bd8037'][names.indexOf(name)]||'hsl('+((names.indexOf(name)*131)%360)+' 46% 46%)';
+  const color=name=>name===missing?'#98a6b1':['#168e85','#478bd2','#a57bd3','#df9448','#62ae71','#d77b8c','#a59b42'][names.indexOf(name)%7];
+  $('sand-period').textContent={day:'当日记录',week:'本周记录',year:'全年记录'}[mode];
+  $('sand-minutes').textContent=Math.round(rows.reduce((sum,row)=>sum+row.end-row.start,0)/60000);
   today=data.today;
   $('anchor-date').max=today;$('next').disabled=last>=today;
   $('purpose-palette').replaceChildren(...options.map(name=>{
@@ -88,6 +91,7 @@ export function mountBehavior(host,{api,onError,date,settings,sequence}){
  for(const b of $('period-modes').children)b.onclick=()=>selectDate(anchor,b.dataset.mode);
  for(const [id,n] of [['prev',-1],['next',1]])$(id).onclick=()=>selectDate(mode==='year'?String(Number(anchor.slice(0,4))+n)+'-01-01':addDays(anchor,n*(mode==='day'?1:7)));
  $('anchor-date').onchange=e=>{if(e.target.validity.valid&&e.target.value)selectDate(e.target.value);else e.target.value=anchor;};
+ host.querySelector('[data-behavior-refresh]').onclick=load;
  $('rules-open').onclick=()=>{const panel=$('purpose-rules');panel.hidden=!panel.hidden;$('rules-open').setAttribute('aria-expanded',String(!panel.hidden));};
  $('show-all').onclick=()=>selectFilter(null);
  $('purpose-form').onsubmit=async e=>{e.preventDefault();const input=$('purpose-name'),name=input.value.trim();
@@ -103,9 +107,9 @@ export function mountBehavior(host,{api,onError,date,settings,sequence}){
  }};
 }
 
-const markup=`<header><div><h1>行为</h1></div><button id="rules-open" aria-expanded="false">归类规则</button></header>
+const markup=`<header><div><h1>行为</h1></div><button id="rules-open" aria-expanded="false">归类规则</button>${refreshControl('data-behavior-refresh','行为')}</header>
 <section id="purpose-rules" class="panel" hidden><h2>按应用归类</h2><div id="purpose-palette" aria-label="可选行为"></div><div id="rule-list"></div><form id="purpose-form"><label>新行为 <input id="purpose-name" maxlength="16" placeholder="例如：写作"></label><button>添加</button></form></section>
-<section class="panel behavior-summary"><div class="behavior-head"><h2 id="chart-title">当天用时排行</h2></div><div class="period-toolbar"><div role="group" aria-label="统计周期" id="period-modes"><button aria-pressed="true" data-mode="day">日</button><button data-mode="week">周</button><button data-mode="year">年</button></div><div class="period-nav"><button id="prev" aria-label="上一期间">‹</button><label><span id="range-label"></span><input type="date" aria-label="选择统计日期" id="anchor-date"></label><button id="next" aria-label="下一期间">›</button></div></div><div id="purpose-chart"></div><div id="purpose-totals" aria-label="按行为筛选时段"></div></section>
+<section class="panel behavior-summary"><div class="behavior-head"><h2 id="chart-title">当天用时排行</h2><div class="sand-total"><small id="sand-period"></small><b id="sand-minutes"></b><span>分钟</span></div></div><div class="period-toolbar"><div role="group" aria-label="统计周期" id="period-modes"><button aria-pressed="true" data-mode="day">日</button><button data-mode="week">周</button><button data-mode="year">年</button></div><div class="period-nav"><button id="prev" aria-label="上一期间">‹</button><label><span id="range-label"></span><input type="date" aria-label="选择统计日期" id="anchor-date"></label><button id="next" aria-label="下一期间">›</button></div></div><div id="purpose-chart"></div><div id="purpose-totals" aria-label="按行为筛选时段"></div></section>
 <section class="panel"><div class="behavior-head session-head"><h2 id="sessions-heading">全部时段</h2><button id="show-all" hidden>清除行为筛选</button><div id="session-devices" role="group" aria-label="按设备筛选时段"><button data-device="全部">全部</button><button data-device="手机">手机</button><button data-device="电脑">电脑</button></div></div>
 <div class="timeline-toolbar"><div id="timeline-style" role="group" aria-label="时段图表样式"><button data-chart="line">折线图</button><button data-chart="bar">柱状图</button></div></div>
 <div id="session-plot" aria-label="按开始时间排列的使用时段"></div><div id="bucket-detail" class="bucket-detail"></div><div id="session-list" aria-label="所选时段"></div><p id="feedback" role="status" aria-live="polite"></p></section>`;

@@ -163,7 +163,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
    const scopeHtml=[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([key,name])=>`<button data-cal="scope" data-scope="${key}" aria-pressed="${scope===key}">${name}</button>`).join('');
    const canExport=Object.hasOwn(modes,mode);
    const reportButton=canExport?`<button data-tool="report" aria-haspopup="dialog">${modes[mode]}报</button>`:'';
-   const header=`<header class="topbar page-header"><div class="page-heading"><h1>${desktop?'统计':'仪表盘'}</h1>${desktop?recordingStatus(snapshot.collector,escape):''}</div><div class="actions"><button data-tool="layout" aria-haspopup="dialog">布局</button>${reportButton}${refreshControl('data-tool="refresh"')}</div></header>`;
+   const header=`<header class="topbar page-header"><div class="page-heading"><h1>${desktop?'统计':'仪表盘'}</h1>${desktop?recordingStatus(snapshot.collector,escape):''}</div><div class="actions"><button data-tool="layout" aria-haspopup="dialog">布局</button>${reportButton}${refreshControl('data-tool="refresh"',desktop?'统计':null)}</div></header>`;
    const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
    const dateText=desktop?desktopPeriodLabel(mode,period,today):mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
    const controls=`<div class="pd-controls"><div class="pd-modes">${modesHtml}</div><div class="pd-range"><button aria-label="上一期间" data-cal="prev">‹</button><button data-cal="dates" aria-haspopup="dialog" aria-label="${fullDate}">${dateText} ▾</button><button aria-label="下一期间" data-cal="next" ${period[1]>=today?'disabled':''}>›</button></div></div>`;
@@ -206,6 +206,8 @@ export function createPeriodView({api, escape, duration, details, report, refres
        const previous=icons.get(img.getAttribute('src'));
        if(previous){img.replaceWith(previous);icons.delete(img.getAttribute('src'));}
      }
+     const seal=host.querySelector('.sand-seal');
+     if(seal)template.content.querySelector('.sand-seal').replaceWith(seal);
      host.replaceChildren(template.content);
      if(focus)host.querySelector(focus)?.focus({preventScroll:true});
    }else host.innerHTML=header+controls+summary;

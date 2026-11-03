@@ -33,8 +33,8 @@ try{
       getComputedStyle(row).borderBottomWidth,getComputedStyle(row.querySelector('small')).fontSize,
       getComputedStyle(row.querySelector('b')).fontSize,getComputedStyle(bar.firstElementChild).backgroundColor];
   });
-  assert.deepEqual(rowStyle,['15px',18,120,'1px','11px','13px','rgb(73, 131, 195)']);
-  assert.equal(await page.locator('.page-header .statusbar').innerText(),'正在记录 · Editor <Example>');
+  assert.deepEqual(rowStyle,['15px',18,120,'1px','11px','13px','rgb(22, 142, 133)']);
+  assert.equal(await page.locator('.page-header .statusbar').isVisible(),false);
   assert.deepEqual(await page.locator('[data-mode]').allTextContents(),['日','周','月','年']);
   for(const [width,height] of [[820,620],[1280,824]]) {
     await page.setViewportSize({width,height});
@@ -105,7 +105,7 @@ try{
   await page.locator('.period-total').waitFor();
   const before=await page.locator('.period-total').boundingBox();
   const tools=page.locator('[data-tool=layout], [data-tool=refresh]');
-  assert.deepEqual(await tools.evaluateAll(nodes=>nodes.map(n=>n.offsetHeight)),[36,36]);
+  assert.deepEqual(await tools.evaluateAll(nodes=>nodes.map(n=>n.offsetHeight)),[36,49]);
   assert.equal(await page.getByRole('heading',{name:'期间对比'}).count(),0);
   await click('[data-tool=layout]');await click('[data-toggle=compare]');await click('[data-toggle=devices]');await click('[data-toggle=focus]');await click('[data-save]');
   await page.getByRole('heading',{name:'设备用时占比'}).waitFor();
@@ -185,7 +185,7 @@ try{
   assert.deepEqual(await page.locator('.settings-grid>.panel h2').allTextContents().then(xs=>xs.slice(0,2)),['统计规则','记录与外观']);
   for(const name of ['dashboard','devices','settings']){
     await click('[data-page='+name+']');
-    const refresh=page.getByRole('button',{name:'更新',exact:true});
+    const refresh=page.getByRole('button',{name:'刷新'+({dashboard:'统计',devices:'设备',settings:'设置'}[name]),exact:true});
     assert.equal(await refresh.textContent(),'');assert.ok(await refresh.evaluate(el=>el===el.parentElement.lastElementChild));
     await refresh.click();
     assert.equal(await page.locator('.nav [data-page=week]').count(),0);
