@@ -633,3 +633,17 @@ html:has(.desk-ui .behavior),
 .wheel-list [role=option] {height:36px;display:grid;place-items:center;scroll-snap-align:center;cursor:pointer;color:var(--muted);white-space:nowrap}
 .wheel-list [aria-selected=true] {font-weight:650;color:var(--text)}
 
+
+/* One selection surface moves between adjacent choices, like the idle-duration control. */
+.desktop-v2 :is(.pd-modes,.pd-scope,.chart-style,#period-modes,#session-devices,#timeline-style,.appearance-options) {isolation:isolate}
+.desktop-v2 :is(.pd-modes,.pd-scope,.chart-style,#period-modes,#session-devices,#timeline-style,.appearance-options)>button {position:relative}
+.desktop-v2 :is(.pd-modes,.pd-scope,.chart-style,#period-modes,#session-devices,#timeline-style)>button[aria-pressed=true] {background:transparent!important;box-shadow:none!important}
+.desktop-v2 :is(.pd-modes,.pd-scope,.chart-style,#period-modes,#session-devices,#timeline-style,.appearance-options)>button[aria-pressed=true]::before {
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;transform-origin:left center;
+  border-radius:inherit;background:var(--surface);box-shadow:0 1px 3px #18283c26;
+}
+.desktop-v2 .appearance-options>button[aria-pressed=true] {border-color:transparent;box-shadow:none}
+.desktop-v2 .appearance-options>button[aria-pressed=true]::before {z-index:1;background:none;box-shadow:0 0 0 2px var(--accent)}
+.desktop-v2 .choice-sliding[aria-pressed=true]::before {animation:review-choice-slide 160ms ease-out}
+@keyframes review-choice-slide {from{transform:translateX(var(--slide-from)) scaleX(var(--slide-scale))}to{transform:none}}
+@media(prefers-reduced-motion:reduce){.desktop-v2 .choice-sliding[aria-pressed=true]::before{animation:none}}

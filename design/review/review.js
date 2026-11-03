@@ -561,8 +561,42 @@ function mountDesktopWheels(d,isPicking=()=>false){
 }
 // @generated wheels:end
 
+// Read the moving highlight before the click: the dashboard rebuilds its controls on selection.
+function bindChoiceMotion(d){
+  const groups=['.pd-modes','.pd-scope','.chart-style','#period-modes','#session-devices','#timeline-style','.appearance-options'];
+  const view=d.defaultView;
+  d.addEventListener('click',event=>{
+    if(picking || view.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const button=event.target.closest('button');
+    const selector=button && groups.find(group=>button.parentElement.matches(group));
+    if(!selector)return;
+    const selected=button.parentElement.querySelector('[aria-pressed=true]');
+    if(!selected || selected===button)return;
+    const rect=selected.getBoundingClientRect();
+    const style=view.getComputedStyle(selected,'::before');
+    const transform=new DOMMatrixReadOnly(style.transform==='none'?undefined:style.transform);
+    const start=rect.left-button.parentElement.getBoundingClientRect().left+transform.e;
+    const width=rect.width*transform.a;
+    const key=button.textContent.trim();
+    view.requestAnimationFrame(()=>{
+      const group=d.querySelector(selector);
+      const next=group?.querySelector('[aria-pressed=true]');
+      if(!next || next.textContent.trim()!==key)return;
+      const target=next.getBoundingClientRect();
+      if(!target.width)return;
+      next.style.setProperty('--slide-from',(start+group.getBoundingClientRect().left-target.left)+'px');
+      next.style.setProperty('--slide-scale',String(width/target.width));
+      next.classList.remove('choice-sliding');
+      void next.offsetWidth;
+      next.classList.add('choice-sliding');
+      next.addEventListener('animationend',()=>next.classList.remove('choice-sliding'),{once:true});
+    });
+  },true);
+}
+
 function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2','desk-ui');
+  bindChoiceMotion(d);
   applyPreviewTheme(d);updatePreviewRecording(d);
   if(pageId!=='home'){
     const nav=d.querySelector('.sidebar .nav');

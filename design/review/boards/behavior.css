@@ -59,9 +59,3 @@
 /* Optional desktop behavior motion study. */
 .behavior-motion:not(.dark) .behavior {--bg:#f5f3f0;--line:#e7e2dc;--surface:#fffefd}
 .behavior-motion .behavior .panel {border-color:var(--line);box-shadow:0 3px 14px #53351908}
-.behavior-motion #period-modes {display:inline-grid;position:relative;isolation:isolate;grid-template-columns:repeat(3,1fr);gap:0}
-.behavior-motion #period-modes::before {content:"";position:absolute;z-index:-1;inset:3px auto 3px 3px;width:calc((100% - 6px)/3);border-radius:7px;background:var(--surface);box-shadow:0 1px 4px #412e211c;transition:transform 200ms cubic-bezier(.2,.8,.2,1)}
-.behavior-motion #period-modes:has([data-mode=week][aria-pressed=true])::before {transform:translateX(100%)}
-.behavior-motion #period-modes:has([data-mode=year][aria-pressed=true])::before {transform:translateX(200%)}
-.behavior-motion #period-modes button {background:transparent;box-shadow:none;transition:color 150ms}
-@media(prefers-reduced-motion:reduce){.behavior-motion #period-modes::before,.behavior-motion #period-modes button {transition:none}}
