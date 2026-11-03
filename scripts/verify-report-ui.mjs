@@ -14,11 +14,19 @@ try{
  }
  browser=await chromium.launch({channel:process.env.ZTIME_BROWSER||'msedge',headless:true});const page=await browser.newPage(),errors=[];
  page.on('pageerror',e=>errors.push(e.message));await page.goto(service.url);
+ for(const tab of ['dashboard','devices','settings']){
+  await page.click('[data-page='+tab+']');
+  const size=await page.locator('.refresh-control:visible').first().evaluate(button=>{
+   const icon=button.querySelector('svg').getBoundingClientRect();
+   return [button.offsetWidth,button.offsetHeight,icon.width,icon.height];
+  });
+  assert.deepEqual(size,[36,36,18,18],tab+' refresh control');
+ }
  await page.click('[data-page=settings]');await page.click('[data-action=delete-data]');
  assert.equal(await page.locator('#dialog .danger').isDisabled(),true);await page.click('#dialog [data-cancel]');
  assert.equal(await page.locator('#dialog').isVisible(),false);
- await page.click('[data-page=dashboard]');await page.click('[data-mode=week]');await page.locator('[data-tool=report]').filter({hasText:'导出周报'}).waitFor();
- assert.deepEqual(await page.locator('.dashboard-view .actions button').allTextContents(),['布局','导出周报','']);
+ await page.click('[data-page=dashboard]');await page.click('[data-mode=week]');await page.locator('[data-tool=report]').filter({hasText:'周报'}).waitFor();
+ assert.deepEqual(await page.locator('.dashboard-view .actions button').allTextContents(),['布局','周报','']);
  await page.click('[data-tool=report]');await page.locator('.report-image svg').waitFor();assert.match(await page.locator('.period-report').textContent(),/每日用时/);
  assert.ok(await page.locator('.report-image text').evaluateAll(labels=>labels.some(label=>/\d 小时$/.test(label.textContent))));
  const preview=await page.locator('.report-image').boundingBox(), formats=await page.locator('.report-formats').boundingBox();
@@ -35,7 +43,7 @@ try{
  await page.click('[data-scope=phone]');
  for(const [mode,title] of [['day','日报'],['week','周报'],['month','月报'],['year','年报']]){
   await page.click('[data-mode='+mode+']');
-  const trigger=page.getByRole('button',{name:'导出'+title,exact:true});
+  const trigger=page.getByRole('button',{name:title,exact:true});
   await trigger.click();
   await page.locator('#dialog h2').filter({hasText:title+'预览'}).waitFor();
   assert.match(await page.locator('.period-report').innerText(),/手机/);

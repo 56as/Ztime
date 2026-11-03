@@ -13,7 +13,7 @@ for(const [source,target,css,feature] of [
  const first=begin.replace('desk-preview',feature||'desk-preview'),last=end.replace('desk-preview',feature||'desk-preview');
  const prev=read(target), start=prev.indexOf(first), stop=prev.indexOf(last,start+first.length);
  if(start<0||stop<0)throw Error('Missing review markers: '+target);
- const src=(css||feature?read(source):read('shared/desktop-card-layout.js')+'\n'+read('shared/rank-initial.js')+'\n'+read(source)).replace(/^export /gm,'').trimEnd();
+ const src=(css||feature?read(source):read('shared/desktop-card-layout.js')+'\n'+read('shared/rank-initial.js')+'\n'+read('web/refresh-control.js')+'\n'+read(source)).replace(/^export /gm,'').trimEnd();
  const next=prev.slice(0,start)+first+'\n'+src+'\n'+prev.slice(stop);
  if(prev!==next){if(check)throw Error('Run node scripts/build-review-insights.mjs');fs.writeFileSync(target,next);}
 }

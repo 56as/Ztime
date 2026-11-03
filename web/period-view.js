@@ -163,7 +163,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
    const scopeHtml=[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([key,name])=>`<button data-cal="scope" data-scope="${key}" aria-pressed="${scope===key}">${name}</button>`).join('');
    const canExport=desktop ? Object.hasOwn(modes,mode) : mode==='week';
    const reportIcon=desktop?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/></svg>':'';
-   const reportButton=canExport?`<button data-tool="report" aria-haspopup="dialog">${reportIcon}导出${modes[mode]}报</button>`:'';
+   const reportButton=canExport?`<button data-tool="report" aria-haspopup="dialog">${reportIcon}${desktop?'':'导出'}${modes[mode]}报</button>`:'';
    const header=`<header class="topbar page-header"><div class="page-heading"><h1>${desktop?'统计':'仪表盘'}</h1>${desktop?recordingStatus(snapshot.collector,escape):''}</div><div class="actions"><button data-tool="layout" aria-haspopup="dialog">布局</button>${reportButton}${refreshControl('data-tool="refresh"')}</div></header>`;
    const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
    const dateText=desktop?desktopPeriodLabel(mode,period,today):mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
