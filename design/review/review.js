@@ -325,32 +325,50 @@ function desktopNavButtons(current){
 function mountIdleProposal(d,grid){
   const panel=d.createElement('section');
   panel.id='idle-proposal';panel.className='panel';panel.dataset.styleNative='';
-  panel.innerHTML=`<h2>排除电脑待机时间</h2><p>仅此电脑 · 方案预览</p>
-    <label><input id="idle-auto" type="checkbox" checked> 自动排除无操作时间</label>
-    <label>连续无操作 <select id="idle-limit"><option>3</option><option selected>5</option><option>10</option><option>30</option></select> 分钟后，从最后一次操作起排除，操作后恢复。</label>
-    <label><input id="idle-schedule" type="checkbox"> 屏蔽固定时段（即使有操作）</label>
-    <fieldset id="idle-hours" disabled><legend>重复时段</legend><select aria-label="重复日期"><option>工作日</option><option>每天</option><option>周末</option></select>
-      <input aria-label="开始时间" type="time" value="12:00"> 至 <input aria-label="结束时间" type="time" value="13:00"></fieldset>
-    <div class="idle-example"><strong>试算 · 周二 12:00–13:00</strong><p>ChatGPT 一直在前台。12:10 离开，12:50 回来，其余时间有操作。</p>
-    <output aria-live="polite"></output></div>`;
+  panel.innerHTML=`<h2>电脑计时</h2>
+    <div class="idle-rule"><label for="idle-auto">排除待机</label><select id="idle-limit" aria-label="待机判定时间"><option value="3">3 分钟</option><option value="5" selected>5 分钟</option><option value="10">10 分钟</option><option value="30">30 分钟</option></select><input id="idle-auto" type="checkbox" role="switch" checked></div>
+    <div class="idle-rule"><label for="idle-schedule">屏蔽时段</label><input id="idle-schedule" type="checkbox" role="switch"></div>
+    <div id="idle-hours" hidden><select aria-label="重复日期"><option>工作日</option><option>每天</option><option>周末</option></select>
+      <input aria-label="开始时间" type="time" value="12:00"><span>至</span><input aria-label="结束时间" type="time" value="13:00"><small id="idle-next"></small></div>
+    <small id="idle-error" role="status"></small>
+    <details class="idle-example"><summary>查看示例</summary>
+      <p>周二 12:00–13:00 · ChatGPT</p>
+      <div class="idle-example-row"><span>12:10–12:50 待机</span><button type="button" id="idle-restore">计入本次</button></div>
+      <output aria-live="polite"></output>
+    </details>`;
   grid.append(panel);
+  const one=selector=>panel.querySelector(selector);
+  const auto=one('#idle-auto'),limit=one('#idle-limit'),schedule=one('#idle-schedule'),hours=one('#idle-hours');
+  const [start,end]=hours.querySelectorAll('input'),repeat=hours.querySelector('select');
+  const saved=JSON.parse(sessionStorage.getItem('ztime-review-idle')||'null');
+  if(saved){
+    auto.checked=saved.auto;limit.value=saved.limit;schedule.checked=saved.schedule;
+    start.value=saved.start;end.value=saved.end;repeat.value=saved.repeat;
+  }
+  let restored=false;
+  const minutes=value=>value?Number(value.slice(0,2))*60+Number(value.slice(3)):NaN;
   function preview(){
-    const checked=id=>panel.querySelector(id).checked;
-    const scheduled=checked('#idle-schedule');
-    panel.querySelector('fieldset').disabled=!scheduled;
-    const mins=s=>s?Number(s.slice(0,2))*60+Number(s.slice(3)):NaN;
-    const [from,to]=[...panel.querySelectorAll('[type=time]')].map(el=>mins(el.value));
-    const out=panel.querySelector('output');
-    if(scheduled && (!Number.isFinite(from+to)||from===to)){out.textContent='请填写不同的起止时间。';return;}
+    const from=minutes(start.value),to=minutes(end.value);
+    hours.hidden=!schedule.checked;limit.hidden=!auto.checked;
+    const invalid=schedule.checked && (!Number.isFinite(from+to)||from===to);
+    one('#idle-error').textContent=invalid?'请选择不同的起止时间。':'';
+    one('#idle-next').textContent=from>to?'次日':'';
+    one('#idle-restore').hidden=!auto.checked;
+    one('#idle-restore').textContent=restored?'撤销计入':'计入本次';
+    const out=one('output');out.hidden=invalid;
+    if(invalid)return;
+    sessionStorage.setItem('ztime-review-idle',JSON.stringify({auto:auto.checked,limit:limit.value,schedule:schedule.checked,repeat:repeat.value,start:start.value,end:end.value}));
     let idle=0,masked=0;
     for(let t=720;t<780;t++){
       const inSchedule=from<to?t>=from&&t<to:t>=from||t<to;
-      if(scheduled && panel.querySelector('fieldset select').value!=='周末' && inSchedule)masked++;
-      else if(checked('#idle-auto') && 40>=Number(panel.querySelector('#idle-limit').value) && t>=730 && t<770)idle++;
+      if(schedule.checked && repeat.value!=='周末' && inSchedule)masked++;
+      else if(auto.checked && !restored && t>=730 && t<770 && 40>=Number(limit.value))idle++;
     }
-    out.textContent='计入 '+(60-idle-masked)+' 分钟　·　待机排除 '+idle+' 分钟　·　固定时段排除 '+masked+' 分钟';
+    out.textContent='计入 '+(60-idle-masked)+' 分钟'+(idle?' · 待机 '+idle+' 分钟':'')+(masked?' · 屏蔽 '+masked+' 分钟':'');
   }
-  panel.addEventListener('input',preview);preview();
+  panel.addEventListener('input',preview);
+  one('#idle-restore').onclick=e=>{if(!e.defaultPrevented){restored=!restored;preview();}};
+  preview();
   if(new URLSearchParams(location.search).get('proposal')==='idle')requestAnimationFrame(()=>panel.scrollIntoView({block:'center'}));
 }
 
@@ -371,6 +389,10 @@ function applySecondDesktopDraft(d,pageId){
     const card=d.createElement('section');card.className='panel';card.id='extension-settings';
     card.innerHTML='<h2>浏览器识别</h2><button data-action="design-extension">启用并生成连接码</button><p id="design-connection" hidden>连接码示意 · 在扩展弹窗中输入</p>';
     d.querySelector('.devices-view').append(card);
+  }
+  if(pageId==='behavior' && new URLSearchParams(location.search).get('proposal')==='short'){
+    d.querySelector('[data-mode=day]').click();
+    requestAnimationFrame(()=>d.getElementById('session-list').scrollIntoView({block:'center'}));
   }
   if(pageId!=='settings')return;
   d.getElementById('extension-settings')?.remove();

@@ -165,6 +165,7 @@ function drawTimeline(rows){
   for(const [i,bin] of bins.entries()){
     const label=bin.title+' · '+bucketDuration(bin.minutes);
     const column=button('',()=>{
+      if(selectedBin!==bin.title)showShort=false;
       selectedId=(bin.parts.find(part=>samples.find(s=>s.id===part.id).minutes>=5)??bin.parts[0]).id;selectedBin=bin.title;draw();
       $(column.id)?.focus({preventScroll:true});
     });
@@ -220,11 +221,16 @@ function draw(){
       summary.append(element('b',bucket.title+' · '+bucketDuration(bucket.minutes)));
       const short=bucket.parts.filter(part=>samples.find(s=>s.id===part.id).minutes<5);
       const list=showShort?bucket.parts:bucket.parts.filter(part=>!short.includes(part));
-      if(short.length)summary.append(button(showShort?'收起短时段':'展开短时段（'+short.length+'）',()=>{
-        showShort=!showShort;
-        if(!showShort && short.some(part=>part.id===selectedId))selectedId=bucket.parts.find(part=>!short.includes(part))?.id??selectedId;
-        draw();
-      }));
+      if(short.length){
+        const disclosure=button('短于 5 分钟 · '+short.length+' 条',()=>{
+          showShort=!showShort;
+          selectedId=(showShort?short[0]:bucket.parts.find(part=>!short.includes(part)))?.id??selectedId;
+          draw();$('short-disclosure')?.focus({preventScroll:true});
+        });
+        disclosure.id='short-disclosure';
+        disclosure.setAttribute('aria-expanded',String(showShort));
+        summary.append(disclosure);
+      }
       if(list.length && (list.length>1 || !list.some(part=>part.id===s.id)))summary.append(picker('bucket-session','选择原始时段',list.map(part=>[part.id,part.time+' · '+part.app]),s.id,id=>{selectedId=id;draw();}));
       $('session-list').append(summary);
     }

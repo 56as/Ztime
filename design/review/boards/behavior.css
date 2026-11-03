@@ -54,3 +54,4 @@
 .bucket-detail {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:6px 0;font-size:13px}
 .bucket-detail select {max-width:65%;min-width:0}
 .behavior .session-row[hidden]{display:none}
+#short-disclosure::before{content:"▸";margin-right:5px}#short-disclosure[aria-expanded=true]::before{content:"▾"}

@@ -495,9 +495,17 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 #period-dashboard .pd-tools [data-cal=refresh] {padding:0;width:36px}
 
 #idle-proposal {grid-column:1/-1;order:5}
-#idle-proposal label {display:block;margin:12px 0}
-#idle-proposal input[type=checkbox] {width:auto;vertical-align:middle}
-#idle-proposal fieldset {display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px}
-#idle-proposal fieldset input {width:auto}
-.idle-example {padding:14px;margin-top:16px;border-radius:10px;background:var(--bg)}
+#idle-proposal h2 {margin-bottom:10px}
+#idle-proposal .idle-rule,.idle-example-row {display:flex;align-items:center;gap:12px;min-height:44px}
+.idle-rule label,.idle-example-row span {margin-right:auto}
+#idle-proposal .idle-rule input {appearance:none;position:relative;width:42px;height:24px;margin:0;padding:0;border:0;border-radius:16px;background:#9499a2;cursor:pointer}
+#idle-proposal .idle-rule input:checked {background:var(--accent)}
+.idle-rule input::after {content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:white;box-shadow:0 1px 3px #0003}
+.idle-rule input:checked::after {transform:translateX(18px)}
+#idle-hours:not([hidden]) {display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+#idle-proposal [hidden] {display:none}
+#idle-hours input {width:auto}
+#idle-error:empty {display:none}
+#idle-proposal .idle-example {padding:10px 0 0;margin-top:4px;border-top:1px solid var(--line)}
+.idle-example summary {cursor:pointer;color:var(--muted)}
 .idle-example output {display:block;margin-top:8px;font-weight:600}
