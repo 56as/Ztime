@@ -522,7 +522,7 @@ function targetFor(note) {
     if(note.board==='desktop-home' && currentDraft() && note.id===10)return doc().querySelector('.pd-summary .pd-date');
     if(note.board==='desktop-home' && currentDraft() && [61,79].includes(note.id))return doc().querySelector('.pd-summary');
     if(note.board==='desktop-home' && currentDraft() && note.id===128)return doc().querySelector('.pd-summary .pd-scope');
-    if(note.board==='desktop-home' && note.id===130)return doc().querySelector('.pd-summary .pd-range');
+    if(note.board==='desktop-home' && [130,136,137].includes(note.id))return doc().querySelector('.pd-summary .pd-range');
     if(note.board==='desktop-behavior' && note.id===131)return doc().getElementById('chart-title');
     if(note.board==='desktop-behavior' && [132,133].includes(note.id))return doc().querySelectorAll('#purpose-chart .bar-row')[note.id-132];
     if(note.board==='desktop-behavior' && note.id===134)return doc().querySelector('.period-nav');
@@ -830,10 +830,9 @@ function mountPeriodDashboard(d,onChange){
    const fmt=(n,opts)=>new Intl.DateTimeFormat('zh-CN',{timeZone:'UTC',...opts}).format(dt(n));
    if(mode==='year')return yr(a)+'年';
    if(mode==='month')return fmt(a,{year:'numeric',month:'long'});
-   if(len(period)===1 && mode!=='week')return fmt(a,{month:'long',day:'numeric',...(yr(a)===yr(today)?{}:{year:'numeric'})})+' '+fmt(a,{weekday:'short'});
-   const start=fmt(a,{month:'long',day:'numeric',...(yr(a)===yr(today)&&yr(a)===yr(b)?{}:{year:'numeric'})});
-   const end=yr(a)!==yr(b)?fmt(b,{year:'numeric',month:'long',day:'numeric'}):month(a)!==month(b)?fmt(b,{month:'long',day:'numeric'}):dt(b).getUTCDate()+'日';
-   return (mode==='week'?'周 · ':'')+start+(a===b?'':'至'+end);
+   const withYear=yr(a)!==yr(today)||yr(a)!==yr(b);
+   const formatDay=n=>fmt(n,{month:'long',day:'numeric',...(withYear?{year:'numeric'}:{})});
+   return formatDay(a)+(a===b?'':'到'+formatDay(b));
  }
  const root=d.createElement('section');root.id='period-dashboard';root.hidden=true;d.body.append(root);
  let mode='day',period=[today,today],comparison=null,scope='all',picker=null;
