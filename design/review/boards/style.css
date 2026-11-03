@@ -611,3 +611,4 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 }
 .desktop-v2 .desktop-choice-wheel {cursor:pointer}
 .desktop-v2 select.wheel-picker-anchor::picker(select) {pointer-events:auto}
+.desktop-v2 .preview-rules select.wheel-picker-anchor::picker(select) {scrollbar-width:none}
