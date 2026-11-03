@@ -647,3 +647,47 @@ html:has(.desk-ui .behavior),
 .desktop-v2 .choice-sliding[aria-pressed=true]::before {animation:review-choice-slide 160ms ease-out}
 @keyframes review-choice-slide {from{transform:translateX(var(--slide-from)) scaleX(var(--slide-scale))}to{transform:none}}
 @media(prefers-reduced-motion:reduce){.desktop-v2 .choice-sliding[aria-pressed=true]::before{animation:none}}
+
+/* Appearance uses the same neutral track and raised surface as the idle timer. */
+.desktop-v2 .appearance-options {gap:0;padding:3px;background:var(--bg);border-radius:10px}
+.desktop-v2 .appearance-options button[data-theme] {min-height:28px;height:28px;background:transparent;color:var(--muted);border:0;border-radius:7px;box-shadow:none}
+.desktop-v2 .appearance-options button[aria-pressed=true] {color:var(--accent);font-weight:650}
+.desktop-v2 .appearance-options>button[aria-pressed=true]::before {z-index:-1;background:var(--surface);box-shadow:0 1px 3px #18283c26}
+
+body:has(#style-lab) {margin:0;background:#f8f6f1;color:#2c302a}
+body:has(#style-lab) #app {display:none}
+#style-lab {max-width:1200px;margin:auto;padding:clamp(22px,4vw,54px);font:14px/1.5 system-ui,"Microsoft YaHei",sans-serif}
+.study-head {display:flex;justify-content:space-between;align-items:end;border-bottom:1px solid #bcbdb1;padding-bottom:20px;margin-bottom:22px}
+.study-head small,.study-code,.study-edition b {font:600 11px/1.4 ui-monospace,Consolas,monospace;letter-spacing:.12em}
+#style-lab h1 {margin:8px 0 3px;font-size:clamp(26px,3.2vw,40px);letter-spacing:-.045em;line-height:1.2;color:inherit}
+#style-lab p {margin:0;color:inherit;font-size:13px}
+.study-edition {text-align:right;color:#545b50;font-size:12px}
+.study-cards {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.study-card {--ink:#46342b;--accent-ui:#a5482c;--paper:#fff9ee;--plate:#ece0cc;--edge:#d2bb9f;--round:14px;min-width:0;overflow:hidden;color:var(--ink);background:var(--paper);border:1px solid var(--edge);border-radius:var(--round)}
+.study-card.folio {--ink:#263b2e;--accent-ui:#385e46;--paper:#f9faf2;--plate:#e2e9d7;--edge:#bcc8af;--round:3px;border-radius:2px 24px 2px 2px}
+.study-card.signal {--ink:#e3ede3;--accent-ui:#bbeca9;--paper:#202c2b;--plate:#182322;--edge:#435751;--round:5px}
+.study-cover {padding:17px 20px 18px;background:var(--plate);border-bottom:1px solid var(--edge)}
+.study-code,.study-ui header {display:flex;align-items:center;justify-content:space-between}
+.study-code {color:var(--ink);font-size:10px}
+.study-cover svg {display:block;margin:5px auto 0;width:100%;height:clamp(95px,11vw,145px)}
+#style-lab h2 {margin:0 0 2px;color:inherit;font-size:26px;letter-spacing:.04em}
+.study-ui {padding:18px 20px 12px}
+.study-ui header,.study-ui label {font-size:12px;font-weight:600}
+.study-ui header i {height:8px;width:8px;background:var(--accent-ui);border-radius:50%}
+.folio header i {border-radius:0;transform:rotate(45deg)}.signal header i {border-radius:0}
+.study-number {font:500 clamp(31px,3.2vw,46px)/1.4 Georgia,serif;letter-spacing:-.06em}
+.study-number span {font:500 12px system-ui;margin:0 6px}
+.signal .study-number {font-family:ui-monospace,Consolas,monospace}
+.study-track {display:flex;gap:3px;height:5px;margin:2px 0 18px;overflow:hidden;border-radius:var(--round)}
+.study-track i {flex:54;background:var(--accent-ui)}.study-track i:nth-child(2){flex:31;opacity:.65}.study-track i:last-child{flex:15;opacity:.32}
+.study-ui form {display:grid;gap:6px}
+#style-lab input,#style-lab button {box-sizing:border-box;width:100%;min-width:0;min-height:36px;font:500 13px/1.4 system-ui;padding:7px 11px;border-radius:var(--round)}
+#style-lab input {background:var(--paper);border:1px solid var(--edge);color:var(--ink)}
+#style-lab input::placeholder {color:var(--ink);opacity:.62}
+#style-lab button {display:flex;justify-content:space-between;align-items:center;background:var(--accent-ui);color:var(--paper);border:0;cursor:pointer}
+#style-lab .folio input {border-width:0 0 1px;border-radius:0}
+#style-lab .sundial button {border-radius:24px}
+#style-lab :is(input,button):focus-visible {outline:2px solid var(--accent-ui);outline-offset:2px}
+#style-lab button:active {transform:translateY(1px)}
+.study-ui output {min-height:17px;line-height:17px;color:var(--accent-ui);font-size:12px}
+@media(max-width:700px){.study-cards{grid-template-columns:1fr}.study-cover svg{height:115px}.study-edition{display:none}}

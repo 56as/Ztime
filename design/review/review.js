@@ -664,6 +664,19 @@ function applySecondDesktopDraft(d,pageId){
   const about=[...grid.children].find(card=>card.querySelector('h2')?.textContent==='Ztime');
   about?.remove();
   mountIdleProposal(d,grid);
+  if(new URLSearchParams(location.search).get('proposal')==='identity'){
+    d.getElementById('app').hidden=true;
+    d.body.append(d.getElementById('study-template').content.cloneNode(true));
+    for(const form of d.querySelectorAll('#style-lab form')){
+      form.addEventListener('submit',event=>{
+        event.preventDefault();
+        if(picking)return;
+        const input=form.querySelector('input');
+        const name=input.value.trim();
+        if(name){form.querySelector('output').textContent='已添加 · '+name;input.value='';}
+      });
+    }
+  }
 }
 let flowTrail = '', trialMode = false, originals = new Map();
 // All synchronization here is simulated with the same two fixed example devices.
