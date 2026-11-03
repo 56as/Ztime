@@ -163,21 +163,3 @@
 .report-formats-title + .report-formats {display:flex;flex-wrap:wrap;margin-top:0;padding:0;border:0}
 .report-formats-title + .report-formats button {display:inline-block;padding:6px 12px;border-radius:8px}
 .report-formats-title + .report-formats button::before {content:none}
-
-#timing-card {grid-column:1/-1;order:5}
-#timing-card h2 {margin-bottom:10px}
-#timing-card .timing-rule,#idle-example-row {display:flex;align-items:center;gap:12px;min-height:44px}
-.timing-rule label,#idle-example-row span {margin-right:auto}
-#timing-card .timing-rule input {appearance:none;position:relative;width:42px;height:24px;margin:0;padding:0;border:0;border-radius:16px;background:#9499a2;cursor:pointer}
-#timing-card .timing-rule input:checked {background:var(--accent)}
-.timing-rule input::after {content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:white;box-shadow:0 1px 3px #0003}
-.timing-rule input:checked::after {transform:translateX(18px)}
-#idle-hours:not([hidden]) {display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
-#timing-card [hidden] {display:none}
-#idle-hours input {width:auto}
-#idle-error:empty {display:none}
-#timing-card #idle-example {padding:10px 0 0;margin-top:4px;border-top:1px solid var(--line)}
-#idle-example summary {cursor:pointer;color:var(--muted)}
-#idle-example output {display:block;margin-top:8px;font-weight:600}
-
-#idle-history{margin-top:12px}#idle-history summary{cursor:pointer}#idle-history button{margin-left:auto}

@@ -3,11 +3,11 @@ import { createInterface } from 'node:readline';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
-import {defaultTiming,scheduled,IdleHistory} from './timing.js';
+import {defaultTiming,scheduled,excludeIdleTail} from './timing.js';
 
 export class Collector {
- constructor(store,hostFor=()=>null,rememberIcon=()=>{}){this.rememberIcon=rememberIcon;this.store=store;this.hostFor=hostFor;this.active=null;this.last=0;this.process=null;this.state='starting';this.history=new IdleHistory(store);}
- resetTracking(){this.active=null;this.foreground=null;this.episode=null;this.last=0;}
+ constructor(store,hostFor=()=>null,rememberIcon=()=>{}){this.rememberIcon=rememberIcon;this.store=store;this.hostFor=hostFor;this.active=null;this.last=0;this.process=null;this.state='starting';}
+ resetTracking(){this.active=null;this.foreground=null;this.wasIdle=false;this.last=0;}
  sample(value,now=Date.now()){return this.store.transaction(()=>this.track(value,now));}
  track(value,now){
   if(this.store.get('paused',false)){this.resetTracking();this.state='paused';return;}
@@ -17,23 +17,20 @@ export class Collector {
   const app=value.state==='active'&&value.appId?{appId:value.appId,appName:value.appName,site:this.hostFor(value.appId,now)}:null;
   const idle=app&&config.auto&&Number.isFinite(value.idleMs)&&value.idleMs>=config.limit*60000;
   const lastInput=Math.max(this.since,now-(value.idleMs>=0?value.idleMs:0));
-  if(idle && !this.episode){
-   this.episode=randomUUID();
-   this.history.rewind(this.episode,lastInput,now);this.active=null;
+  if(idle && !this.wasIdle){
+   this.wasIdle=true;
+   excludeIdleTail(this.store,lastInput,now);this.active=null;
   }
   // Attribute each interval to the previous foreground window. Split at input
-  // and minute boundaries so a scheduled break never becomes restorable idle.
+  // and minute boundaries so overlapping exclusions are applied once.
   for(let at=this.last||now;this.foreground&&at<now;){
    const stop=Math.min(now,(Math.floor(at/60000)+1)*60000,lastInput>at?lastInput:now);
-   const absent=this.episode && (idle?at>=lastInput:at<lastInput||!app);
-   if(scheduled(at,config,zone)){
-    this.history.add('schedule',this.foreground,at,stop);this.active=null;
-   }
-   else if(absent){this.history.add(this.episode,this.foreground,at,stop);this.active=null;}
+   const absent=this.wasIdle && (idle?at>=lastInput:at<lastInput||!app);
+   if(absent||scheduled(at,config,zone))this.active=null;
    else this.record(this.foreground,at,stop);
    at=stop;
   }
-  if(!idle)this.episode=null;
+  if(!idle)this.wasIdle=false;
   const blocked=scheduled(now,config,zone);
   if(!app||idle||blocked)this.active=null;
   else this.record(app,now,now);

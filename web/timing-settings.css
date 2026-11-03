@@ -1,0 +1,24 @@
+:is(#idle-proposal,#timing-card) {grid-column:1/-1;order:5}
+:is(#idle-proposal,#timing-card) h2 {margin-bottom:10px}
+:is(#idle-proposal,#timing-card) .idle-rule {display:flex;align-items:center;gap:12px;min-height:44px}
+.idle-rule > label {font:500 14px/20px system-ui;white-space:nowrap}
+:is(#idle-proposal,#timing-card) .idle-rule input[role=switch] {appearance:none;position:relative;box-sizing:border-box;flex:0 0 42px;width:42px;min-width:42px;max-width:42px;height:24px;min-height:24px;max-height:24px;margin:0 0 0 auto;padding:0;border:0;border-radius:16px;background:#9499a2;cursor:pointer}
+:is(#idle-proposal,#timing-card) .idle-rule input[role=switch]:checked {background:var(--accent)}
+.idle-rule input[role=switch]::after {content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:white;box-shadow:0 1px 3px #0003}
+.idle-rule input[role=switch]:checked::after {transform:translateX(18px)}
+#idle-hours:not([hidden]) {display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+:is(#idle-proposal,#timing-card) [hidden] {display:none}
+#idle-hours input {width:auto}
+#idle-error:empty {display:none}
+#idle-limit {position:relative;display:inline-grid;grid-template-columns:repeat(4,1fr);width:min(264px,48%);box-sizing:border-box;margin:0;padding:3px;border-radius:10px;background:var(--bg);isolation:isolate}
+#idle-limit::before {content:"";position:absolute;z-index:-1;inset:3px auto 3px 3px;width:calc((100% - 6px)/4);transform:translateX(calc(100% * var(--choice,1)));transition:transform .16s ease-out;border-radius:7px;background:var(--surface);box-shadow:0 1px 3px #18283c26}
+#idle-limit label {position:relative;cursor:pointer;text-align:center}
+#idle-limit input {position:absolute;inset:0;opacity:0;margin:0;padding:0;border:0;min-height:0;width:100%;height:100%;cursor:pointer}
+#idle-limit span {display:block;padding:5px 0;font:500 13px/18px system-ui;color:var(--muted);border-radius:7px}
+#idle-limit input:checked + span {color:var(--accent);font-weight:650}
+#idle-limit input:focus-visible + span {outline:2px solid var(--accent)}
+@media(prefers-reduced-motion:reduce){#idle-limit::before{transition:none}}
+
+.timing-card #idle-limit label {margin:0;padding:0;min-width:0}
+.timing-card .idle-rule {justify-content:flex-start}
+.timing-card #idle-hours :is(input,select) {box-sizing:border-box;min-height:32px;height:32px;margin:0;padding:0 8px;font:400 13px/1 system-ui;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--text)}

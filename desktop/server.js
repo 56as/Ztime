@@ -34,10 +34,6 @@ export async function createApp(options={}){
    const timing=validateTiming(body);
    collector.resetTracking();store.set('timing',timing);return timing;
   }
-  if(u.pathname==='/api/idle-history'){
-   if(method==='GET')return collector.history.recent(collector.episode);
-   if(method==='PUT'){collector.history.restore(body.episode,body.count,collector.episode);return {ok:true};}
-  }
   if(u.pathname==='/api/behavior'){
    if(method==='GET')return behavior.read(u.searchParams.get('anchor'),u.searchParams.get('mode'));
    if(method==='PUT')return behavior.change(body);
@@ -73,7 +69,7 @@ export async function createApp(options={}){
   }
   if(method==='GET'&&u.pathname==='/api/sessions')return store.sessions().filter(s=>!s.deletedAt&&(!u.searchParams.get('appId')||s.appId===u.searchParams.get('appId'))&&(!u.searchParams.get('deviceId')||s.deviceId===u.searchParams.get('deviceId'))).slice(0,500);
   if(method==='DELETE'&&u.pathname==='/api/session'){store.markDeleted(body.id);collector.resetTracking();return {ok:true};}
-  if(method==='DELETE'&&u.pathname==='/api/data'){if(body.confirm!=='删除')throw new Error('请输入“删除”确认');store.transaction(()=>{for(const s of store.sessions())store.markDeleted(s.id);store.db.exec('DELETE FROM idle_parts');});collector.resetTracking();return {ok:true};}
+  if(method==='DELETE'&&u.pathname==='/api/data'){if(body.confirm!=='删除')throw new Error('请输入“删除”确认');store.transaction(()=>{for(const s of store.sessions())store.markDeleted(s.id);store.db.exec('DROP TABLE IF EXISTS idle_parts');});collector.resetTracking();return {ok:true};}
   if(method==='GET'&&u.pathname==='/api/export'){
    const rows=store.sessions().filter(s=>!s.deletedAt);const csv=v=>'"'+String(/^[=+\-@]/.test(String(v))?"'"+v:v).replaceAll('"','""')+'"';const format=u.searchParams.get('format');return format==='csv'?{filename:'time-ledger.csv',type:'text/csv',content:'\uFEFF'+[['id','device_id','app_id','app_name','start_utc','end_utc','duration_ms'],...rows.map(s=>[s.id,s.deviceId,s.appId,s.appName,new Date(s.start).toISOString(),new Date(s.end).toISOString(),s.end-s.start])].map(r=>r.map(csv).join(',')).join('\r\n')}:{filename:'time-ledger.json',type:'application/json',content:JSON.stringify({schemaVersion:1,exportedAt:new Date().toISOString(),settings:store.get('settings'),devices:store.devices(),sessions:rows},null,2)};
   }
