@@ -496,9 +496,9 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 
 #idle-proposal {grid-column:1/-1;order:5}
 #idle-proposal h2 {margin-bottom:10px}
-#idle-proposal .idle-rule,.idle-example-row {display:flex;align-items:center;gap:12px;min-height:44px}
-.idle-rule label,.idle-example-row span {margin-right:auto}
-#idle-proposal .idle-rule input {appearance:none;position:relative;width:42px;height:24px;margin:0;padding:0;border:0;border-radius:16px;background:#9499a2;cursor:pointer}
+#idle-proposal .idle-rule {display:flex;align-items:center;gap:12px;min-height:44px}
+.idle-rule label,#review-idle-history span {margin-right:auto}
+#idle-proposal .idle-rule input {appearance:none;position:relative;box-sizing:border-box;flex:0 0 42px;width:42px;min-width:42px;max-width:42px;height:24px;min-height:24px;max-height:24px;margin:0;padding:0;border:0;border-radius:16px;background:#9499a2;cursor:pointer}
 #idle-proposal .idle-rule input:checked {background:var(--accent)}
 .idle-rule input::after {content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:white;box-shadow:0 1px 3px #0003}
 .idle-rule input:checked::after {transform:translateX(18px)}
@@ -506,6 +506,13 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 #idle-proposal [hidden] {display:none}
 #idle-hours input {width:auto}
 #idle-error:empty {display:none}
-#idle-proposal .idle-example {padding:10px 0 0;margin-top:4px;border-top:1px solid var(--line)}
-.idle-example summary {cursor:pointer;color:var(--muted)}
-.idle-example output {display:block;margin-top:8px;font-weight:600}
+#idle-limit {position:relative;display:inline-grid;grid-template-columns:repeat(4,1fr);width:min(264px,100%);box-sizing:border-box;margin:0 0 8px;padding:3px;border-radius:10px;background:var(--bg);isolation:isolate}
+#idle-limit::before {content:"";position:absolute;z-index:-1;inset:3px auto 3px 3px;width:calc((100% - 6px)/4);transform:translateX(calc(100% * var(--choice,1)));transition:transform .16s ease-out;border-radius:7px;background:var(--surface);box-shadow:0 1px 3px #18283c26}
+#idle-limit label {position:relative;cursor:pointer;text-align:center}
+#idle-limit input {position:absolute;inset:0;opacity:0;margin:0;width:100%;height:100%;cursor:pointer}
+#idle-limit span {display:block;padding:5px 0;font:500 13px/18px system-ui;color:var(--muted);border-radius:7px}
+#idle-limit input:checked + span {color:var(--accent);font-weight:650}
+#idle-limit input:focus-visible + span {outline:2px solid var(--accent)}
+#review-idle-history {margin-top:8px}
+#review-idle-history summary {cursor:pointer;color:var(--muted)}
+@media(prefers-reduced-motion:reduce){#idle-limit::before{transition:none}}
