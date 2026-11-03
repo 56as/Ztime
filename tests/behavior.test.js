@@ -55,3 +55,15 @@ test('a raw session crossing the configured day boundary is clipped once per day
   assert.throws(()=>b.read('2026-02-31','week'));
  }finally{store.close();}
 });
+
+test('hour buckets conserve elapsed time across a repeated DST hour and retain the source row',async()=>{
+ const {behaviorBuckets}=await import('../shared/behavior.js');
+ const settings={timeZone:'America/New_York',dayStart:0};
+ const clock=new Intl.DateTimeFormat('en-GB',{timeZone:settings.timeZone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+ const row={id:'session',date:'2026-11-01',category:'学习',start:Date.parse('2026-11-01T05:30:00Z'),end:Date.parse('2026-11-01T06:30:00Z')};
+ const bins=behaviorBuckets([row],{mode:'day',first:row.date,last:row.date,today:row.date,settings,clock});
+ assert.equal(bins.length,25);
+ const used=bins.filter(b=>b.rows.length);
+ assert.deepEqual(used.map(b=>b.duration),[1800000,1800000]);
+ assert.ok(used.every(b=>b.rows[0]===row));
+});

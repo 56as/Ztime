@@ -37,7 +37,8 @@ function leader(parts){
   const max=Math.max(1,...entries.map(r=>r.parts.reduce((n,p)=>n+p[1],0)));
   for(const r of entries){
     const line=button('',()=>{if(r.day)dayView(r.day);else{selectFilter(r.label);}});
-    line.className='bar-row';line.append(element('span',r.label),bar(r.parts,max),element('small',mode==='week'?leader(r.parts):fmt(r.parts[0][1])));
+    line.className='bar-row';line.append(element('span',r.label),bar(r.parts,max));
+    if(mode==='day')line.append(element('small',fmt(r.parts[0][1])));else line.setAttribute('aria-label',r.label+' · '+leader(r.parts));
     chart.append(line);
   }
   if(!entries.length)chart.append(element('p','当天没有使用记录。'));

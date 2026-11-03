@@ -47,4 +47,11 @@
 .timeline-tick{position:absolute;top:calc(100% + 4px);left:0;right:0;text-align:center;font-size:11px;line-height:15px}
 .timeline-tick span{display:block}.timeline-column[aria-pressed=true] .timeline-tick{color:var(--text);font-weight:600}
 #session-list .session-row{border-bottom:0;border-top:1px solid var(--line);padding-top:14px}
-.behavior .timeline-paging{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:8px}
+
+.behavior .chart-week .bar-row {grid-template-columns:3em minmax(0,1fr)}
+.timeline-columns.timeline-day,.timeline-columns.timeline-year,.timeline-columns.timeline-week {min-width:100%}
+.timeline-day .timeline-tick,.timeline-year .timeline-tick {left:50%;right:auto;transform:translateX(-50%);white-space:nowrap}
+.timeline-day .timeline-column:first-of-type .timeline-tick,.timeline-year .timeline-column:first-of-type .timeline-tick {left:0;transform:none}
+.timeline-scroll {padding-inline:8px}
+.bucket-detail {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:6px 0;font-size:13px}
+.bucket-detail select {max-width:65%;min-width:0}

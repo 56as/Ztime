@@ -23,7 +23,7 @@ const paths=[
  'web/delete-confirm.js',
  'web/brand-icon.png',
  'shared/week-report.js',
- 'shared/time.js',
+ 'shared/time.js','shared/behavior.js',
  'shared/layout.js',
  'shared/appearance.js',
  'shared/dashboard.js',
