@@ -203,11 +203,11 @@ function showReference(key,detail=''){
   const panel=$('reference');
   panel.hidden=!referenceLabels[key];
   if(panel.hidden)return;
-  const src='reference/0.2.25/'+key+'.png';
+  const src='reference/0.2.26/'+key+'.png';
   $('reference-thumb').src=src;
   $('reference-caption').textContent=referenceLabels[key]+' · '+(detail||'默认视图');
   $('reference-difference').textContent=key.endsWith('-report')?'正式版支持 TXT、CSV、PDF 和 PNG，可展开查看文字明细。':'截图使用全部设备和默认布局。';
-  $('reference-title').textContent='Windows 0.2.25 · '+referenceLabels[key];
+  $('reference-title').textContent='Windows 0.2.26 · '+referenceLabels[key];
 }
 $('reference-thumb').onload=()=>{$('reference-open').hidden=false;$('reference-fallback').hidden=true;};
 $('reference-thumb').onerror=()=>{
@@ -380,7 +380,7 @@ function applySecondDesktopDraft(d,pageId){
     nav.setAttribute('aria-label','主导航');
     nav.innerHTML=desktopNavButtons(pageId);
     const version=d.createElement('small');
-    version.id='desktop-version';version.textContent='版本 0.2.25';
+    version.id='desktop-version';version.textContent='版本 0.2.26';
     d.querySelector('.sidebar').append(version);
   }
 
@@ -1126,7 +1126,7 @@ function mountPeriodDashboard(d,onChange){
     const total=summary.firstElementChild;total.className='pd-total-value';
     summary.append(summary.querySelector('.pd-scope'),controls.querySelector('.pd-modes'),controls.querySelector('.pd-range'),total);
     controls.remove();
-    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.25';
+    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.26';
     root.querySelector('.pd-nav').append(version);
   }
   if(mobile){
