@@ -32,7 +32,7 @@ function barChart(series){
  return `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="128" viewBox="0 0 420 128" font-size="12" fill="currentColor" role="img" aria-label="用时分布，单位小时"><text x="0" y="14">${scale} 小时</text>${marks}</svg>`;
 }
 
-export function openPeriodReport(selection,dialog,weekly){
+export function openPeriodReport(selection,dialog,weekly,saveFile){
  const {mode,from,to,scope,result,series}=selection;
  const [name,chartTitle]=periods[mode],scopeName=scopes[scope];
  const range=(from===to?from:from+' 至 '+to)+' · '+scopeName;
@@ -58,6 +58,7 @@ export function openPeriodReport(selection,dialog,weekly){
  showReportDialog(dialog,{title:name+'预览',preview,text,formats,async save(format){
    const filename='Ztime-'+name+'-'+from+'.'+format;
    const blob=format==='txt'||format==='csv'?new Blob(['\uFEFF',format==='txt'?text:csv],{type:(format==='txt'?'text/plain':'text/csv')+';charset=utf-8'}):await (await import('./image-export.js')).graphicExport(sheet,format);
+   if(saveFile){await saveFile(blob,filename);return {message:'请选择保存位置'};}
    download(blob,filename);return {message:'已发起下载：'+filename};
  }});
 }

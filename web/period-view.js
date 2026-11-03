@@ -161,15 +161,15 @@ export function createPeriodView({api, escape, duration, details, report, refres
  function paint() {
    const modesHtml=Object.entries(modes).map(([key,name])=>`<button data-cal="mode" data-mode="${key}" aria-pressed="${mode===key}">${name}</button>`).join('');
    const scopeHtml=[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([key,name])=>`<button data-cal="scope" data-scope="${key}" aria-pressed="${scope===key}">${name}</button>`).join('');
-   const canExport=desktop ? Object.hasOwn(modes,mode) : mode==='week';
-   const reportButton=canExport?`<button data-tool="report" aria-haspopup="dialog">${desktop?'':'导出'}${modes[mode]}报</button>`:'';
+   const canExport=Object.hasOwn(modes,mode);
+   const reportButton=canExport?`<button data-tool="report" aria-haspopup="dialog">${modes[mode]}报</button>`:'';
    const header=`<header class="topbar page-header"><div class="page-heading"><h1>${desktop?'统计':'仪表盘'}</h1>${desktop?recordingStatus(snapshot.collector,escape):''}</div><div class="actions"><button data-tool="layout" aria-haspopup="dialog">布局</button>${reportButton}${refreshControl('data-tool="refresh"')}</div></header>`;
    const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
    const dateText=desktop?desktopPeriodLabel(mode,period,today):mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
    const controls=`<div class="pd-controls"><div class="pd-modes">${modesHtml}</div><div class="pd-range"><button aria-label="上一期间" data-cal="prev">‹</button><button data-cal="dates" aria-haspopup="dialog" aria-label="${fullDate}">${dateText} ▾</button><button aria-label="下一期间" data-cal="next" ${period[1]>=today?'disabled':''}>›</button></div></div>`;
    const ranking=result?.apps.map((app,index)=>{
      const device=app.platform==='android'?'手机':'电脑',percent=100*app.duration/result.apps[0].duration;
-     if(!desktop)return `<button class="app-row" data-rank="${index}"><span class="app-name">${escape(app.name)}</span><small>${device}</small><strong>${duration(app.duration,true)}</strong><span class="rank-track" aria-hidden="true"><i style="width:${percent}%"></i></span></button>`;
+     if(!desktop)return `<button class="app-row" data-rank="${index}"><span class="app-name"><span class="phone-app-icon" aria-hidden="true">${escape(Array.from(app.name)[0]||'?')}${/^[^/\\]+$/.test(app.appId)?`<img alt="" loading="lazy" src="./app-icons/${app.platform==='android'?'android':'windows'}/${escape(encodeURIComponent(app.platform==='android'?app.appId:app.appId.toLowerCase()))}.png">`:''}</span>${escape(app.name)}</span><small>${device}</small><strong>${duration(app.duration,true)}</strong><span class="rank-track" aria-hidden="true"><i style="width:${percent}%"></i></span></button>`;
      const query=new URLSearchParams({v:'4',platform:app.platform,id:app.appId,name:app.name});
      const mono=app.platform==='windows' && app.appId.toLowerCase()==='chatgpt.exe';
      const icon=`<img class="review-app-icon" alt="" ${mono?'data-monochrome':''} src="/api/app-icon?${escape(query.toString())}">`;
@@ -209,6 +209,10 @@ export function createPeriodView({api, escape, duration, details, report, refres
      host.replaceChildren(template.content);
      if(focus)host.querySelector(focus)?.focus({preventScroll:true});
    }else host.innerHTML=header+controls+summary;
+   if(!desktop)for(const img of host.querySelectorAll('.phone-app-icon img')){
+     img.onerror=()=>img.remove();
+     if(img.complete && !img.naturalWidth)img.remove();
+   }
    if(result){
      const key=JSON.stringify([period,mode,scope]);
      if(pointPeriod!==key){selectedPoint=null;pointPeriod=key;}
@@ -235,7 +239,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
          openerSelector='[data-tool=layout]';draft=structuredClone(layout);drawModal();
        }
        else if(button.dataset.tool==='report'){
-         const selection=desktop?{mode,from:iso(period[0]),to:iso(period[1]),scope:queryScope(),result,series:chartSeries()}:null;
+         const selection={mode,from:iso(period[0]),to:iso(period[1]),scope:queryScope(),result,series:chartSeries()};
          await report(iso(period[1]),selection);
        }
        else if(button.dataset.tool==='refresh')await (desktop?update(true):refreshPhone());

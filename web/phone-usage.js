@@ -26,8 +26,11 @@ export function bindPhoneUsage(host,{result,snapshot,scope,mode,selected,onSelec
     const amount=bin.start>=result.end?'尚未到达':duration(bin.duration,true);
     input.setAttribute('aria-valuetext',label+' · '+amount);
     svg.querySelectorAll('circle').forEach((c,i)=>c.setAttribute('r',i===index?'5':'2.3'));
+    const list=rows=>'<ul>'+rows.map(a=>'<li><span>'+escape(a.name)+' <small>'+(a.platform==='android'?'手机':'电脑')+'</small></span><b>'+escape(duration(a.duration,true))+'</b></li>').join('')+'</ul>';
+    const short=apps.filter(a=>a.duration<300000);
     detail.innerHTML='<div><strong>'+escape(label)+'</strong><b>'+escape(amount)+'</b></div>'+
-      (apps.length?'<ul>'+apps.map(a=>'<li><span>'+escape(a.name)+' <small>'+(a.platform==='android'?'手机':'电脑')+'</small></span><b>'+escape(duration(a.duration,true))+'</b></li>').join('')+'</ul>':end>bin.start?'<p>这段时间没有使用记录。</p>':'');
+      (apps.length?list(apps.filter(a=>a.duration>=300000)):end>bin.start?'<p>这段时间没有使用记录。</p>':'')+
+      (short.length?'<details><summary>短于 5 分钟的应用明细（'+short.length+'）</summary>'+list(short)+'</details>':'');
   }
   input.oninput=input.onclick=()=>inspect(Number(input.value));
   if(selected!==null)inspect(selected);

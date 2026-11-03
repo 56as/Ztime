@@ -95,3 +95,31 @@
   .phone-ui .data-settings h2 {flex-basis:100%;margin:0}
   .phone-ui .data-settings .risk-block {margin:0}
 }
+
+.phone-theme {position:relative;isolation:isolate;display:grid;grid-template-columns:1fr 1fr;align-items:center;height:32px;background:var(--bg);border:1px solid var(--line);border-radius:10px;text-align:center;color:var(--text);font-size:13px}
+.phone-theme::before {content:'';position:absolute;z-index:-1;inset:2px auto 2px 2px;width:calc(50% - 2px);border-radius:8px;background:var(--surface);box-shadow:0 1px 4px #0003;transition:transform .16s ease-out}
+.dark .phone-theme::before {transform:translateX(100%)}
+.phone-theme input {position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0}
+.phone-theme:focus-within {outline:2px solid var(--accent)}
+
+.phone-ui .wheel-value {min-width:0;min-height:32px;padding:3px 10px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:9px;font:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.phone-ui dialog.wheel-sheet[open] {width:min(320px,calc(100% - 28px));padding:12px;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:16px}
+.wheel-sheet header {display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.wheel-window {position:relative}
+.wheel-window::before {content:'';position:absolute;inset:40% 0;height:20%;border-radius:8px;background:var(--tint);pointer-events:none}
+.wheel-list {position:relative;height:180px;padding:72px 0;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;scrollbar-width:none}
+.wheel-list [role=option] {height:36px;display:grid;place-items:center;scroll-snap-align:center;cursor:pointer;color:var(--muted);white-space:nowrap}
+.wheel-list [aria-selected=true] {font-weight:650;color:var(--text)}
+
+.phone-ui .refresh-control svg {width:18px;height:18px;flex:none}
+.phone-ui .wheel-value {grid-column:2}
+
+.phone-ui .phone-timing {grid-column:1/-1;color:var(--text);margin-top:4px}
+.phone-ui .phone-timing label {display:flex;align-items:center;justify-content:space-between;gap:8px}
+.phone-ui .phone-timing select {width:auto}
+.phone-ui .app-name:has(.phone-app-icon) {display:flex;gap:6px;align-items:center}
+.phone-app-icon {position:relative;display:inline-grid;place-items:center;flex:none;width:20px;height:20px;border-radius:4px;background:var(--bg);font-size:12px}
+.phone-app-icon img {position:absolute;inset:0;width:100%;height:100%;background:var(--surface);object-fit:contain}
+.phone-ui .ranking-card .rank-track {margin-left:26px}
+.phone-ui .sync-status h2 {font-size:13px;margin:8px 0 0}
+@media(prefers-reduced-motion:reduce){.phone-theme::before{transition:none}}

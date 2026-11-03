@@ -7,6 +7,7 @@ import android.os.*;
 import org.json.*;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.time.*;
 
 public class UsageCollector {
     public static boolean granted(Context context){AppOpsManager appOps=(AppOpsManager)context.getSystemService(Context.APP_OPS_SERVICE);return appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,android.os.Process.myUid(),context.getPackageName())==AppOpsManager.MODE_ALLOWED;}
@@ -38,5 +39,14 @@ public class UsageCollector {
         state=new JSONObject().put("screen",actualScreen).put("unlocked",actualUnlocked).put("pkg",pkg).put("start",start);
         db.put("captureState",state);db.put("captureCursor",now);db.put("collector",new JSONObject().put("state","ready").put("lastSample",now));
     }
-    private static void save(Context context,LedgerDb db,String own,String pkg,long start,long end) throws Exception {if(end<=start)return;String id=UUID.nameUUIDFromBytes((own+":"+pkg+":"+start).getBytes(StandardCharsets.UTF_8)).toString();db.write(new JSONObject().put("id",id).put("deviceId",own).put("appId",pkg).put("appName",label(context,pkg)).put("start",start).put("end",end).put("deletedAt",JSONObject.NULL),true);}
+    private static void save(Context context,LedgerDb db,String own,String pkg,long start,long end) throws Exception {if(end<=start)return;
+        JSONObject rule=db.object("phoneTiming",new JSONObject());
+        String repeat=rule.optString("repeat","off");
+        if(repeat.equals("off")){write(context,db,own,pkg,start,end);return;}
+        ZoneId zone=ZoneId.of(db.settings().getString("timeZone"));
+        PhoneSchedule.keep(start,end,zone,repeat,LocalTime.parse(rule.getString("start")),LocalTime.parse(rule.getString("end")),
+            (a,b)->write(context,db,own,pkg,a,b));
+    }
+    private static void write(Context context,LedgerDb db,String own,String pkg,long start,long end)throws Exception{
+        String id=UUID.nameUUIDFromBytes((own+":"+pkg+":"+start).getBytes(StandardCharsets.UTF_8)).toString();db.write(new JSONObject().put("id",id).put("deviceId",own).put("appId",pkg).put("appName",label(context,pkg)).put("start",start).put("end",end).put("deletedAt",JSONObject.NULL),true);}
 }

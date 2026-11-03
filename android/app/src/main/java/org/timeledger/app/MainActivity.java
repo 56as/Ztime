@@ -41,7 +41,7 @@ public class MainActivity extends Activity {
         if(method.equals("GET")&&p.equals("/api/summary")){
             try{UsageCollector.collect(this,db);}catch(Exception e){db.put("collector",new JSONObject().put("state","error"));}
             JSONObject result=new JSONObject().put("native",true).put("version",getPackageManager().getPackageInfo(getPackageName(),0).versionName).put("device",db.device()).put("devices",db.devices()).put("sessions",db.sessions()).put("settings",db.settings()).put("paused",Boolean.parseBoolean(db.get("paused","false"))).put("collector",db.object("collector",new JSONObject())).put("appearance",db.object("appearance",null)).put("layout",db.object("layout",null)).put("weekLayout",db.object("weekLayout",null)).put("periodLayout",db.object("periodLayout",null)).put("settingsConflict",db.object("settingsConflict",null)).put("lastSync",Long.parseLong(db.get("lastSync","0"))).put("syncError",db.get("syncError","")).put("requests",new JSONArray());
-            JSONArray peers=new JSONArray();JSONObject peer=db.object("peer",null);if(peer!=null&&peer.has("device"))peers.put(new JSONObject().put("id",peer.getJSONObject("device").getString("id")).put("last_sync",Long.parseLong(db.get("lastSync","0"))));return result.put("peers",peers);
+            JSONArray peers=new JSONArray();JSONObject peer=db.object("peer",null);if(peer!=null&&peer.has("device"))peers.put(new JSONObject().put("id",peer.getJSONObject("device").getString("id")).put("last_sync",Long.parseLong(db.get("lastSync","0"))));return result.put("peers",peers).put("phoneTiming",db.object("phoneTiming",new JSONObject()));
         }
         if(method.equals("PUT")&&p.equals("/api/period-layout")){
             JSONArray cards=body.getJSONArray("cards");
@@ -55,7 +55,25 @@ public class MainActivity extends Activity {
         }
         else if(method.equals("PUT")&&p.equals("/api/layout")){JSONArray widgets=body.getJSONArray("widgets");if(widgets.length()>10)throw new Exception("布局无效");Set<String> ids=new HashSet<>();for(int i=0;i<widgets.length();i++){JSONObject w=widgets.getJSONObject(i);String id=w.getString("id");if(!Arrays.asList("header","phone","computer","apps","hours","week","changes","pie","deviceShare","stats").contains(id)||!ids.add(id)||w.getInt("w")<3||w.getInt("w")>12||w.getInt("h")<(id.equals("header")?96:140)||w.getInt("h")>900)throw new Exception("模块无效");for(String sizeKey:Arrays.asList("timeFontSize","unitFontSize")){if(w.has(sizeKey)){double size=w.getDouble(sizeKey);int min=sizeKey.equals("timeFontSize")?24:14,max=sizeKey.equals("timeFontSize")?72:36;if(size!=Math.rint(size)||size<min||size>max)throw new Exception("时间字号无效");}}}String page=body.optString("page","home");if(!page.equals("home")&&!page.equals("week"))throw new Exception("布局页面无效");db.put(page.equals("week")?"weekLayout":"layout",new JSONObject().put("widgets",widgets));}
         else if(method.equals("PUT")&&p.equals("/api/appearance")){if(!Arrays.asList("system","light","dark").contains(body.optString("theme"))||!Arrays.asList("blue","green","purple","amber","pink","teal","coral","graphite").contains(body.optString("accentColor")))throw new Exception("外观选项无效");db.put("appearance",new JSONObject().put("theme",body.getString("theme")).put("accentColor",body.getString("accentColor")));}
-        else if(method.equals("PUT")&&p.equals("/api/settings")){int hour=body.getInt("dayStart");String tz=body.getString("timeZone");if(hour<0||hour>23||!Arrays.asList(TimeZone.getAvailableIDs()).contains(tz))throw new Exception("请检查日界线和时区");JSONObject previous=db.settings();db.put("settings",new JSONObject().put("dayStart",hour).put("timeZone",tz).put("weekStart",1).put("baseRevision",previous.getString("revision")).put("revision",UUID.randomUUID().toString()));}
+        else if(method.equals("PUT") && p.equals("/api/phone-timing")){
+            String repeat=body.getString("repeat"),start=body.getString("start"),end=body.getString("end");
+            if(!Arrays.asList("off","daily","weekdays","weekends").contains(repeat))throw new Exception("重复日期无效");
+            java.time.LocalTime.parse(start);java.time.LocalTime.parse(end);
+            if(!repeat.equals("off") && start.equals(end))throw new Exception("起止时间不能相同");
+            synchronized(UsageCollector.class){
+                UsageCollector.collect(this,db);
+                resetActiveStart();
+                db.put("phoneTiming",new JSONObject().put("repeat",repeat).put("start",start).put("end",end));
+            }
+        }
+        else if(method.equals("PUT")&&p.equals("/api/settings")){int hour=body.getInt("dayStart");String tz=body.getString("timeZone");if(hour<0||hour>23||!Arrays.asList(TimeZone.getAvailableIDs()).contains(tz))throw new Exception("请检查日界线和时区");synchronized(UsageCollector.class){
+                JSONObject previous=db.settings();
+                if(!previous.getString("timeZone").equals(tz) && !db.object("phoneTiming",new JSONObject()).optString("repeat","off").equals("off")){
+                    UsageCollector.collect(this,db);
+                    resetActiveStart();
+                }
+                db.put("settings",new JSONObject().put("dayStart",hour).put("timeZone",tz).put("weekStart",1).put("baseRevision",previous.getString("revision")).put("revision",UUID.randomUUID().toString()));}}
+
         else if(method.equals("POST")&&p.equals("/api/settings/resolve")){JSONObject r=db.object("settingsConflict",null);if(r!=null){if(body.optString("choice").equals("remote"))db.put("settings",r);else {JSONObject keep=db.settings();keep.put("baseRevision",r.getString("revision")).put("revision",UUID.randomUUID().toString());db.put("settings",keep);}}db.put("settingsConflict","null");}
         else if(method.equals("POST")&&p.equals("/api/pause")){UsageCollector.collect(this,db);db.put("paused",body.getBoolean("paused"));db.put("captureState",new JSONObject());db.put("captureCursor",System.currentTimeMillis());}
         else if(method.equals("POST")&&p.equals("/api/permission"))runOnUiThread(()->startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
@@ -72,29 +90,44 @@ public class MainActivity extends Activity {
         else if(method.equals("GET")&&p.equals("/api/sessions")){JSONArray result=new JSONArray(),all=db.sessions();for(int i=0;i<all.length()&&result.length()<500;i++){JSONObject s=all.getJSONObject(i);if(s.isNull("deletedAt")&&(u.getQueryParameter("appId")==null||s.getString("appId").equals(u.getQueryParameter("appId")))&&(u.getQueryParameter("deviceId")==null||s.getString("deviceId").equals(u.getQueryParameter("deviceId"))))result.put(s);}return result;}
         else if(method.equals("DELETE")&&p.equals("/api/session")){db.delete(body.getString("id"));resetActiveStart();}
         else if(method.equals("DELETE")&&p.equals("/api/data")){if(!body.optString("confirm").equals("删除"))throw new Exception("请确认删除");JSONArray all=db.sessions();for(int i=0;i<all.length();i++)db.delete(all.getJSONObject(i).getString("id"));resetActiveStart();}
-        else if(method.equals("POST")&&p.equals("/api/week-report")){
-            String filename=body.getString("filename"), report=body.getString("content");
-            if(!filename.matches("Ztime-周报-[0-9]{4}-[0-9]{2}-[0-9]{2}\\.txt") || report.length()>128000)throw new Exception("周报内容无效");
-            java.io.File pending=new java.io.File(getCacheDir(),"weekly-report.txt");
-            java.nio.file.Files.write(pending.toPath(),("\uFEFF"+report).getBytes(StandardCharsets.UTF_8));
-            runOnUiThread(()->startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("text/plain").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,filename),701));
+        else if(method.equals("POST") && (p.equals("/api/period-report") || p.equals("/api/week-report"))){
+            String filename=body.getString("filename");
+            if(!filename.matches("Ztime-(日|周|月|年)报-[0-9]{4}-[0-9]{2}-[0-9]{2}\\.(txt|csv|pdf|png)"))throw new Exception("报告文件名无效");
+            String extension=filename.substring(filename.lastIndexOf('.')+1);
+            String mime=switch(extension){case "csv" -> "text/csv";case "pdf" -> "application/pdf";case "png" -> "image/png";default -> "text/plain";};
+            byte[] bytes;
+            if(p.equals("/api/week-report"))bytes=("\uFEFF"+body.getString("content")).getBytes(StandardCharsets.UTF_8);
+            else {
+                String encoded=body.getString("data");
+                if(encoded.length()>8000000)throw new Exception("报告文件太大");
+                bytes=android.util.Base64.decode(encoded,android.util.Base64.DEFAULT);
+            }
+            if(!savingReport.compareAndSet(false,true))throw new Exception("请先完成当前保存");
+            try{java.nio.file.Files.write(reportFile().toPath(),bytes);}
+            catch(Exception e){savingReport.set(false);throw e;}
+            runOnUiThread(()->{
+                try{startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType(mime).addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,filename),701);}
+                catch(ActivityNotFoundException e){reportFile().delete();savingReport.set(false);reportNotice("无法打开文件选择器");}
+            });
         }
         else if(method.equals("GET")&&p.equals("/api/export")){JSONArray sessions=db.sessions(),filtered=new JSONArray();for(int i=0;i<sessions.length();i++)if(sessions.getJSONObject(i).isNull("deletedAt"))filtered.put(sessions.getJSONObject(i));boolean csv="csv".equals(u.getQueryParameter("format"));String content;if(csv){StringBuilder b=new StringBuilder("\uFEFFid,device_id,app_id,app_name,start_utc,end_utc,duration_ms\r\n");for(int i=0;i<filtered.length();i++){JSONObject s=filtered.getJSONObject(i);List<String> values=Arrays.asList(s.getString("id"),s.getString("deviceId"),s.getString("appId"),s.getString("appName"),java.time.Instant.ofEpochMilli(s.getLong("start")).toString(),java.time.Instant.ofEpochMilli(s.getLong("end")).toString(),String.valueOf(s.getLong("end")-s.getLong("start")));for(int j=0;j<values.size();j++){String v=values.get(j);if(v.matches("^[=+@-].*"))v="'"+v;b.append('"').append(v.replace("\"","\"\"")).append('"');if(j<values.size()-1)b.append(',');}b.append("\r\n");}content=b.toString();}else content=new JSONObject().put("schemaVersion",1).put("settings",db.settings()).put("devices",db.devices()).put("sessions",filtered).toString(2);exportContent=content;String mime=csv?"text/csv":"application/json",filename="time-ledger."+(csv?"csv":"json");runOnUiThread(()->startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType(mime).addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,filename),700));return new JSONObject().put("saved",true);}
         else throw new Exception("接口不存在");
         return new JSONObject().put("ok",true);
     }
+    private final java.util.concurrent.atomic.AtomicBoolean savingReport=new java.util.concurrent.atomic.AtomicBoolean();
+    private java.io.File reportFile(){return new java.io.File(getCacheDir(),"period-report.tmp");}
     private void reportNotice(String message){runOnUiThread(()->web.evaluateJavascript("window.ledgerReportNotice("+JSONObject.quote(message)+")",null));}
     private void resetActiveStart()throws Exception{JSONObject s=db.object("captureState",new JSONObject());s.put("start",System.currentTimeMillis());db.put("captureState",s);db.put("captureCursor",System.currentTimeMillis());}
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){super.onActivityResult(requestCode,resultCode,data);if(requestCode==701){
-        java.io.File pending=new java.io.File(getCacheDir(),"weekly-report.txt");
-        if(resultCode!=RESULT_OK||data==null||data.getData()==null){pending.delete();reportNotice("已取消保存");return;}
+        java.io.File pending=reportFile();
+        if(resultCode!=RESULT_OK||data==null||data.getData()==null){pending.delete();savingReport.set(false);reportNotice("已取消保存");return;}
         tasks.execute(()->{
             try(var out=getContentResolver().openOutputStream(data.getData(),"wt")){
                 if(out==null)throw new java.io.IOException();
                 java.nio.file.Files.copy(pending.toPath(),out);
-            }catch(Exception e){reportNotice("周报保存失败，请重试");return;}
-            finally{pending.delete();}
-            reportNotice("周报已保存");
+            }catch(Exception e){reportNotice("报告保存失败，请重试");return;}
+            finally{pending.delete();savingReport.set(false);}
+            reportNotice("报告已保存");
         });
         return;
     }if(requestCode==700){if(resultCode==RESULT_OK&&data!=null&&exportContent!=null){String text=exportContent;tasks.execute(()->{try(var out=getContentResolver().openOutputStream(data.getData())){if(out!=null)out.write(text.getBytes(StandardCharsets.UTF_8));}catch(Exception ignored){}});}return;}IntentResult result=IntentIntegrator.parseActivityResult(requestCode,resultCode,data);if(result!=null&&result.getContents()!=null)web.evaluateJavascript("window.ledgerPairUri("+JSONObject.quote(result.getContents())+")",null);}

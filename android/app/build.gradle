@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 android {
     namespace 'org.timeledger.app'
     compileSdk 35
-    defaultConfig { applicationId 'org.timeledger.app'; minSdk 28; targetSdk 35; versionCode 16; versionName '0.2.14' }
+    defaultConfig { applicationId 'org.timeledger.app'; minSdk 28; targetSdk 35; versionCode 17; versionName '0.2.29' }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     signingConfigs { debug { storeFile file('../../.tools/debug.keystore') } }
     sourceSets { main { assets.srcDirs = ["$buildDir/generated/sharedAssets"] } }
@@ -11,10 +11,12 @@ android {
 tasks.register('prepareSharedWeb') {
     inputs.dir("$rootDir/../web")
     inputs.dir("$rootDir/../shared")
+    inputs.dir("$rootDir/../assets/app-icons/catalog")
     outputs.dir("$buildDir/generated/sharedAssets/web")
     doLast {
         copy { from "$rootDir/../web"; into "$buildDir/generated/sharedAssets/web" }
         copy { from "$rootDir/../shared"; into "$buildDir/generated/sharedAssets/web/shared" }
+        copy { from "$rootDir/../assets/app-icons/catalog"; include "**/*.png"; into "$buildDir/generated/sharedAssets/web/app-icons" }
         def index = file("$buildDir/generated/sharedAssets/web/index.html")
         index.text = index.getText('UTF-8').replace('href="/style.css"', 'href="./style.css"').replace('src="/app.js"', 'src="./app.js"')
     }
