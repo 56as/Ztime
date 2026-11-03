@@ -1,3 +1,4 @@
+import {defaultTiming,validateTiming} from './timing.js';
 import {validDesktopLayout} from '../shared/desktop-card-layout.js';
 import {validCardLayout} from '../shared/period-layout.js';
 import {periodBounds,periodStats} from '../shared/period.js';
@@ -29,6 +30,14 @@ export async function createApp(options={}){
  const cookie=randomBytes(32).toString('hex');
  async function route(method,url,body={}){
   const u=new URL(url,'http://localhost');
+  if(u.pathname==='/api/timing' && method==='PUT'){
+   const timing=validateTiming(body);
+   collector.resetTracking();store.set('timing',timing);return timing;
+  }
+  if(u.pathname==='/api/idle-history'){
+   if(method==='GET')return collector.history.recent(collector.episode);
+   if(method==='PUT'){collector.history.restore(body.episode,body.count,collector.episode);return {ok:true};}
+  }
   if(u.pathname==='/api/behavior'){
    if(method==='GET')return behavior.read(u.searchParams.get('anchor'),u.searchParams.get('mode'));
    if(method==='PUT')return behavior.change(body);
@@ -40,7 +49,7 @@ export async function createApp(options={}){
    const rows=store.db.prepare('SELECT * FROM sessions WHERE deleted_at IS NULL AND start<? AND end>?').all(bounds.end,bounds.start).map(row=>store.decode(row));
    return periodStats(rows,store.devices(),settings,from,to,params.get('mode'),params.get('scope')||'all',now,true);
   }
-  if(method==='GET'&&u.pathname==='/api/summary')return {...store.summary(u.searchParams.get('date')||undefined,u.searchParams.has('weekDate')?Math.min(Date.now(),dayBounds(u.searchParams.get('weekDate'),store.get('settings')).end-1):Date.now()),version:options.version??sourceVersion,ledgerSequence:store.get('sequence',0),periodLayout:store.get('periodLayout'),browser:browser.status(),autostart:options.autostart?.get()??null,sync:{port:sync.port,addresses:sync.addresses(),error:syncError}};
+  if(method==='GET'&&u.pathname==='/api/summary')return {...store.summary(u.searchParams.get('date')||undefined,u.searchParams.has('weekDate')?Math.min(Date.now(),dayBounds(u.searchParams.get('weekDate'),store.get('settings')).end-1):Date.now()),timing:store.get('timing',defaultTiming),version:options.version??sourceVersion,ledgerSequence:store.get('sequence',0),periodLayout:store.get('periodLayout'),browser:browser.status(),autostart:options.autostart?.get()??null,sync:{port:sync.port,addresses:sync.addresses(),error:syncError}};
   if(method==='POST'&&u.pathname==='/api/browser')return browser.configure(body.enabled===true);
   if(method==='PUT'&&u.pathname==='/api/appearance'){if(!validAppearance(body))throw new Error('外观选项无效');store.set('appearance',{theme:body.theme,accentColor:body.accentColor});return {ok:true};}
   if(method==='POST'&&u.pathname==='/api/autostart'){if(!options.autostart)throw new Error('开机启动仅在桌面程序中设置');options.autostart.set(body.enabled===true);return {ok:true};}
@@ -63,8 +72,8 @@ export async function createApp(options={}){
     .all(params.get('deviceId'),params.get('appId'),end,start).map(row=>store.decode(row));
   }
   if(method==='GET'&&u.pathname==='/api/sessions')return store.sessions().filter(s=>!s.deletedAt&&(!u.searchParams.get('appId')||s.appId===u.searchParams.get('appId'))&&(!u.searchParams.get('deviceId')||s.deviceId===u.searchParams.get('deviceId'))).slice(0,500);
-  if(method==='DELETE'&&u.pathname==='/api/session'){store.markDeleted(body.id);collector.active=null;return {ok:true};}
-  if(method==='DELETE'&&u.pathname==='/api/data'){if(body.confirm!=='删除')throw new Error('请输入“删除”确认');store.transaction(()=>{for(const s of store.sessions())store.markDeleted(s.id);});collector.active=null;return {ok:true};}
+  if(method==='DELETE'&&u.pathname==='/api/session'){store.markDeleted(body.id);collector.resetTracking();return {ok:true};}
+  if(method==='DELETE'&&u.pathname==='/api/data'){if(body.confirm!=='删除')throw new Error('请输入“删除”确认');store.transaction(()=>{for(const s of store.sessions())store.markDeleted(s.id);store.db.exec('DELETE FROM idle_parts');});collector.resetTracking();return {ok:true};}
   if(method==='GET'&&u.pathname==='/api/export'){
    const rows=store.sessions().filter(s=>!s.deletedAt);const csv=v=>'"'+String(/^[=+\-@]/.test(String(v))?"'"+v:v).replaceAll('"','""')+'"';const format=u.searchParams.get('format');return format==='csv'?{filename:'time-ledger.csv',type:'text/csv',content:'\uFEFF'+[['id','device_id','app_id','app_name','start_utc','end_utc','duration_ms'],...rows.map(s=>[s.id,s.deviceId,s.appId,s.appName,new Date(s.start).toISOString(),new Date(s.end).toISOString(),s.end-s.start])].map(r=>r.map(csv).join(',')).join('\r\n')}:{filename:'time-ledger.json',type:'application/json',content:JSON.stringify({schemaVersion:1,exportedAt:new Date().toISOString(),settings:store.get('settings'),devices:store.devices(),sessions:rows},null,2)};
   }

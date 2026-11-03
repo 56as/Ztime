@@ -3,20 +3,50 @@ import { createInterface } from 'node:readline';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
+import {defaultTiming,scheduled,IdleHistory} from './timing.js';
+
 export class Collector {
- constructor(store,hostFor=()=>null,rememberIcon=()=>{}){this.rememberIcon=rememberIcon;this.store=store;this.hostFor=hostFor;this.active=null;this.last=0;this.process=null;this.state='starting';}
- sample(value,now=Date.now()){
-  if(this.store.get('paused',false)){this.active=null;this.state='paused';return;}
-  if(now-this.last>10000)this.active=null;
+ constructor(store,hostFor=()=>null,rememberIcon=()=>{}){this.rememberIcon=rememberIcon;this.store=store;this.hostFor=hostFor;this.active=null;this.last=0;this.process=null;this.state='starting';this.history=new IdleHistory(store);}
+ resetTracking(){this.active=null;this.foreground=null;this.episode=null;this.last=0;}
+ sample(value,now=Date.now()){return this.store.transaction(()=>this.track(value,now));}
+ track(value,now){
+  if(this.store.get('paused',false)){this.resetTracking();this.state='paused';return;}
+  const config=this.store.get('timing',defaultTiming),zone=this.store.get('settings').timeZone;
+  if(!this.last||now<this.last||now-this.last>10000){this.resetTracking();this.since=now;}
   if(value.iconSource)this.rememberIcon(value.iconSource);
-  const site=value.state==='active'?this.hostFor(value.appId,now):null;
-  if(this.active&&(this.active.site!==site||value.state!=='active'||value.appId!==this.active.appId)){this.active.end=now;this.store.write(this.active);this.active=null;}
-  this.last=now;this.state=value.state;
-  if(value.state!=='active'||!value.appId){this.active=null;this.store.set('collector',{state:value.state,lastSample:now});return;}
-  if(!this.active||this.active.appId!==value.appId)this.active={id:randomUUID(),deviceId:this.store.device.id,appId:value.appId,appName:value.appName,site,start:now,end:now};
-  this.active.end=now;
-  this.store.write(this.active);
-  this.store.set('collector',{state:'active',lastSample:now,appName:value.appName});
+  const app=value.state==='active'&&value.appId?{appId:value.appId,appName:value.appName,site:this.hostFor(value.appId,now)}:null;
+  const idle=app&&config.auto&&Number.isFinite(value.idleMs)&&value.idleMs>=config.limit*60000;
+  const lastInput=Math.max(this.since,now-(value.idleMs>=0?value.idleMs:0));
+  if(idle && !this.episode){
+   this.episode=randomUUID();
+   this.history.rewind(this.episode,lastInput,now);this.active=null;
+  }
+  // Attribute each interval to the previous foreground window. Split at input
+  // and minute boundaries so a scheduled break never becomes restorable idle.
+  for(let at=this.last||now;this.foreground&&at<now;){
+   const stop=Math.min(now,(Math.floor(at/60000)+1)*60000,lastInput>at?lastInput:now);
+   const absent=this.episode && (idle?at>=lastInput:at<lastInput||!app);
+   if(scheduled(at,config,zone)){
+    this.history.add('schedule',this.foreground,at,stop);this.active=null;
+   }
+   else if(absent){this.history.add(this.episode,this.foreground,at,stop);this.active=null;}
+   else this.record(this.foreground,at,stop);
+   at=stop;
+  }
+  if(!idle)this.episode=null;
+  const blocked=scheduled(now,config,zone);
+  if(!app||idle||blocked)this.active=null;
+  else this.record(app,now,now);
+  this.foreground=app;this.last=now;
+  if(!app)this.since=now;
+  this.state=app?(blocked?'scheduled':idle?'idle':'active'):value.state;
+  this.store.set('collector',{state:this.state,lastSample:now,...(this.state==='active'?{appName:app.appName}:{})});
+ }
+ record(app,start,end){
+  if(!this.active||this.active.appId!==app.appId||this.active.site!==app.site||this.active.end!==start)
+   this.active={...app,id:randomUUID(),deviceId:this.store.device.id,start,end};
+  else if(this.active.end===end)return;
+  this.active.end=end;this.store.write(this.active);
  }
  start(){
   if(process.platform!=='win32'){this.store.set('collector',{state:'unsupported'});return;}
@@ -26,6 +56,6 @@ export class Collector {
   this.process.on('error',()=>this.store.set('collector',{state:'error'}));
   this.process.on('exit',()=>{this.active=null;if(!this.stopped)this.store.set('collector',{state:'stopped'});});
  }
- pause(paused){if(this.active&&Date.now()-this.last<=10000){this.active.end=Date.now();this.store.write(this.active);}this.active=null;this.store.set('paused',paused);this.store.set('collector',{state:paused?'paused':'starting'});}
+ pause(paused){this.resetTracking();this.store.set('paused',paused);this.store.set('collector',{state:paused?'paused':'starting'});}
  stop(){this.stopped=true;this.active=null;this.process?.kill();}
 }
