@@ -59,3 +59,33 @@
 /* Optional desktop behavior motion study. */
 .behavior-motion:not(.dark) .behavior {--bg:#f5f3f0;--line:#e7e2dc;--surface:#fffefd}
 .behavior-motion .behavior .panel {border-color:var(--line);box-shadow:0 3px 14px #53351908}
+
+/* Brand study: the same cream field and graphite ink as the original launcher artwork. */
+body.desktop-v2.hourglass-study:not(.dark) {
+  --sand:#fbf6e9;--ink:#2f2f33;--bg:#f2efe7;--surface:#fffdf8;--text:#2f2f33;
+  --muted:#706a60;--line:#d9d4c8;--accent:#2f2f33!important;--tint:#e8e3d7!important;
+  background:var(--bg);color:var(--text)
+}
+.hourglass-study:not(.dark) .sidebar {background:#f8f5ec;border-color:var(--line)}
+.hourglass-study:not(.dark) .sidebar .nav button.active {color:var(--ink);background:#e6e1d5}
+.hourglass-study .behavior > header {position:relative;isolation:isolate;display:grid;grid-template-columns:1fr auto;min-height:128px;padding:20px 25px;box-sizing:border-box;overflow:hidden;border:1px solid var(--line);border-radius:22px;background:var(--sand,var(--surface))}
+.hourglass-study .sand-signature {font-size:12px;color:var(--muted);letter-spacing:.1em}
+.hourglass-study .behavior h1 {font-size:40px;line-height:1.2;letter-spacing:-.04em;margin:6px 0 0}
+.hourglass-study .sand-seal {grid-area:1/2;align-self:center;justify-self:end;margin-right:2px}
+.hourglass-study .sand-seal img {display:block;width:96px;height:96px}
+.hourglass-study #rules-open {grid-area:1/1;justify-self:end;margin-right:25px}
+.hourglass-study .behavior > header > div:first-child {grid-area:1/1;justify-self:start}
+.hourglass-study:not(.dark) :is(#rules-open,#purpose-form button) {border:0;border-radius:18px;background:#2f2f33;color:#fbf6e9;padding:8px 17px}
+.hourglass-study:not(.dark) .behavior .panel {background:var(--surface);border:1px solid var(--line);border-radius:19px;box-shadow:none}
+.hourglass-study .behavior .behavior-summary {border-top:1px solid var(--line)!important}
+.hourglass-study .behavior-summary .behavior-head {padding-bottom:12px;border-bottom:1px solid var(--line)}
+.hourglass-study .sand-total {display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.hourglass-study .sand-total b {font:520 32px/1.1 Georgia,serif;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.hourglass-study .sand-total :is(small,span) {font-size:12px;color:var(--muted)}
+.hourglass-study .sand-total small {margin-right:4px}
+.hourglass-study .behavior .purpose-track {height:9px;border-radius:8px}
+.hourglass-study .behavior #purpose-totals button {background:var(--bg);border:0;border-radius:12px}
+.hourglass-study #purpose-form input {min-height:34px;padding:5px 12px;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:10px}
+.hourglass-study #purpose-form input:focus {outline:2px solid var(--accent);outline-offset:2px}
+.hourglass-study .behavior :is(#period-modes,#session-devices,#timeline-style) {border-radius:12px;background:var(--bg)}
+.hourglass-study .behavior :is(#period-modes,#session-devices,#timeline-style) button {border-radius:9px}

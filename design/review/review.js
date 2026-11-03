@@ -618,7 +618,17 @@ function applySecondDesktopDraft(d,pageId){
     card.innerHTML='<h2>浏览器识别</h2><button data-action="design-extension">启用并生成连接码</button><p id="design-connection" hidden>连接码示意 · 在扩展弹窗中输入</p>';
     d.querySelector('.devices-view').append(card);
   }
-  if(pageId==='behavior' && new URLSearchParams(location.search).get('proposal')==='motion'){
+  const proposal=new URLSearchParams(location.search).get('proposal');
+  if(pageId==='behavior' && proposal==='hourglass'){
+    d.body.classList.add('hourglass-study');
+    const header=d.querySelector('.behavior > header');
+    header.querySelector('h1').insertAdjacentHTML('beforebegin','<small class="sand-signature">Ztime · 时间手记</small>');
+    header.insertAdjacentHTML('beforeend','<div class="sand-seal"><img src="brand-icon.png" alt="Ztime 沙漏"></div>');
+    const heading=d.querySelector('.behavior-summary .behavior-head');
+    heading.insertAdjacentHTML('beforeend','<div class="sand-total"><small id="sand-period"></small><b id="sand-minutes"></b><span>分钟</span></div>');
+    d.querySelector('[data-mode=day]').click();
+  }
+  if(pageId==='behavior' && ['motion','hourglass'].includes(proposal)){
     d.body.classList.add('behavior-motion');
     const chart=d.getElementById('purpose-chart');
     let previous=chart.className;

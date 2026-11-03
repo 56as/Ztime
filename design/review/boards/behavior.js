@@ -51,6 +51,11 @@ function tally(rows){
   return [...totals].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'zh'));
 }
 function color(name){
+  if(document.body.classList.contains('hourglass-study')){
+    const inks=['#444346','#817363','#66756e','#ab7965','#796d80','#918865','#637584'];
+    const index=state.names.indexOf(name);
+    return index<0?'#aaa298':inks[index%inks.length];
+  }
   if(name===missing)return '#969da9';
   const i=state.names.indexOf(name);
   return ['#397acb','#348b74','#9a6db0','#bd8037'][i]||'hsl('+((i*131)%360)+' 46% 46%)';
@@ -184,6 +189,10 @@ function drawTimeline(rows){
 }
 function draw(){
   const [start,end]=bounds(),rows=countedSamples.filter(s=>s.date>=start&&s.date<=end);
+  if($('sand-period')){
+    $('sand-period').textContent={day:'当日记录',week:'本周记录',year:'全年记录'}[mode];
+    $('sand-minutes').textContent=String(Math.round(rows.reduce((sum,row)=>sum+row.minutes,0)));
+  }
   $('anchor-date').max=demoToday;
   $('next').disabled=end>=demoToday;
   $('anchor-date').value=anchor;$('range-label').textContent=mode==='year'?anchor.slice(0,4)+' 年':dateRange(start,end);
