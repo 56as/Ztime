@@ -992,6 +992,24 @@ function mountPeriodDashboard(d,onChange){
    return '<button data-cal="pick" data-n="'+n+'" data-style-id="cal-day-'+s+'" class="'+cl+'" aria-label="'+s+'" '+(n>today?'disabled':'')+'>'+dayOf(n)+'</button>';}).join('');
   return '<section class="pd-picker" id="pd-picker" aria-label="日期选择"><div class="pd-top"><strong>'+(p.target==='comparison'?'选择对比区间':'选择统计区间')+'</strong><button data-cal="cancel" aria-label="关闭日历">关闭</button></div><div class="pd-short"><button data-cal="today">今天</button><button data-cal="yesterday">昨天</button></div><div class="pd-month"><button data-cal="back-month" aria-label="上个月">‹</button><strong>'+yr(m)+' 年 '+(dt(m).getUTCMonth()+1)+' 月</strong><button data-cal="next-month" aria-label="下个月" '+(nextMonth(m)>today?'disabled':'')+'>›</button></div><div class="pd-grid">'+[...'一二三四五六日'].map(x=>'<small>'+x+'</small>').join('')+cells+'</div><div class="pd-inputs"><label>开始日期<input type="date" data-edge="start" max="'+iso(today)+'" value="'+p.start+'"></label><label>结束日期<input type="date" data-edge="end" max="'+iso(today)+'" value="'+p.end+'"></label></div><p class="pd-help" role="status">'+(p.error||(p.second?'再点结束日，或直接应用为单日。':'选同月起止日，最多 31 天。'))+'</p><div class="pd-end"><button data-cal="cancel">取消</button><button class="pd-primary" data-cal="apply">应用区间</button></div></section>';
  }
+ const reportNames={day:'日报',week:'周报',month:'月报',year:'年报'};
+ const entryPeriod=new URLSearchParams(location.search).get('period');
+ if(desktop && Object.hasOwn(reportNames,entryPeriod))choose(entryPeriod,today);
+ function reportPanel(values,series){
+   const used=series.filter(bin=>bin.minutes!=null);
+   const peak=used.reduce((best,bin)=>!best||bin.minutes>best.minutes?bin:best,null);
+   const max=Math.max(1,...used.map(bin=>bin.minutes));
+   const bars=used.map((bin,i)=>`<div title="${html(bin.detail)} · ${dur(bin.minutes)}"><i style="height:${100*bin.minutes/max}%"></i><small>${i%Math.ceil(used.length/6)===0?html(bin.label):''}</small></div>`).join('');
+   const appsByTime=values.map((minutes,i)=>({name:apps[i][0],minutes})).filter(a=>a.minutes>0).sort((a,b)=>b.minutes-a.minutes).slice(0,3);
+   return `<section class="pd-picker pd-report"><div class="pd-top"><h3>${reportNames[mode]}预览</h3><button data-cal="cancel" aria-label="关闭报告预览">×</button></div>
+     <p>${html(label(period))} · ${{all:'全部设备',phone:'手机',pc:'电脑'}[scope]}</p>
+     <strong class="report-total">${dur(total(values))}</strong>
+     <h4>${{day:'分时用时',week:'每日用时',month:'每日用时',year:'每月用时'}[mode]}</h4>
+     <small class="report-scale">${Number((max/60).toFixed(2))} 小时</small><div class="report-bars" role="img" aria-label="用时分布，单位小时">${bars}</div>
+     ${peak?`<p>${html(peak.detail)} 用时最多，共 ${dur(peak.minutes)}。</p>`:''}
+     <h4>主要应用</h4>${appsByTime.map(a=>`<div class="report-app"><span>${html(a.name)}</span><b>${dur(a.minutes)}</b></div>`).join('')}
+     <footer><h4>导出格式</h4>${['TXT','CSV','PDF','PNG'].map(fmt=>`<button data-cal="report-format" data-format="${fmt}">${fmt}</button>`).join(' ')}<small role="status">设计稿演示 · 使用示例数据</small></footer></section>`;
+ }
  function draw(){
   const focused=d.activeElement?.closest('.pd-modal')?selectorFor(d.activeElement):null;
   const v=vector(period),sum=total(v),series=bins(),max=Math.max(1,...series.map(x=>x.minutes||0));
@@ -1014,7 +1032,7 @@ function mountPeriodDashboard(d,onChange){
   const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
   const dateText=desktop?desktopPeriodLabel(mode,period,today):mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
   const previousIcons=desktop?[...root.querySelectorAll('.rank-label img')]:[];
-  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div>'+(desktop?desktopNavButtons('home'):'<button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button>')+'</nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">'+(desktop?'统计':'仪表盘')+'</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
+  root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div>'+(desktop?desktopNavButtons('home'):'<button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button>')+'</nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">'+(desktop?'统计':'仪表盘')+'</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button>'+(desktop && reportNames[mode]?'<button data-cal="report" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/></svg>导出'+reportNames[mode]+'</button>':'')+'<button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
   '<section class="pd-summary"><div><small>'+(desktop?{all:'设备累计',phone:'手机累计',pc:'电脑累计'}[scope]:'设备累计')+'</small><h2>'+dur(sum)+'</h2></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+
   (comparison?'<p class="pd-comp-label">'+label(comparison)+'</p><p>对比期累计　'+dur(compare)+'</p><strong>日均'+(Math.abs(delta)<0.5?'持平':(delta>0?'增加 ':'减少 ')+dur(Math.abs(delta)))+'</strong><p>本期日均 '+dur(sum/len(period))+' · 对比期日均 '+dur(compare/len(comparison))+'</p>':'<p>'+(mode==='year'?'比较上年同期的使用情况。':'可选另一月份的一段日期，比较日均用时。')+'</p>')+
   '<div class="pd-short"><button data-cal="compare">'+(mode==='year'?'对比上年同期':comparison?'更改对比日期':'选择对比日期')+'</button>'+(comparison?'<button data-cal="clear">清除对比</button>':'')+'</div></section></div></div></div>';
@@ -1039,9 +1057,9 @@ function mountPeriodDashboard(d,onChange){
     }
   }
   applyLayout(series);
-  const content=layoutDraft?layoutPanel():calendar();
+  const content=picker?.target==='report'?reportPanel(v,series):layoutDraft?layoutPanel():calendar();
   if(content){
-    const label=layoutDraft?(desktop?'统计布局':'仪表盘布局'):picker.target==='year'?'选择年份':picker.target==='comparison'?'选择对比区间':'选择统计区间';
+    const label=picker?.target==='report'?reportNames[mode]+'预览':layoutDraft?(desktop?'统计布局':'仪表盘布局'):picker.target==='year'?'选择年份':picker.target==='comparison'?'选择对比区间':'选择统计区间';
     root.firstElementChild.inert=true;
     root.insertAdjacentHTML('beforeend','<div class="pd-scrim" data-cal="dismiss"><div class="pd-modal" role="dialog" aria-modal="true" aria-label="'+label+'">'+content+'</div></div>');
     // Dialog fields are created after the dashboard. Delegate edits to the current draft.
@@ -1062,7 +1080,12 @@ function mountPeriodDashboard(d,onChange){
   if(a==='chart-style'){desktopPreview.chart=button.dataset.chart;draw();root.querySelector('[data-chart="'+desktopPreview.chart+'"]').focus({preventScroll:true});return true;}
   if(['mode','prev','next','apply-year','apply','scope'].includes(a))pointIndex=null;
   const wasOpen=!!picker || !!layoutDraft;
-  if(['layout','dates','compare'].includes(a))returnFocus=a;
+  if(['layout','dates','compare','report'].includes(a))returnFocus=a;
+  if(a==='report' && desktop && reportNames[mode])picker={target:'report'};
+  if(a==='report-format'){
+    root.querySelector('.pd-report [role=status]').textContent='示例文件 · Ztime-'+reportNames[mode]+'-'+iso(period[0])+'.'+button.dataset.format.toLowerCase();
+    return true;
+  }
   if(a==='refresh'){notice(d,'已更新示例视图');return true;}
   if(a==='layout')layoutDraft=structuredClone(layout);
   if(a==='layout-toggle')layoutDraft.find(row=>row.key===button.dataset.key).visible=!layoutDraft.find(row=>row.key===button.dataset.key).visible;
@@ -1108,7 +1131,8 @@ function mountPeriodDashboard(d,onChange){
   mode=m;period=[+a,+b];scope=sc;comparison=sane(c)&&sane(e)&&+e>=+c&&+e-+c<=366?[+c,+e]:null;picker=null;
   pointIndex=mobile && /^\d+$/.test(point) && +point<bins().length?+point:null;
   layoutDraft=t==='layout'?structuredClone(layout):null;
-  if(t==='year')picker={target:t};
+  if(t==='report' && desktop && reportNames[mode]){picker={target:t};returnFocus='report';}
+  else if(t==='year')picker={target:t};
   else if(['period','comparison'].includes(t)&&sane(mo)&&[start,end].every(x=>/^(?:\d{4}-\d{2}-\d{2})?$/.test(x)))picker={target:t,month:first(+mo),start,end,second:second==='1',error:''};
   draw();
  }

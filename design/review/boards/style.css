@@ -478,3 +478,18 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-v2 .pd-summary > div.pd-scope {order:0;align-items:stretch;gap:1px;margin-inline-start:0}
 .desktop-v2 .pd-summary .pd-range {margin-inline-start:auto;min-height:36px;white-space:nowrap}
 .desktop-v2 .pd-summary .pd-total-value {display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+
+.desktop-v2 #period-dashboard .pd-tools button[data-cal] {display:inline-flex;gap:6px;align-items:center;justify-content:center;box-sizing:border-box;height:36px;padding:0 12px;border-radius:9px;border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));background:var(--tint);color:var(--accent);font:600 13px/1 system-ui;white-space:nowrap}
+.pd-tools [data-cal=report] svg {width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pd-modal:has(.pd-report) {width:min(510px,100%)}
+.pd-report .report-total {font-size:24px}
+.pd-report h4 {margin:16px 0 8px}
+.report-bars {height:110px;display:flex;gap:3px;align-items:end;padding-bottom:20px}
+.report-bars > div {position:relative;flex:1;height:100%;display:flex;align-items:end;justify-content:center}
+.report-bars i {display:block;width:min(20px,90%);background:var(--accent);border-radius:3px 3px 0 0}
+.report-bars small {position:absolute;top:100%;font-size:10px;white-space:nowrap}
+.report-app {display:flex;justify-content:space-between;padding:4px 0}
+.pd-report footer {margin-top:16px;border-top:1px solid var(--line)}
+.pd-report footer small {display:block;margin-top:10px;color:var(--muted)}
+
+.desktop-v2 #period-dashboard .pd-tools [data-cal=refresh] {padding:0;width:36px}
