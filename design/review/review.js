@@ -322,6 +322,38 @@ function desktopNavButtons(current){
     return '<button '+target+(active?' class="active" aria-current="page"':'')+'><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="'+path+'"/></svg>'+label+'</button>';
   }).join('');
 }
+function mountIdleProposal(d,grid){
+  const panel=d.createElement('section');
+  panel.id='idle-proposal';panel.className='panel';panel.dataset.styleNative='';
+  panel.innerHTML=`<h2>排除电脑待机时间</h2><p>仅此电脑 · 方案预览</p>
+    <label><input id="idle-auto" type="checkbox" checked> 自动排除无操作时间</label>
+    <label>连续无操作 <select id="idle-limit"><option>3</option><option selected>5</option><option>10</option><option>30</option></select> 分钟后，从最后一次操作起排除，操作后恢复。</label>
+    <label><input id="idle-schedule" type="checkbox"> 屏蔽固定时段（即使有操作）</label>
+    <fieldset id="idle-hours" disabled><legend>重复时段</legend><select aria-label="重复日期"><option>工作日</option><option>每天</option><option>周末</option></select>
+      <input aria-label="开始时间" type="time" value="12:00"> 至 <input aria-label="结束时间" type="time" value="13:00"></fieldset>
+    <div class="idle-example"><strong>试算 · 周二 12:00–13:00</strong><p>ChatGPT 一直在前台。12:10 离开，12:50 回来，其余时间有操作。</p>
+    <output aria-live="polite"></output></div>`;
+  grid.append(panel);
+  function preview(){
+    const checked=id=>panel.querySelector(id).checked;
+    const scheduled=checked('#idle-schedule');
+    panel.querySelector('fieldset').disabled=!scheduled;
+    const mins=s=>s?Number(s.slice(0,2))*60+Number(s.slice(3)):NaN;
+    const [from,to]=[...panel.querySelectorAll('[type=time]')].map(el=>mins(el.value));
+    const out=panel.querySelector('output');
+    if(scheduled && (!Number.isFinite(from+to)||from===to)){out.textContent='请填写不同的起止时间。';return;}
+    let idle=0,masked=0;
+    for(let t=720;t<780;t++){
+      const inSchedule=from<to?t>=from&&t<to:t>=from||t<to;
+      if(scheduled && panel.querySelector('fieldset select').value!=='周末' && inSchedule)masked++;
+      else if(checked('#idle-auto') && 40>=Number(panel.querySelector('#idle-limit').value) && t>=730 && t<770)idle++;
+    }
+    out.textContent='计入 '+(60-idle-masked)+' 分钟　·　待机排除 '+idle+' 分钟　·　固定时段排除 '+masked+' 分钟';
+  }
+  panel.addEventListener('input',preview);preview();
+  if(new URLSearchParams(location.search).get('proposal')==='idle')requestAnimationFrame(()=>panel.scrollIntoView({block:'center'}));
+}
+
 function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2','desk-ui');
   applyPreviewTheme(d);updatePreviewRecording(d);
@@ -360,6 +392,7 @@ function applySecondDesktopDraft(d,pageId){
   grid.querySelector('.accent-picker')?.remove();
   const about=[...grid.children].find(card=>card.querySelector('h2')?.textContent==='Ztime');
   about?.remove();
+  mountIdleProposal(d,grid);
 }
 let flowTrail = '', trialMode = false, originals = new Map();
 // All synchronization here is simulated with the same two fixed example devices.

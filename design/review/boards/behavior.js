@@ -132,7 +132,13 @@ function timelineBins(rows){
   }
   return bins;
 }
-let selectedBin=null;
+let selectedBin=null,showShort=false;
+function bucketDuration(minutes){
+  const divisor=mode==='year'?1440:mode==='week'?60:1;
+  const unit=mode==='year'?' 天':mode==='week'?' 小时':' 分钟';
+  const value=minutes/divisor;
+  return (value>0 && value<0.01?'不到 0.01':Number(value.toFixed(2)))+unit;
+}
 function drawTimeline(rows){
   const plot=$('session-plot');
   plot.replaceChildren();
@@ -141,9 +147,10 @@ function drawTimeline(rows){
   const bins=timelineBins(rows).map(bin=>({...bin,minutes:bin.parts.reduce((sum,s)=>sum+s.minutes,0)}));
   const selected=bins.find(b=>b.title===selectedBin && b.parts.some(s=>s.id===selectedId))??bins.find(b=>b.parts.some(s=>s.id===selectedId));
   selectedBin=selected?.title;
-  const top=Math.max(5,Math.ceil(Math.max(...bins.map(b=>b.minutes))/5)*5);
+  const stepMinutes={day:5,week:15,year:14.4}[mode];
+  const top=Math.max(2*stepMinutes,Math.ceil(Math.max(...bins.map(b=>b.minutes))/(2*stepMinutes))*2*stepMinutes);
   const axis=element('div');axis.className='timeline-axis';
-  for(const tick of [top,top/2,0])axis.append(element('small',tick+' min'));
+  for(const tick of [top,top/2,0])axis.append(element('small',bucketDuration(tick)));
   const scroll=element('div');scroll.className='timeline-scroll';
   const columns=element('div');columns.className='timeline-columns '+chartStyle+' timeline-'+mode;
   columns.style.setProperty('--count',bins.length);
@@ -156,9 +163,9 @@ function drawTimeline(rows){
   }
   const step=mode==='day'?4:mode==='year'?Math.ceil(bins.length/7):1;
   for(const [i,bin] of bins.entries()){
-    const label=bin.title+' · '+bin.minutes+' 分钟';
+    const label=bin.title+' · '+bucketDuration(bin.minutes);
     const column=button('',()=>{
-      selectedId=bin.parts[0].id;selectedBin=bin.title;draw();
+      selectedId=(bin.parts.find(part=>samples.find(s=>s.id===part.id).minutes>=5)??bin.parts[0]).id;selectedBin=bin.title;draw();
       $(column.id)?.focus({preventScroll:true});
     });
     column.id='bucket-'+mode+'-'+i;column.className='timeline-column';column.title=label;
@@ -210,10 +217,18 @@ function draw(){
     if(Object.hasOwn(state.exceptions,s.id))controls.append(button('撤销调整',()=>{delete state.exceptions[s.id];save('本段已恢复为'+group(s)+'。');}));
     if(bucket){
       const summary=element('div');summary.className='bucket-detail';
-      summary.append(element('b',bucket.title+' · '+bucket.minutes+' 分钟'));
-      if(bucket.parts.length>1)summary.append(picker('bucket-session','选择原始时段',bucket.parts.map(part=>[part.id,part.time+' · '+part.app]),s.id,id=>{selectedId=id;draw();}));
+      summary.append(element('b',bucket.title+' · '+bucketDuration(bucket.minutes)));
+      const short=bucket.parts.filter(part=>samples.find(s=>s.id===part.id).minutes<5);
+      const list=showShort?bucket.parts:bucket.parts.filter(part=>!short.includes(part));
+      if(short.length)summary.append(button(showShort?'收起短时段':'展开短时段（'+short.length+'）',()=>{
+        showShort=!showShort;
+        if(!showShort && short.some(part=>part.id===selectedId))selectedId=bucket.parts.find(part=>!short.includes(part))?.id??selectedId;
+        draw();
+      }));
+      if(list.length && (list.length>1 || !list.some(part=>part.id===s.id)))summary.append(picker('bucket-session','选择原始时段',list.map(part=>[part.id,part.time+' · '+part.app]),s.id,id=>{selectedId=id;draw();}));
       $('session-list').append(summary);
     }
+    row.hidden=s.minutes<5 && !showShort;
     row.append(element('small',(mode==='year'?monthDay(s.date)+' ':'')+s.time),info,controls);$('session-list').append(row);
   }
   $('rule-list').replaceChildren(...[...new Set(countedSamples.map(s=>s.app))].map((app,i)=>{
@@ -240,7 +255,7 @@ document.addEventListener('reveal-behavior-note',event=>{
   const selector=event.detail;
   if(selector==='#purpose-chart > button:nth-of-type(3)'){mode='week';anchor=demoToday;}
   const s=countedSamples.find(s=>['#session-','#override-','#point-'].some(prefix=>selector.startsWith(prefix+s.id)));
-  if(s){anchor=s.date;mode=selector.startsWith('#point-')?'day':'week';device='全部';selectedId=s.id;selectedBin=null;}
+  if(s){if(s.minutes<5)showShort=true;anchor=s.date;mode=selector.startsWith('#point-')?'day':'week';device='全部';selectedId=s.id;selectedBin=null;}
   const cell=selector.match(/^#cell-(\d{4}-\d{2}-\d{2})/);if(cell){anchor=cell[1];mode='year';}
   filter=null;draw();
   if(selector==='#purpose-rules > p:nth-of-type(1)'||document.querySelector(selector)?.closest('#purpose-rules')){

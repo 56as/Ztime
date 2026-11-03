@@ -493,3 +493,11 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .pd-report footer small {display:block;margin-top:10px;color:var(--muted)}
 
 .desktop-v2 #period-dashboard .pd-tools [data-cal=refresh] {padding:0;width:36px}
+
+#idle-proposal {grid-column:1/-1;order:5}
+#idle-proposal label {display:block;margin:12px 0}
+#idle-proposal input[type=checkbox] {width:auto;vertical-align:middle}
+#idle-proposal fieldset {display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px}
+#idle-proposal fieldset input {width:auto}
+.idle-example {padding:14px;margin-top:16px;border-radius:10px;background:var(--bg)}
+.idle-example output {display:block;margin-top:8px;font-weight:600}
