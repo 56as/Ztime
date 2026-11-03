@@ -55,7 +55,7 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/api/notes":
             return self.reply(200, read_notes())
         name = route[1:] or "index.html"
-        if name not in {"index.html", "review.css", "review.js", "boards/style.css", "boards/app-icons.svg", "boards/brand-icon.png", "boards/behavior.js", "boards/behavior.css"} and not re.fullmatch(r"reference/0\.2\.24/(day|week|month|year|report|behavior|devices|settings)\.png", name) and not re.fullmatch(r"boards/rank-icons/(chatgpt|chrome|weixin|code|excel|word|rustdesk|tailscale|taskmgr|photos|qq|alipay|bilibili|meituan|tailscale-phone)\.png", name) and not re.fullmatch("boards/" + board + r"\.html", name):
+        if name not in {"index.html", "review.css", "review.js", "boards/style.css", "boards/app-icons.svg", "boards/brand-icon.png", "boards/behavior.js", "boards/behavior.css"} and not re.fullmatch(r"reference/[0-9]+\.[0-9]+\.[0-9]+/((day|week|month|year)(-report)?|report|behavior|devices|settings)\.png", name) and not re.fullmatch(r"boards/rank-icons/(chatgpt|chrome|weixin|code|excel|word|rustdesk|tailscale|taskmgr|photos|qq|alipay|bilibili|meituan|tailscale-phone)\.png", name) and not re.fullmatch("boards/" + board + r"\.html", name):
             return self.reply(404, {})
         file = ROOT / name
         mime = {".js": "text/javascript", ".html": "text/html; charset=utf-8", ".css": "text/css", ".png": "image/png", ".svg": "image/svg+xml"}

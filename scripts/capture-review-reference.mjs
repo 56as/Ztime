@@ -34,7 +34,9 @@ try{
   await page.locator('#period-view[aria-busy=false] .desktop-rank-row').first().waitFor();
   await page.locator('.desktop-rank-row img').evaluateAll(imgs=>Promise.all(imgs.map(img=>img.decode())));
   await shot(mode);
-  if(mode==='week'){await page.locator('[data-tool=report]').click();await page.locator('#dialog[open] .report-image svg').waitFor();await shot('report');await page.keyboard.press('Escape');}
+  await page.locator('[data-tool=report]').click();
+  await page.locator('#dialog[open] .report-image svg').waitFor();
+  await shot(mode+'-report');await page.keyboard.press('Escape');
  }
  for(const [key,ready] of [['behavior','#purpose-chart'],['devices','#extension-settings, [data-action=pair]'],['settings','#timeZone']]){
   await page.locator('[data-page='+key+']').click();await page.locator(ready).first().waitFor();await shot(key);

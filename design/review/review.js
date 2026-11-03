@@ -198,28 +198,22 @@ function pageTitle(id) {
   return titles[id] || ({week:'每周（历史批注）','week-edit':'每周编辑（历史批注）'})[id];
 }
 // The reference comes from a packaged Windows build, independent of the editable board.
-const referenceLabels={day:'日统计',week:'周统计',month:'月统计',year:'年统计',report:'周报预览',behavior:'行为',devices:'设备',settings:'设置'};
+const referenceLabels={day:'日统计',week:'周统计',month:'月统计',year:'年统计','day-report':'日报预览','week-report':'周报预览','month-report':'月报预览','year-report':'年报预览',behavior:'行为',devices:'设备',settings:'设置'};
 function showReference(key,detail=''){
   const panel=$('reference');
   panel.hidden=!referenceLabels[key];
   if(panel.hidden)return;
-  const src='reference/0.2.24/'+key+'.png';
+  const src='reference/0.2.25/'+key+'.png';
   $('reference-thumb').src=src;
   $('reference-caption').textContent=referenceLabels[key]+' · '+(detail||'默认视图');
-  $('reference-difference').textContent=({
-    report:'设计稿按所选设备预览；正式周报合计所有设备，另有可展开的文字明细。',
-    week:'导出周报：设计稿为浅蓝底、36 px；正式版为浅灰底、38 px。',
-    behavior:'同尺寸下，正式版标题和两张卡片比设计稿低 12 px。',
-    devices:'浏览器识别关闭时可启用；启用后，正式版显示重新生成连接码和停用识别。',
-    settings:'已核对主要控件与首行两张卡片的位置。'
-  })[key]||'日报、月报和年报目前仅在设计稿中可预览。';
-  $('reference-title').textContent='Windows 0.2.24 · '+referenceLabels[key];
+  $('reference-difference').textContent=key.endsWith('-report')?'正式版支持 TXT、CSV、PDF 和 PNG，可展开查看文字明细。':'截图使用全部设备和默认布局。';
+  $('reference-title').textContent='Windows 0.2.25 · '+referenceLabels[key];
 }
 $('reference-thumb').onload=()=>{$('reference-open').hidden=false;$('reference-fallback').hidden=true;};
 $('reference-thumb').onerror=()=>{
   $('reference-open').hidden=true;
-  if(location.port==='41875'){
-    const url=new URL(location.href);url.port='41876';
+  if(['41875','41876'].includes(location.port)){
+    const url=new URL(location.href);url.port='41877';
     const mode=doc()?.querySelector('[data-cal=mode][aria-pressed=true]')?.dataset.mode;
     if(mode)url.searchParams.set('period',mode);
     $('reference-fallback').href=url.href;$('reference-fallback').hidden=false;
@@ -336,7 +330,7 @@ function applySecondDesktopDraft(d,pageId){
     nav.setAttribute('aria-label','主导航');
     nav.innerHTML=desktopNavButtons(pageId);
     const version=d.createElement('small');
-    version.id='desktop-version';version.textContent='版本 0.2.24';
+    version.id='desktop-version';version.textContent='版本 0.2.25';
     d.querySelector('.sidebar').append(version);
   }
 
@@ -1043,9 +1037,8 @@ function mountPeriodDashboard(d,onChange){
  }
  function draw(){
   if(desktop && currentDraft()){
-    const weeklyPreview=picker?.target==='report' && mode==='week';
-    const detail=weeklyPreview?'正式版包含图文周报和可展开的文字明细':picker?.target==='report'?'正式版没有此报告，显示统计页':mode==='week'?'正式版仅此周期有导出按钮':'正式版此周期没有导出按钮';
-    showReference(weeklyPreview?'report':mode,detail);
+    const preview=picker?.target==='report';
+    showReference(preview?mode+'-report':mode,preview?'报告预览':'默认视图');
   }
   const focused=d.activeElement?.closest('.pd-modal')?selectorFor(d.activeElement):null;
   const v=vector(period),sum=total(v),series=bins(),max=Math.max(1,...series.map(x=>x.minutes||0));
@@ -1078,7 +1071,7 @@ function mountPeriodDashboard(d,onChange){
     const total=summary.firstElementChild;total.className='pd-total-value';
     summary.append(summary.querySelector('.pd-scope'),controls.querySelector('.pd-modes'),controls.querySelector('.pd-range'),total);
     controls.remove();
-    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.24';
+    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.25';
     root.querySelector('.pd-nav').append(version);
   }
   if(mobile){
