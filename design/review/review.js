@@ -117,6 +117,17 @@ function bindDesktopPoints(card,series,{pointIndex,onSelect,dur,enabled=()=>true
    card.addEventListener('keydown',e=>{if(e.key==='Escape' && !detail.hidden){const index=pointIndex;close();points[index]?.focus();e.stopPropagation();}});
    if(pointIndex!==null && series[pointIndex]?.minutes!=null)inspect(pointIndex);
  }
+
+function desktopPeriodLabel(mode,[a,b],today){
+ const date=n=>new Date(n*86400000);
+ const year=n=>date(n).getUTCFullYear();
+ const format=(n,options)=>new Intl.DateTimeFormat('zh-CN',{timeZone:'UTC',...options}).format(date(n));
+ if(mode==='year')return year(a)+'年';
+ if(mode==='month')return format(a,{year:'numeric',month:'long'});
+ const withYear=year(a)!==year(today)||year(a)!==year(b);
+ const day=n=>format(n,{month:'long',day:'numeric',...(withYear?{year:'numeric'}:{})});
+ return day(a)+(a===b?'':'到'+day(b));
+}
 // @generated desk-preview:end
 // All state lives in the current fixture document; no calls to the product or the notes API.
 const timers=new WeakMap();
@@ -825,15 +836,6 @@ function mountPeriodDashboard(d,onChange){
   return [a,Math.min(b,today)];
  };
  const label=r=>len(r)===1?stamp(r[0]):stamp(r[0])+' – '+short(r[1]);
- function desktopDateLabel(){
-   const [a,b]=period;
-   const fmt=(n,opts)=>new Intl.DateTimeFormat('zh-CN',{timeZone:'UTC',...opts}).format(dt(n));
-   if(mode==='year')return yr(a)+'年';
-   if(mode==='month')return fmt(a,{year:'numeric',month:'long'});
-   const withYear=yr(a)!==yr(today)||yr(a)!==yr(b);
-   const formatDay=n=>fmt(n,{month:'long',day:'numeric',...(withYear?{year:'numeric'}:{})});
-   return formatDay(a)+(a===b?'':'到'+formatDay(b));
- }
  const root=d.createElement('section');root.id='period-dashboard';root.hidden=true;d.body.append(root);
  let mode='day',period=[today,today],comparison=null,scope='all',picker=null;
  const desktop=currentDraft();
@@ -1010,7 +1012,7 @@ function mountPeriodDashboard(d,onChange){
    return '<div class="pd-app"><span>'+name+'</span><small>'+device+'</small><b>'+dur(m)+'</b><i class="rank-track"><i style="width:'+percent+'%"></i></i></div>';
   }).join('');
   const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
-  const dateText=desktop?desktopDateLabel():mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
+  const dateText=desktop?desktopPeriodLabel(mode,period,today):mobile && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
   const previousIcons=desktop?[...root.querySelectorAll('.rank-label img')]:[];
   root.innerHTML='<div class="pd-layout"><nav class="pd-nav" aria-label="主导航"><div class="pd-brand"><img src="brand-icon.png" alt=""> Ztime</div>'+(desktop?desktopNavButtons('home'):'<button aria-current="page" data-cal="home">仪表盘</button><button data-page="devices">设备</button><button data-page="settings">设置</button>')+'</nav><div class="pd-main"><header class="pd-header"><div><h1 id="pd-heading">'+(desktop?'统计':'仪表盘')+'</h1>'+recording+'</div><div class="pd-tools"><button data-cal="layout" aria-haspopup="dialog">布局</button><button data-cal="refresh" aria-label="更新" title="更新">'+refreshGlyph+'</button></div></header><section class="pd-controls"><div class="pd-modes">'+presetButtons+'</div><div class="pd-range"><button data-cal="prev" aria-label="上一期间">‹</button><button class="pd-date" aria-haspopup="dialog" data-cal="dates" aria-label="'+fullDate+'" title="'+fullDate+'">'+dateText+' ▾</button><button data-cal="next" aria-label="下一期间" '+(period[1]>=today?'disabled':'')+'>›</button></div></section>'+
   '<section class="pd-summary"><div><small>'+(desktop?{all:'设备累计',phone:'手机累计',pc:'电脑累计'}[scope]:'设备累计')+'</small><h2>'+dur(sum)+'</h2></div><div class="pd-scope">'+[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([k,v])=>'<button data-cal="scope" data-scope="'+k+'" aria-pressed="'+(scope===k)+'">'+v+'</button>').join('')+'</div></section><section class="pd-card"><div class="pd-top"><h3>'+({时:'分时用时',日:'每日趋势',月:'全年趋势'})[barUnit]+'</h3><small>单位：小时</small></div><div class="pd-plot"><div class="pd-axis"><span>'+(max/60).toFixed(1)+'</span><span>0</span></div><div class="pd-bars">'+bars+'</div></div></section><div class="pd-bottom"><section class="pd-card"><h3>应用排行</h3>'+ranking+'</section><section class="pd-card"><h3>期间对比</h3>'+

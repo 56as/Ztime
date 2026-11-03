@@ -90,3 +90,14 @@ export function bindDesktopPoints(card,series,{pointIndex,onSelect,dur,enabled=(
    card.addEventListener('keydown',e=>{if(e.key==='Escape' && !detail.hidden){const index=pointIndex;close();points[index]?.focus();e.stopPropagation();}});
    if(pointIndex!==null && series[pointIndex]?.minutes!=null)inspect(pointIndex);
  }
+
+export function desktopPeriodLabel(mode,[a,b],today){
+ const date=n=>new Date(n*86400000);
+ const year=n=>date(n).getUTCFullYear();
+ const format=(n,options)=>new Intl.DateTimeFormat('zh-CN',{timeZone:'UTC',...options}).format(date(n));
+ if(mode==='year')return year(a)+'年';
+ if(mode==='month')return format(a,{year:'numeric',month:'long'});
+ const withYear=year(a)!==year(today)||year(a)!==year(b);
+ const day=n=>format(n,{month:'long',day:'numeric',...(withYear?{year:'numeric'}:{})});
+ return day(a)+(a===b?'':'到'+day(b));
+}

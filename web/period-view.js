@@ -1,6 +1,6 @@
 import {recordingStatus} from './recording-status.js';
 import {desktopTitles,desktopLayout} from './shared/desktop-card-layout.js';
-import {usageArea,shareChart,desktopUsageChart,bindDesktopPoints,desktopRankRow} from './desktop-insights.js';
+import {usageArea,shareChart,desktopUsageChart,bindDesktopPoints,desktopRankRow,desktopPeriodLabel} from './desktop-insights.js';
 import {bindPhoneUsage} from './phone-usage.js';
 import {refreshControl} from './refresh-control.js';
 import {cardTitles,defaultCardLayout,validCardLayout} from './shared/period-layout.js';
@@ -163,7 +163,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
    const scopeHtml=[['all','全部设备'],['phone','手机'],['pc','电脑']].map(([key,name])=>`<button data-cal="scope" data-scope="${key}" aria-pressed="${scope===key}">${name}</button>`).join('');
    const header=`<header class="topbar page-header"><div class="page-heading"><h1>${desktop?'统计':'仪表盘'}</h1>${desktop?recordingStatus(snapshot.collector,escape):''}</div><div class="actions"><button data-tool="layout" aria-haspopup="dialog">布局</button>${mode==='week'?'<button data-tool="report">导出周报</button>':''}${refreshControl('data-tool="refresh"')}</div></header>`;
    const fullDate=mode==='year'?yr(period[0])+' 年':label(period);
-   const dateText=!desktop && mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
+   const dateText=desktop?desktopPeriodLabel(mode,period,today):mode!=='year' && len(period)>1?short(period[0])+'–'+short(period[1]):fullDate;
    const controls=`<div class="pd-controls"><div class="pd-modes">${modesHtml}</div><div class="pd-range"><button aria-label="上一期间" data-cal="prev">‹</button><button data-cal="dates" aria-haspopup="dialog" aria-label="${fullDate}">${dateText} ▾</button><button aria-label="下一期间" data-cal="next" ${period[1]>=today?'disabled':''}>›</button></div></div>`;
    const ranking=result?.apps.map((app,index)=>{
      const device=app.platform==='android'?'手机':'电脑',percent=100*app.duration/result.apps[0].duration;
@@ -194,6 +194,12 @@ export function createPeriodView({api, escape, duration, details, report, refres
      const icons=new Map([...host.querySelectorAll('.rank-label img')].map(img=>[img.getAttribute('src'),img]));
      const template=document.createElement('template');
      template.innerHTML=header+controls+summary;
+     const toolbar=template.content.querySelector('.period-total');
+     if(toolbar){
+       const filters=template.content.querySelector('.pd-controls');
+       toolbar.append(toolbar.querySelector('.pd-modes'),filters.querySelector('.pd-modes'),filters.querySelector('.pd-range'),toolbar.querySelector('.total-value'));
+       filters.remove();
+     }
      for(const img of template.content.querySelectorAll('.rank-label img')){
        const previous=icons.get(img.getAttribute('src'));
        if(previous){img.replaceWith(previous);icons.delete(img.getAttribute('src'));}

@@ -41,10 +41,10 @@ try{
     const firstScreen=await page.locator('.default-pair').evaluate(grid=>{
       const trend=grid.querySelector('.trend-card').getBoundingClientRect();
       const rank=grid.querySelector('.ranking-card').getBoundingClientRect();
-      const controls=document.querySelector('.pd-controls').getBoundingClientRect();
+      const [scope,mode,range]=[...document.querySelector('.period-total').children].map(el=>el.getBoundingClientRect());
       const summary=document.querySelector('.period-total').getBoundingClientRect();
       return document.scrollingElement.scrollHeight===innerHeight && rank.top>trend.bottom &&
-        rank.width===trend.width && rank.bottom>innerHeight-32 && controls.bottom===summary.top;
+        rank.width===trend.width && rank.bottom>innerHeight-32 && scope.left<mode.left && mode.left<range.left && mode.top===scope.top && mode.height===scope.height;
     });
     assert.ok(firstScreen,'Default cards fill one desktop window');
   }
