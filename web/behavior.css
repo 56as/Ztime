@@ -18,7 +18,7 @@
 .behavior .year-row button:hover{outline:1px solid var(--accent)}.behavior .session-actions button{font-size:12px;color:var(--accent);border:0;background:transparent;padding:4px}
 .behavior .session-row{grid-template-columns:145px minmax(110px,1fr) auto}
 @media(max-width:850px){.behavior .session-row{grid-template-columns:1fr auto}.behavior .year-row{gap:2px}.behavior .bar-row small{font-size:11px}}
-.behavior [hidden]{display:none!important}.behavior #rule-list{max-height:320px;overflow:auto}.behavior .session-row b{overflow-wrap:anywhere}
+.behavior [hidden]{display:none!important}.behavior .session-row b{overflow-wrap:anywhere}
 
 .behavior #purpose-palette{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0;font-size:13px}
 .behavior #purpose-palette span::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--color)}
