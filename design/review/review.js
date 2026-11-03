@@ -322,43 +322,59 @@ function desktopNavButtons(current){
     return '<button '+target+(active?' class="active" aria-current="page"':'')+'><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="'+path+'"/></svg>'+label+'</button>';
   }).join('');
 }
+// @generated timing:start
+const timingLimits=[3,5,10,30];
+
+function timingCard(id='timing-card'){
+ const options=timingLimits.map(n=>`<label><input type="radio" name="idle-minutes" value="${n}"><span>${n} 分钟</span></label>`).join('');
+ return `<section id="${id}" class="panel settings-section timing-card"><h2>电脑计时</h2>
+ <div class="idle-rule"><label for="idle-auto">排除待机</label>
+ <div id="idle-limit" role="radiogroup" aria-label="待机判定时间">${options}</div><input id="idle-auto" type="checkbox" role="switch"></div>
+ <div class="idle-rule"><label for="idle-schedule">屏蔽时段</label><input id="idle-schedule" type="checkbox" role="switch"></div>
+ <div id="idle-hours" hidden><select id="idle-repeat" aria-label="重复日期"><option value="weekdays">工作日</option><option value="daily">每天</option><option value="weekends">周末</option></select>
+ <input id="idle-start" aria-label="开始时间" type="time"><span>至</span><input id="idle-end" aria-label="结束时间" type="time"><small id="idle-next"></small></div>
+ <small id="idle-error" role="status"></small></section>`;
+}
+
+function bindTiming(card,config,api,onError){
+ if(!card||!config)return;
+ const el=id=>card.querySelector('#idle-'+id);
+ const group=el('limit'), radios=[...group.querySelectorAll('input')];
+ function render(value){
+  for(const key of ['auto','schedule'])el(key).checked=value[key];
+  for(const key of ['repeat','start','end'])el(key).value=value[key];
+  radios.forEach(radio=>{radio.checked=Number(radio.value)===value.limit;});
+  group.style.setProperty('--choice',timingLimits.indexOf(value.limit));
+  group.hidden=!value.auto;el('hours').hidden=!value.schedule;
+  el('next').textContent=value.start>value.end?'次日':'';
+ }
+ render(config);
+ card.onchange=async()=>{
+  const value={auto:el('auto').checked,limit:Number(group.querySelector(':checked').value),schedule:el('schedule').checked,
+   repeat:el('repeat').value,start:el('start').value,end:el('end').value};
+  if(!value.start||!value.end||value.start===value.end){
+   if(value.schedule){el('error').textContent='请选择不同的起止时间。';return;}
+   value.start=config.start;value.end=config.end;
+  }
+  el('error').textContent='';
+  const focus=card.ownerDocument.activeElement;
+  render(value);card.inert=true;
+  try{config=await api('/api/timing','PUT',value);}
+  catch(error){onError(error.message);}
+  finally{render(config);card.inert=false;if(card.contains(focus))focus.focus({preventScroll:true});}
+ };
+}
+// @generated timing:end
 function mountIdleProposal(d,grid){
-  const panel=d.createElement('section');
-  panel.id='idle-proposal';panel.className='panel';panel.dataset.styleNative='';
-  const choices=[3,5,10,30];
-  panel.innerHTML=`<h2>电脑计时</h2>
-    <div class="idle-rule"><label for="idle-auto">排除待机</label><input id="idle-auto" type="checkbox" role="switch" checked></div>
-    <div id="idle-limit" role="radiogroup" aria-label="待机判定时间">
-      ${choices.map(n=>`<label><input type="radio" name="idle-minutes" value="${n}" ${n===5?'checked':''}><span>${n} 分钟</span></label>`).join('')}
-    </div>
-    <div class="idle-rule"><label for="idle-schedule">屏蔽时段</label><input id="idle-schedule" type="checkbox" role="switch"></div>
-    <div id="idle-hours" hidden><select aria-label="重复日期"><option>工作日</option><option>每天</option><option>周末</option></select>
-      <input aria-label="开始时间" type="time" value="12:00"><span>至</span><input aria-label="结束时间" type="time" value="13:00"><small id="idle-next"></small></div>
-    <small id="idle-error" role="status"></small>
-    <details id="review-idle-history"><summary>最近待机</summary><div class="idle-rule"><span>11月3日 12:10 · 40 分钟</span><button type="button">计入本次</button></div></details>`;
-  grid.append(panel);
-  const one=selector=>panel.querySelector(selector);
-  const auto=one('#idle-auto'),limit=one('#idle-limit'),schedule=one('#idle-schedule'),hours=one('#idle-hours');
-  const [start,end]=hours.querySelectorAll('input'),repeat=hours.querySelector('select');
-  const saved=JSON.parse(sessionStorage.getItem('ztime-review-idle')||'null');
-  if(saved){
-    auto.checked=saved.auto;schedule.checked=saved.schedule;
-    const index=choices.indexOf(Number(saved.limit));
-    if(index>=0)limit.querySelectorAll('input')[index].checked=true;
-    start.value=saved.start;end.value=saved.end;repeat.value=saved.repeat;
-  }
-  function preview(){
-    hours.hidden=!schedule.checked;limit.hidden=!auto.checked;
-    const selected=limit.querySelector(':checked').value;
-    limit.style.setProperty('--choice',choices.indexOf(Number(selected)));
-    const invalid=schedule.checked && (!start.value||!end.value||start.value===end.value);
-    one('#idle-error').textContent=invalid?'请选择不同的起止时间。':'';
-    one('#idle-next').textContent=start.value>end.value?'次日':'';
-    if(!invalid)sessionStorage.setItem('ztime-review-idle',JSON.stringify({auto:auto.checked,limit:selected,schedule:schedule.checked,repeat:repeat.value,start:start.value,end:end.value}));
-  }
-  const historyButton=one('#review-idle-history button');
-  historyButton.onclick=e=>{if(!e.defaultPrevented)historyButton.textContent=historyButton.textContent==='计入本次'?'撤销计入':'计入本次';};
-  panel.addEventListener('input',preview);preview();
+  grid.insertAdjacentHTML('beforeend',timingCard('idle-proposal'));
+  const panel=d.getElementById('idle-proposal');
+  panel.dataset.styleNative='';
+  const saved=JSON.parse(sessionStorage.getItem('ztime-review-idle')||'{}');
+  const repeatAliases={'工作日':'weekdays','每天':'daily','周末':'weekends'};
+  const config={auto:true,schedule:false,start:'12:00',end:'13:00',...saved,limit:Number(saved.limit)||5,repeat:repeatAliases[saved.repeat]||saved.repeat||'weekdays'};
+  bindTiming(panel,config,async(_path,_method,next)=>{
+    sessionStorage.setItem('ztime-review-idle',JSON.stringify(next));return next;
+  },message=>panel.querySelector('#idle-error').textContent=message);
   if(new URLSearchParams(location.search).get('proposal')==='idle')requestAnimationFrame(()=>panel.scrollIntoView({block:'center'}));
 }
 
@@ -599,7 +615,7 @@ function comparisonNote(note){
 function targetFor(note) {
   if(secondDraftNote(note)!==currentDraft())return null;
   try {
-    if(note.board==='desktop-settings' && note.id===140)return doc().querySelector('#idle-proposal h2');
+    if(note.board==='desktop-settings' && [140,144].includes(note.id))return doc().querySelector('#idle-proposal h2');
     if(note.board==='desktop-home' && currentDraft() && [9,91,127,129].includes(note.id))return doc().querySelector('.pd-summary .pd-modes');
     if(note.board==='desktop-home' && currentDraft() && note.id===10)return doc().querySelector('.pd-summary .pd-date');
     if(note.board==='desktop-home' && currentDraft() && [61,79].includes(note.id))return doc().querySelector('.pd-summary');
