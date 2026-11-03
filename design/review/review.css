@@ -6,3 +6,5 @@
 #trial-size{width:100%;font:inherit}#trial-fields[hidden]{display:none}
 
 .quick .entry-group{display:inline-flex;align-items:center;gap:10px}.entry-group b{color:#53645b;font-weight:600}
+#reference{background:#f5f7f5;border:1px solid #d5dfd6;border-radius:9px;padding:12px;margin:0 0 18px}#reference p{font-size:12px;color:#52665a;margin:5px 0}#reference-open{display:block;width:100%;padding:4px;font-size:12px}#reference img,#reference-full{display:block;width:100%;height:auto}#reference-dialog{width:min(1280px,94vw);max-height:94vh;padding:12px;border:1px solid #c6d0c8;border-radius:10px}#reference-dialog::backdrop{background:#14221bcc}#reference-dialog>div{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}#reference-full{max-height:78vh;object-fit:contain}
+#reference-open[hidden]{display:none}

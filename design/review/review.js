@@ -197,6 +197,36 @@ function pageTitle(id) {
   }
   return titles[id] || ({week:'每周（历史批注）','week-edit':'每周编辑（历史批注）'})[id];
 }
+// The reference comes from a packaged Windows build, independent of the editable board.
+const referenceLabels={day:'日统计',week:'周统计',month:'月统计',year:'年统计',report:'周报预览',behavior:'行为',devices:'设备',settings:'设置'};
+function showReference(key,detail=''){
+  const panel=$('reference');
+  panel.hidden=!referenceLabels[key];
+  if(panel.hidden)return;
+  const src='reference/0.2.24/'+key+'.png';
+  $('reference-thumb').src=src;
+  $('reference-caption').textContent=referenceLabels[key]+' · '+(detail||'默认视图');
+  $('reference-difference').textContent=({
+    report:'设计稿按所选设备预览；正式周报合计所有设备，另有可展开的文字明细。',
+    week:'导出周报：设计稿为浅蓝底、36 px；正式版为浅灰底、38 px。',
+    behavior:'同尺寸下，正式版标题和两张卡片比设计稿低 12 px。',
+    devices:'浏览器识别关闭时可启用；启用后，正式版显示重新生成连接码和停用识别。',
+    settings:'已核对主要控件与首行两张卡片的位置。'
+  })[key]||'日报、月报和年报目前仅在设计稿中可预览。';
+  $('reference-title').textContent='Windows 0.2.24 · '+referenceLabels[key];
+}
+$('reference-thumb').onload=()=>{$('reference-open').hidden=false;$('reference-fallback').hidden=true;};
+$('reference-thumb').onerror=()=>{
+  $('reference-open').hidden=true;
+  if(location.port==='41875'){
+    const url=new URL(location.href);url.port='41876';
+    const mode=doc()?.querySelector('[data-cal=mode][aria-pressed=true]')?.dataset.mode;
+    if(mode)url.searchParams.set('period',mode);
+    $('reference-fallback').href=url.href;$('reference-fallback').hidden=false;
+  }
+};
+$('reference-open').onclick=()=>{$('reference-full').src=$('reference-thumb').src;$('reference-dialog').showModal();};
+$('reference-close').onclick=()=>$('reference-dialog').close();
 let periodView=null;
 const refreshGlyph='<svg class="review-refresh-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 7v5h-5 M19.4 11a7.4 7.4 0 1 0-2 6.5"/></svg>';
 const desktopV2='desktop-v2';
@@ -416,6 +446,7 @@ function showBoard(key, feature = "") {
   device.value = mode; page.value = id;
   page.querySelector('option[value="home"]').textContent=feature===desktopV2?'统计':isDashboard(feature)?'仪表盘':'今日';
   $('sync-scenario').hidden=id!=='devices';
+  showReference(feature===desktopV2?id:null);
   clearEditor(); frame.dataset.feature=feature; resize();
   location.hash = feature?key+'/'+feature:key;
   frame.src = 'boards/' + key + '.html';
@@ -1011,6 +1042,11 @@ function mountPeriodDashboard(d,onChange){
      <footer><h4>导出格式</h4>${['TXT','CSV','PDF','PNG'].map(fmt=>`<button data-cal="report-format" data-format="${fmt}">${fmt}</button>`).join(' ')}<small role="status">设计稿演示 · 使用示例数据</small></footer></section>`;
  }
  function draw(){
+  if(desktop && currentDraft()){
+    const weeklyPreview=picker?.target==='report' && mode==='week';
+    const detail=weeklyPreview?'正式版包含图文周报和可展开的文字明细':picker?.target==='report'?'正式版没有此报告，显示统计页':mode==='week'?'正式版仅此周期有导出按钮':'正式版此周期没有导出按钮';
+    showReference(weeklyPreview?'report':mode,detail);
+  }
   const focused=d.activeElement?.closest('.pd-modal')?selectorFor(d.activeElement):null;
   const v=vector(period),sum=total(v),series=bins(),max=Math.max(1,...series.map(x=>x.minutes||0));
   const compare=comparison?total(vector(comparison)):null,delta=comparison?sum/len(period)-compare/len(comparison):null;

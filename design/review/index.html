@@ -9,7 +9,10 @@
 <span class="entry-group"><b>桌面</b><a href="#desktop-home/desktop-v2">统计</a><a href="#desktop-behavior/desktop-v2">行为</a><a href="#desktop-devices/desktop-v2">设备</a><a href="#desktop-settings/desktop-v2">设置</a></span></nav>
 <label id="sync-scenario" hidden>同步演练条件 <select id="reachability"><option value="online">两端可互访</option><option value="offline">对端暂时不可达</option></select></label>
 <div id="stage"><div id="mount"><iframe id="frame" title="Ztime 设计画板"></iframe></div></div><footer><span id="caption"></span><span>滚动画板可批注下方内容</span></footer></section>
-<aside><small>DESIGN REVIEW</small><h2>批注 <span id="count" hidden></span></h2><p id="hint">选“试改文字 / 字号”可以改标题、按钮或说明；调整布局或操作步骤，请选“添加批注”再点具体位置。</p>
+<aside><section id="reference" hidden aria-label="正式版对照"><strong>正式版对照 · Windows 0.2.24</strong>
+<p id="reference-caption"></p><p id="reference-difference"></p><button id="reference-open" aria-label="放大正式版截图"><img id="reference-thumb" alt=""><span>放大正式版截图</span></button>
+<a id="reference-fallback" hidden>打开带正式版对照的评审页</a><p>截图使用示例记录。请在设计画板上选点批注。</p></section>
+<dialog id="reference-dialog" aria-labelledby="reference-title"><div><strong id="reference-title">正式版对照</strong><button id="reference-close">关闭</button></div><img id="reference-full" alt="正式版窗口截图"></dialog><small>DESIGN REVIEW</small><h2>批注 <span id="count" hidden></span></h2><p id="hint">选“试改文字 / 字号”可以改标题、按钮或说明；调整布局或操作步骤，请选“添加批注”再点具体位置。</p>
 <p class="help">浏览时可点应用排行查看明细，或演练配对的确认、拒绝和超时。配对演练为交互提案。</p>
 <form id="editor" hidden><strong id="target"></strong><label for="kind">意见类型</label><select id="kind"><option value="UI">UI · 视觉布局</option><option value="UX">UX · 操作流程</option></select><small id="trail"></small><div id="trial-fields" hidden><label for="trial-copy">画板文字</label><textarea id="trial-copy" maxlength="300" rows="2"></textarea><label for="trial-size">字号（px，可留空沿用原值）</label><input type="number" id="trial-size" min="8" max="80" step="1"></div><label for="message">修改意见</label><textarea id="message" maxlength="2000" rows="4" placeholder="哪里不合理？你希望看到什么变化？"></textarea><div><button class="primary" type="submit">保存批注</button> <button id="cancel" type="button">取消</button></div></form>
 <div role="status" id="status"></div><div id="notes"></div></aside></main><script type="module" src="review.js"></script></body></html>
