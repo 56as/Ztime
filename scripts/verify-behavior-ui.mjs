@@ -28,6 +28,7 @@ try{
  const category=name=>page.locator('#purpose-totals button').filter({hasText:name});
  await category('学习').filter({hasText:'10 分钟'}).waitFor();
  assert.equal(await page.locator('.timeline-column').count(),7);
+ await page.locator('[data-short]').click();
  await page.getByLabel('选择原始时段').selectOption({index:1});
  await page.getByRole('button',{name:'柱状图',exact:true}).click();
  assert.equal(await page.locator('.timeline-column:enabled').first().getAttribute('aria-pressed'),'true');
@@ -38,6 +39,7 @@ try{
  await page.getByLabel('词典 · 电脑默认行为').selectOption('翻译');
  await category('翻译').filter({hasText:'8 分钟'}).waitFor();
  await category('工作').click();
+ await page.locator('[data-short]').click();
  assert.equal(await page.locator('.session-row').count(),1);
  await page.getByRole('button',{name:'撤销调整'}).click();
  await category('翻译').filter({hasText:'10 分钟'}).waitFor();
@@ -64,6 +66,7 @@ try{
  await category('未分类').filter({hasText:'35 分钟'}).waitFor();
  await page.locator('[data-device="手机"]').click();
  assert.equal(await page.locator('.timeline-column:enabled').count(),1);
+ await page.locator('[data-short]').click();
  assert.equal(await page.getByLabel('选择原始时段').locator('option').count(),35);
  await page.getByLabel('选择原始时段').selectOption({index:34});
  await page.getByLabel('调整阅读本段用途').selectOption('社交');

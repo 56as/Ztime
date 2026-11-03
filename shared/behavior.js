@@ -17,7 +17,7 @@ export function behaviorRows(sessions,settings,first,last){
   while(i<days.length&&days[i].end<=s.start)i++;
   for(let j=i;j<days.length&&days[j].start<s.end;j++){
    const day=days[j],start=Math.max(day.start,s.start),end=Math.min(day.end,s.end);
-   if(end>start)rows.push({id:s.id,date:day.date,start,end,app:s.app,platform:s.platform,category:s.override??s.rule??missing,manual:s.override!=null});
+   if(end>start)rows.push({id:s.id,date:day.date,start,end,sourceDuration:s.end-s.start,app:s.app,platform:s.platform,category:s.override??s.rule??missing,manual:s.override!=null});
   }
  }
  return rows;
