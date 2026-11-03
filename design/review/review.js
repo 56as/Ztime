@@ -594,6 +594,25 @@ function bindChoiceMotion(d){
   },true);
 }
 
+function dressHourglassPage(d){
+  const header=d.querySelector('.pd-header') || d.querySelector('.page-header,.behavior > header');
+  if(!header)return;
+  header.classList.add('sand-header');
+  if(!header.querySelector('.sand-seal')){
+    header.insertAdjacentHTML('beforeend','<div class="sand-seal sand-motion"><img src="brand-icon.png" alt="Ztime 沙漏"></div>');
+  }
+  const logo=d.querySelector('.pd-brand img') || d.querySelector('.sidebar .brand img');
+  if(logo && !logo.closest('.sand-icon')){
+    const frame=d.createElement('span');
+    frame.className='sand-icon sand-motion';logo.before(frame);frame.append(logo);
+  }
+  for(const button of d.querySelectorAll('.pd-nav button,.sidebar .nav button')){
+    if(button.hasAttribute('title'))continue;
+    const label=button.textContent.trim();
+    button.setAttribute('aria-label',label);button.title=label;
+    for(const node of [...button.childNodes])if(node.nodeType===3)node.remove();
+  }
+}
 function applySecondDesktopDraft(d,pageId){
   d.body.classList.add('desktop-v2','desk-ui');
   bindChoiceMotion(d);
@@ -621,28 +640,15 @@ function applySecondDesktopDraft(d,pageId){
   const proposal=new URLSearchParams(location.search).get('proposal');
   if(pageId==='behavior' && proposal==='hourglass'){
     d.body.classList.add('hourglass-study');
-    const header=d.querySelector('.behavior > header');
-    header.insertAdjacentHTML('beforeend','<div class="sand-seal"><img src="brand-icon.png" alt="Ztime 沙漏"></div>');
     const heading=d.querySelector('.behavior-summary .behavior-head');
     heading.insertAdjacentHTML('beforeend','<div class="sand-total"><small id="sand-period"></small><b id="sand-minutes"></b><span>分钟</span></div>');
     d.querySelector('[data-mode=day]').click();
   }
   if(proposal==='hourglass'){
-    const logo=d.querySelector('.sand-seal img') || [...d.querySelectorAll('.pd-brand img,.sidebar .brand img')].find(img=>img.offsetWidth);
-    if(logo){
-      const mark=logo.parentElement;
-      if(!mark.classList.contains('sand-seal')){
-        const frame=d.createElement('span');
-        frame.className='sand-icon';
-        logo.before(frame);frame.append(logo);
-      }
-      const frame=logo.parentElement;
-      frame.classList.add('sand-motion');
-      const visible=new IntersectionObserver(([entry])=>frame.classList.toggle('sand-paused',!entry.isIntersecting || d.hidden));
-      visible.observe(frame);
-      d.addEventListener('visibilitychange',()=>frame.classList.toggle('sand-paused',d.hidden || frame.getBoundingClientRect().bottom<=0));
-      d.defaultView.addEventListener('pagehide',()=>visible.disconnect(),{once:true});
-    }
+    d.body.classList.add('hourglass-study');
+    dressHourglassPage(d);
+    const pause=()=>d.body.classList.toggle('sand-paused',d.hidden);
+    d.addEventListener('visibilitychange',pause);pause();
   }
   if(pageId==='behavior' && ['motion','hourglass'].includes(proposal)){
     d.body.classList.add('behavior-motion');
@@ -1464,6 +1470,7 @@ function mountPeriodDashboard(d,onChange){
       draw();
     });
   }
+  if(desktop && d.body.classList.contains('hourglass-study'))dressHourglassPage(d);
   onChange();
  }
  function choose(m,n){mode=m;period=span(m,n);comparison=null;picker=null;}

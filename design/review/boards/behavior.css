@@ -61,13 +61,6 @@
 .behavior-motion .behavior .panel {border-color:var(--line);box-shadow:0 3px 14px #53351908}
 
 /* Brand study: the same cream field and graphite ink as the original launcher artwork. */
-body.desktop-v2.hourglass-study:not(.dark) {
-  --sand:#fbf6e9;--ink:#2f2f33;--bg:#f2efe7;--surface:#fffdf8;--text:#2f2f33;
-  --muted:#706a60;--line:#d9d4c8;--accent:#2f2f33!important;--tint:#e8e3d7!important;
-  background:var(--bg);color:var(--text)
-}
-.hourglass-study:not(.dark) .sidebar {background:#f8f5ec;border-color:var(--line)}
-.hourglass-study:not(.dark) .sidebar .nav button.active {color:var(--ink);background:#e6e1d5}
 .hourglass-study .behavior > header {position:relative;isolation:isolate;display:grid;grid-template-columns:1fr auto;min-height:67px;padding:7px 18px;box-sizing:border-box;overflow:hidden;border:1px solid var(--line);border-radius:22px;background:var(--sand,var(--surface))}
 .hourglass-study .behavior h1 {font-size:30px;line-height:1.2;letter-spacing:-.04em;margin:0}
 .hourglass-study .sand-seal {grid-area:1/2;align-self:center;justify-self:end;margin-right:2px}

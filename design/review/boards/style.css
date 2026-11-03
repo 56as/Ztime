@@ -714,3 +714,41 @@ body:has(#style-lab) #app {display:none}
 }
 .sand-motion.sand-paused::after {animation-play-state:paused}
 @media(prefers-reduced-motion:reduce){.sand-motion::before,.sand-motion::after{animation:none;opacity:0}}
+
+body.desktop-v2.hourglass-study:not(.dark) {
+  --sand:#fbf6e9;--ink:#2f2f33;--bg:#f2efe7;--surface:#fffdf8;--text:#2f2f33;--muted:#706a60;--line:#d9d4c8;
+  --accent:#2f2f33!important;--tint:#e8e3d7!important;background:var(--bg);color:var(--text)
+}
+.desktop-v2.hourglass-study :is(.app-shell,.pd-layout) {grid-template-columns:72px minmax(0,1fr)}
+.desktop-v2.hourglass-study .sidebar,.desktop-v2.hourglass-study #period-dashboard .pd-nav {
+  width:72px;box-sizing:border-box;padding:24px 10px;gap:5px;background:var(--sand,var(--surface));border-right:1px solid var(--line)
+}
+.desktop-v2.hourglass-study .sidebar .brand,.desktop-v2.hourglass-study #period-dashboard .pd-brand {
+  justify-content:center;display:flex;align-items:center;padding:0;margin:0 0 22px;gap:0;font-size:0
+}
+.hourglass-study .sidebar .brand strong,.hourglass-study #desktop-version {display:none}
+.desktop-v2.hourglass-study .sidebar .nav button,.desktop-v2.hourglass-study #period-dashboard .pd-nav button {
+  display:flex;align-items:center;justify-content:center;padding:0;min-height:42px;width:100%;color:var(--muted);border-radius:11px
+}
+.desktop-v2.hourglass-study .sidebar .nav button.active,.desktop-v2.hourglass-study #period-dashboard .pd-nav button.active {color:var(--text);background:var(--tint)}
+.hourglass-study .sand-header .statusbar,.hourglass-study .pd-header h1,.hourglass-study .page-header h1 {display:none}
+.desktop-v2.hourglass-study :is(.pd-header,.page-header.topbar) {
+  display:flex;align-items:center;justify-content:space-between;min-height:67px;box-sizing:border-box;gap:12px;padding:7px 18px;
+  border:1px solid var(--line);border-radius:22px;background:var(--sand,var(--surface));box-shadow:none
+}
+.hourglass-study :is(.pd-header,.page-header) > div:first-child:has(h1) {display:none}
+.hourglass-study .sand-seal img {display:block;width:49px;height:49px}
+.hourglass-study .sand-icon img {width:31px;height:31px}
+.desktop-v2.hourglass-study :is(.panel,.pd-card,.pd-summary) {background:var(--surface);border:1px solid var(--line);border-radius:19px;box-shadow:none}
+.desktop-v2.hourglass-study #period-dashboard {--pd-blue:var(--accent);background:var(--bg);color:var(--text)}
+.desktop-v2.hourglass-study #period-dashboard :is(.pd-main,.pd-layout) {background:var(--bg)}
+.desktop-v2.hourglass-study:not(.dark) :is(.pd-tools,.page-header .actions) button {border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text)}
+.desktop-v2.hourglass-study:not(.dark) :is(.devices-view,.settings-view) button.primary {background:var(--ink);color:var(--sand);border:0;border-radius:16px}
+.hourglass-study .sand-icon::before {animation:sand-sidebar-turn 8s linear infinite}
+@keyframes sand-sidebar-turn {0%{transform:rotate(-180deg);animation-timing-function:cubic-bezier(.22,.72,.22,1)} 8%,100%{transform:rotate(0)}}
+.sand-paused .sand-motion::before,.sand-paused .sand-motion::after {animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.hourglass-study .sand-icon::before {animation:none}}
+.hourglass-study #period-dashboard .rank-track {background:var(--bg)}
+.hourglass-study #period-dashboard .rank-track i,.hourglass-study #period-dashboard .rank-track span {background:var(--muted)}
+.hourglass-study .settings-view button[data-export] {background:var(--bg);color:var(--text);border:1px solid var(--line)}
+body.desktop-v2.unified.hourglass-study .devices-view > .page-header + .panel {border-top:1px solid var(--line)}
