@@ -608,7 +608,14 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 }
 .desk-ui .desktop-choice-wheel {cursor:pointer}
 .desk-ui select.wheel-picker-anchor::picker(select) {pointer-events:auto}
-.desk-ui :is(.preview-rules,.stat-rules) select.wheel-picker-anchor::picker(select) {scrollbar-width:none}
+.desk-ui select.wheel-picker-anchor::picker(select) {scrollbar-width:none}
+.desk-ui #dayStart.wheel-picker-anchor::picker(select) {
+  box-sizing:border-box;width:var(--wheel-width);
+}
+.desk-ui #dayStart.wheel-picker-anchor option {
+  position:relative;justify-content:center;text-align:center;font-variant-numeric:tabular-nums;
+}
+.desk-ui #dayStart.wheel-picker-anchor option::checkmark {position:absolute;inset-inline-start:8px}
 /* @generated wheels:end */
 
 [data-review-device=mobile] .wheel-value {min-width:0;min-height:32px;padding:3px 10px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:9px;font:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
