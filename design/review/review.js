@@ -157,7 +157,7 @@ function mountDailyReplay(host,rows,state,{onChange=()=>{},enabled=()=>true,time
     const x=m=>left+(m-start)*width/windowMinutes();
     const time=timeAt(state.minute);
     const names=rows.filter(r=>r.start<=state.minute && state.minute<r.end).map(r=>r.name).join(' · ')||'无记录';
-    let marks=label(300,40,32,time)+label(300,63,12,names);
+    let marks='<g class="replay-time">'+label(300,40,32,time)+'</g>'+label(300,63,12,names);
     for(let i=0;i<=4;i++){
       const tick=start+i*windowMinutes()/4;
       marks+=label(x(tick),95,11,timeAt(tick))+`<path d="M${x(tick)} 103v87" stroke="var(--clock-grid)"/>`;
@@ -1571,11 +1571,13 @@ function mountPeriodDashboard(d,onChange){
        card.innerHTML='<h3>'+modules[key]+'</h3>'+shareChart(key,appTotals,ms=>dur(ms/60000));cards[key]=card;
      }
    }
-   const shown=layout.filter(row=>row.visible);
+   const clockActive=desktop && mode==='day' && clockState.view && layout.some(row=>row.visible && row.key==='trend');
+   const shown=layout.filter(row=>row.visible && !(clockActive && row.key==='ranking'));
+   grid.classList.toggle('clock-only',clockActive && shown.length===1);
    grid.classList.toggle('default-pair',(desktop || mobile) && shown.length===2 && shown.every(row=>['ranking','trend'].includes(row.key)));
    for(const entry of layout){
      const card=cards[entry.key];
-     card.dataset.cardKey=entry.key;card.hidden=!entry.visible;
+     card.dataset.cardKey=entry.key;card.hidden=!shown.includes(entry);
      card.classList.toggle('pd-trend',entry.key==='trend');
      grid.append(card);
    }
