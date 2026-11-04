@@ -39,7 +39,11 @@ body.desk-ui:not(.dark) {
 }
 .desk-ui .behavior > header {position:relative;isolation:isolate;display:grid;grid-template-columns:1fr auto auto;min-height:67px;padding:7px 18px;box-sizing:border-box;overflow:hidden;border:1px solid var(--line);border-radius:22px;background:var(--sand,var(--surface))}
 .desk-ui .behavior h1 {font-size:30px;line-height:1.2;letter-spacing:-.04em;margin:0}
-.desk-ui .sand-seal {grid-area:1/3;align-self:center;justify-self:end;margin-right:2px}
+/* Every desktop header uses the main column, including on long, scrollable pages. */
+html:has(> body.desk-ui) {scrollbar-width:none}
+.desk-ui .behavior-view .behavior {max-width:none}
+.desk-ui main.behavior-view {padding-top:clamp(12px,3vh,24px)}
+.desk-ui .behavior .sand-seal {grid-area:1/3;align-self:center;justify-self:end}
 .desk-ui .sand-seal img {display:block;width:49px;height:49px}
 .desk-ui #rules-open {grid-area:1/2;justify-self:end}
 .desk-ui .behavior > header > div:first-child {grid-area:1/1;justify-self:start}

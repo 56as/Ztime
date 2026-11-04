@@ -14,6 +14,8 @@ try{
  }
  browser=await chromium.launch({channel:process.env.ZTIME_BROWSER||'msedge',headless:true});const page=await browser.newPage(),errors=[];
  page.on('pageerror',e=>errors.push(e.message));await page.goto(service.url);
+ await page.setViewportSize({width:1600,height:824});
+ let firstHeader;
  for(const tab of ['dashboard','behavior','devices','settings']){
   await page.click('[data-page='+tab+']');
   await page.locator('main.'+tab+'-view .sand-seal').waitFor();
@@ -22,6 +24,12 @@ try{
    return [button.offsetWidth,button.offsetHeight,icon.width,icon.height];
   });
   assert.deepEqual(size,[49,49,49,49],tab+' refresh control');
+  const position=await page.locator('main.'+tab+'-view .sand-seal').evaluate(seal=>{
+   const header=seal.closest('header').getBoundingClientRect(),icon=seal.getBoundingClientRect();
+   return [header.left,header.right,icon.top,icon.right];
+  });
+  firstHeader??=position;
+  assert.deepEqual(position,firstHeader,tab+' header alignment at wide window size');
  }
  await page.click('[data-page=settings]');await page.click('[data-action=delete-data]');
  assert.equal(await page.locator('#dialog .danger').isDisabled(),true);await page.click('#dialog [data-cancel]');
