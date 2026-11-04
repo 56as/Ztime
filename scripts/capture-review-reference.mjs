@@ -37,6 +37,7 @@ try{
   if(mode==='day'){
    await page.locator('[data-chart=ringdesk]').click();
    await page.locator('#replay-instrument').waitFor();
+   await page.locator('#clock-instrument').press('ArrowLeft');
    await shot('dial');
    await page.locator('[data-chart=line]').click();
   }

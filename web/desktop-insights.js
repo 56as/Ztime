@@ -192,7 +192,12 @@ function mountDailyRing(host,rows,state,dur,{onChange=()=>{},enabled=()=>true,ti
       marks+=`<path d="M${path(part.start,r)}A${r} ${r} 0 0 1 ${path((part.start+part.end)/2,r)} A${r} ${r} 0 0 1 ${path(part.end,r)}" fill="none" stroke="${color}" stroke-width="10"/>`;
     }
   }
-  svg.innerHTML=marks+'<path class="clock-hand" stroke="var(--clock-hand)" stroke-width="2"/><text class="clock-value" x="150" y="152" text-anchor="middle"></text><text class="clock-caption" x="150" y="173" text-anchor="middle" font-size="11"></text>';
+  svg.innerHTML=marks+`<defs><marker id="ringdesk-needle" orient="auto" markerUnits="userSpaceOnUse"
+    viewBox="-53 -6 54 12" refX="0" refY="0" markerWidth="54" markerHeight="12">
+    <path class="needle-body" d="M0 0 L-34 3.6 L-48 1.8 Q-51 0 -48 -1.8 L-34 -3.6 Z"/>
+    <path class="needle-facet" d="M-1 0 L-34 -3.1 L-47 -1.5 L-43 0 Z"/>
+    <circle class="needle-pin" cx="-44" cy="0" r="1.4"/>
+  </marker></defs>`+'<path marker-end="url(#ringdesk-needle)" class="clock-hand" stroke="var(--clock-hand)" stroke-width="2"/><text class="clock-value" x="150" y="152" text-anchor="middle"></text><text class="clock-caption" x="150" y="173" text-anchor="middle" font-size="11"></text>';
   const total=dur(rows.reduce((sum,row)=>sum+row.minutes,0));
   function update(){
     const {minute,selected}=state;

@@ -119,7 +119,7 @@ html:has(.desk-ui .behavior),
 .dark :is(#period-dashboard,#period-view) .replay-controls button[aria-pressed=true] {color:#19382f}
 
 /* Linked daily ring and replay workspace. */
-.desk-ui :is(.pd-main,.dashboard-view):has(.ring-desk) {max-width:none;padding-inline:clamp(14px,2vw,32px)}
+.desk-ui :is(.pd-main,.app-shell > main) {max-width:none;padding-inline:clamp(14px,2vw,32px)}
 .desk-ui .pd-bottom.clock-only:has(.ring-desk) {align-items:stretch}
 .desk-ui .ring-desk {display:grid;grid-template-columns:minmax(0,0.95fr) minmax(0,1.25fr);align-items:stretch;gap:clamp(12px,2.5vw,40px)}
 .ring-desk > section {display:grid;grid-template-rows:auto minmax(0,1fr);min-width:0;min-height:0;padding-block:12px}
@@ -132,3 +132,11 @@ html:has(.desk-ui .behavior),
   .ring-desk .desk-replay {padding-inline-start:12px}
   .ring-desk .replay-controls {gap:4px 8px}
 }
+
+.ring-desk .clock-face svg,.ring-desk .clock-face svg * {user-select:none;-webkit-user-select:none}
+.ring-desk .clock-hand[marker-end] {stroke-opacity:0;pointer-events:none}
+.ring-desk .needle-body {fill:#865936;stroke:#573d26;stroke-width:.65;stroke-linejoin:round}
+.ring-desk .needle-facet {fill:#e9c593}
+.ring-desk .needle-pin {fill:#fff1d6;stroke:#745034;stroke-width:.5}
+.dark .ring-desk .needle-body {fill:#c29b6c;stroke:#f3dfbf}
+.dark .ring-desk .needle-facet {fill:#f8d9a7}

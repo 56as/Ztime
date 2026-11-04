@@ -225,7 +225,12 @@ function mountDailyRing(host,rows,state,dur,{onChange=()=>{},enabled=()=>true,ti
       marks+=`<path d="M${path(part.start,r)}A${r} ${r} 0 0 1 ${path((part.start+part.end)/2,r)} A${r} ${r} 0 0 1 ${path(part.end,r)}" fill="none" stroke="${color}" stroke-width="10"/>`;
     }
   }
-  svg.innerHTML=marks+'<path class="clock-hand" stroke="var(--clock-hand)" stroke-width="2"/><text class="clock-value" x="150" y="152" text-anchor="middle"></text><text class="clock-caption" x="150" y="173" text-anchor="middle" font-size="11"></text>';
+  svg.innerHTML=marks+`<defs><marker id="ringdesk-needle" orient="auto" markerUnits="userSpaceOnUse"
+    viewBox="-53 -6 54 12" refX="0" refY="0" markerWidth="54" markerHeight="12">
+    <path class="needle-body" d="M0 0 L-34 3.6 L-48 1.8 Q-51 0 -48 -1.8 L-34 -3.6 Z"/>
+    <path class="needle-facet" d="M-1 0 L-34 -3.1 L-47 -1.5 L-43 0 Z"/>
+    <circle class="needle-pin" cx="-44" cy="0" r="1.4"/>
+  </marker></defs>`+'<path marker-end="url(#ringdesk-needle)" class="clock-hand" stroke="var(--clock-hand)" stroke-width="2"/><text class="clock-value" x="150" y="152" text-anchor="middle"></text><text class="clock-caption" x="150" y="173" text-anchor="middle" font-size="11"></text>';
   const total=dur(rows.reduce((sum,row)=>sum+row.minutes,0));
   function update(){
     const {minute,selected}=state;
@@ -334,11 +339,11 @@ function showReference(key,detail=''){
   const panel=$('reference');
   panel.hidden=!referenceLabels[key];
   if(panel.hidden)return;
-  const src='reference/0.2.41/'+key+'.png';
+  const src='reference/0.2.42/'+key+'.png';
   $('reference-thumb').src=src;
   $('reference-caption').textContent=referenceLabels[key]+' · '+(detail||'默认视图');
   $('reference-difference').textContent=key.endsWith('-report')?'正式版支持 TXT、CSV、PDF 和 PNG，可展开查看文字明细。':'截图使用全部设备和默认布局。';
-  $('reference-title').textContent='Windows 0.2.41 · '+referenceLabels[key];
+  $('reference-title').textContent='Windows 0.2.42 · '+referenceLabels[key];
 }
 $('reference-thumb').onload=()=>{$('reference-open').hidden=false;$('reference-fallback').hidden=true;};
 $('reference-thumb').onerror=()=>{
@@ -768,7 +773,7 @@ function applySecondDesktopDraft(d,pageId){
     nav.setAttribute('aria-label','主导航');
     nav.innerHTML=desktopNavButtons(pageId);
     const version=d.createElement('small');
-    version.id='desktop-version';version.textContent='版本 0.2.41';
+    version.id='desktop-version';version.textContent='版本 0.2.42';
     d.querySelector('.sidebar').append(version);
   }
 
@@ -1419,18 +1424,6 @@ function reviewDeviceSessions(series,apps){
   return rows.sort((a,b)=>a.start-b.start);
 }
 
-// Prototype the needle on the existing hand so its tip follows the calibrated time position.
-function addReviewNeedle(panel){
-  const hand=panel.querySelector('.clock-hand');
-  hand.insertAdjacentHTML('beforebegin',`<defs><marker id="ringdesk-needle" orient="auto" markerUnits="userSpaceOnUse"
-    viewBox="-53 -6 54 12" refX="0" refY="0" markerWidth="54" markerHeight="12">
-    <path class="needle-body" d="M0 0 L-34 3.6 L-48 1.8 Q-51 0 -48 -1.8 L-34 -3.6 Z"/>
-    <path class="needle-facet" d="M-1 0 L-34 -3.1 L-47 -1.5 L-43 0 Z"/>
-    <circle class="needle-pin" cx="-44" cy="0" r="1.4"/>
-  </marker></defs>`);
-  hand.setAttribute('marker-end','url(#ringdesk-needle)');
-}
-
 function mountPeriodDashboard(d,onChange){
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
  const today=num(new Date(Date.now()-4*3600000).toLocaleDateString('sv-SE',{timeZone:'Asia/Hong_Kong'}));
@@ -1580,7 +1573,6 @@ function mountPeriodDashboard(d,onChange){
          trend.querySelector('.usage-chart').replaceWith(panel);
          const sessions=reviewDeviceSessions(series,apps);
          mountRingDesk(panel,sessions,clockState,dur,{onChange,enabled:()=>!picking});
-         addReviewNeedle(panel);
        }else bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange});
      }
      if(desktop)ranking.classList.add('desktop-rank-card');
@@ -1679,7 +1671,7 @@ function mountPeriodDashboard(d,onChange){
     const total=summary.firstElementChild;total.className='pd-total-value';
     summary.append(summary.querySelector('.pd-scope'),controls.querySelector('.pd-modes'),controls.querySelector('.pd-range'),total);
     controls.remove();
-    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.41';
+    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.42';
     root.querySelector('.pd-nav').append(version);
   }
   if(mobile){

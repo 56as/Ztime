@@ -333,7 +333,7 @@ html:has(.desk-ui .behavior),
 .dark :is(#period-dashboard,#period-view) .replay-controls button[aria-pressed=true] {color:#19382f}
 
 /* Linked daily ring and replay workspace. */
-.desk-ui :is(.pd-main,.dashboard-view):has(.ring-desk) {max-width:none;padding-inline:clamp(14px,2vw,32px)}
+.desk-ui :is(.pd-main,.app-shell > main) {max-width:none;padding-inline:clamp(14px,2vw,32px)}
 .desk-ui .pd-bottom.clock-only:has(.ring-desk) {align-items:stretch}
 .desk-ui .ring-desk {display:grid;grid-template-columns:minmax(0,0.95fr) minmax(0,1.25fr);align-items:stretch;gap:clamp(12px,2.5vw,40px)}
 .ring-desk > section {display:grid;grid-template-rows:auto minmax(0,1fr);min-width:0;min-height:0;padding-block:12px}
@@ -346,6 +346,14 @@ html:has(.desk-ui .behavior),
   .ring-desk .desk-replay {padding-inline-start:12px}
   .ring-desk .replay-controls {gap:4px 8px}
 }
+
+.ring-desk .clock-face svg,.ring-desk .clock-face svg * {user-select:none;-webkit-user-select:none}
+.ring-desk .clock-hand[marker-end] {stroke-opacity:0;pointer-events:none}
+.ring-desk .needle-body {fill:#865936;stroke:#573d26;stroke-width:.65;stroke-linejoin:round}
+.ring-desk .needle-facet {fill:#e9c593}
+.ring-desk .needle-pin {fill:#fff1d6;stroke:#745034;stroke-width:.5}
+.dark .ring-desk .needle-body {fill:#c29b6c;stroke:#f3dfbf}
+.dark .ring-desk .needle-facet {fill:#f8d9a7}
 /* @generated desk-preview:end */
 
 /* The phone boards share one bottom tab bar. */
@@ -481,7 +489,6 @@ html:has(.desk-ui .behavior),
 .desktop-v2 #period-dashboard h1 {margin:0;line-height:1.35}
 .desktop-v2 .pd-header .statusbar {margin:7px 0 0;font-size:11px;line-height:1.5;min-height:0}
 .desktop-v2.unified .page-header.topbar {margin-bottom:14px}
-.desktop-v2 :is(.pd-main,.app-shell > main) {max-width:none;padding-inline:clamp(14px,2vw,32px)}
 @media(min-width:1101px){.desktop-v2 .pd-layout {grid-template-columns:208px minmax(0,1fr)}}
 .desktop-v2 .pd-header {margin-bottom:14px}
 .desktop-v2 .pd-controls {margin-bottom:0;border-top:3px solid var(--accent);border-bottom:0;border-radius:14px 14px 0 0;padding:10px 14px 4px}
@@ -871,12 +878,3 @@ body.desktop-v2.imprint-study #period-dashboard .pd-card {border:0;border-top:1p
 body.desktop-v2.imprint-study #period-dashboard .usage-chart {color:var(--print-ink)}
 body.desktop-v2.imprint-study #period-dashboard .rank-track i {background:var(--print-ink)}
 body.desktop-v2.imprint-study #period-dashboard .rank-track {background:var(--line)}
-
-/* Pointer study. Keep native text selection outside the two scrub surfaces. */
-.ring-desk .clock-face svg,.ring-desk .clock-face svg * {user-select:none;-webkit-user-select:none}
-.ring-desk .clock-hand[marker-end] {stroke-opacity:0;pointer-events:none}
-.ring-desk .needle-body {fill:#865936;stroke:#573d26;stroke-width:.65;stroke-linejoin:round}
-.ring-desk .needle-facet {fill:#e9c593}
-.ring-desk .needle-pin {fill:#fff1d6;stroke:#745034;stroke-width:.5}
-.dark .ring-desk .needle-body {fill:#c29b6c;stroke:#f3dfbf}
-.dark .ring-desk .needle-facet {fill:#f8d9a7}

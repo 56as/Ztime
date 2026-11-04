@@ -17,6 +17,7 @@ const windowsRankNames=new Map([
 export function createPeriodView({api, escape, duration, details, report, refreshPhone, onError}) {
  let selectedPoint=null, pointPeriod='';
  let chartStyle='line', dailyView=new URLSearchParams(location.search).get('view')==='ringdesk'?'ringdesk':null;
+ let showLatestRecord=dailyView==='ringdesk';
  const clock={minute:0,zoom:240,selected:false};
  let desktop=false, rankOffset=0, rankPeriod='';
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
@@ -249,6 +250,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
        const options={timeAt,dayMinutes:result.dayMinutes,offset:snapshot.settings.dayStart*60};
        const rows=result.sessions, panel=trend.querySelector('.daily-clock');
        if(!clock.selected)clock.minute=rows.length?rows.reduce((last,row)=>Math.max(last,row.start),0):0;
+       if(showLatestRecord && rows.length){clock.selected=true;showLatestRecord=false;}
        clock.minute=Math.min(clock.minute,result.dayMinutes-1/60000);
        mountRingDesk(panel,rows,clock,m=>duration(m*60000,true),options);
      }else if(desktop && trend)bindDesktopPoints(trend,series,{pointIndex:selectedPoint,onSelect:i=>{selectedPoint=i;},dur:m=>duration(m*60000,true)});
