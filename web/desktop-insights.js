@@ -110,57 +110,67 @@ function defaultClockTime(minute){
   return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
 }
 
+function captureClockPointer(svg,event){
+  svg.setPointerCapture(event.pointerId);
+  svg.setAttribute('data-scrubbing','');
+  svg.onlostpointercapture=()=>svg.removeAttribute('data-scrubbing');
+}
+
 function mountDailyReplay(host,rows,state,{onChange=()=>{},enabled=()=>true,timeAt=defaultClockTime,dayMinutes=1440}={}){
-  const windowMinutes=()=>state.zoom===1440?dayMinutes:Math.min(dayMinutes,state.zoom);
-  const starts=[...new Set(rows.map(row=>row.start))].sort((a,b)=>a-b);
-  host.innerHTML='<div class="clock-face clock-replay"><svg id="replay-instrument" data-style-native viewBox="0 0 600 215" tabindex="0" role="slider" aria-label="选择回溯时刻" aria-valuemin="0" aria-valuemax="'+(dayMinutes-1)+'"></svg><div class="replay-controls"><div role="group" aria-label="切换记录"><button data-step="-1">上一段</button><button data-step="1">下一段</button></div><div role="group" aria-label="时间范围">'+[120,240,1440].map(m=>'<button data-zoom="'+m+'">'+(m===1440 && dayMinutes!==1440?'全天':m/60+' 小时')+'</button>').join('')+'</div></div></div>';
-  const svg=host.querySelector('svg'),left=54,width=520;
+  host.innerHTML='<div class="clock-face clock-replay"><svg id="replay-instrument" data-style-native viewBox="0 0 600 215" tabindex="0" role="slider" aria-label="选择回溯时刻" aria-valuemin="0" aria-valuemax="'+(dayMinutes-1)+'"></svg></div>';
+  const svg=host.querySelector('svg'),left=54,width=520,span=Math.min(120,dayMinutes),scale=width/span;
   const clamp=(m,max)=>Math.max(0,Math.min(max,m));
-  const startOfWindow=()=>clamp(Math.round(state.minute-windowMinutes()/2),dayMinutes-windowMinutes());
-  let start=startOfWindow();
+  const startOfWindow=()=>clamp(Math.round(state.minute-span/2),dayMinutes-span);
   const label=(x,y,size,text,anchor='middle')=>`<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="${size}">${html(text)}</text>`;
-  const step=direction=>direction<0?starts.findLast(m=>m<state.minute):starts.find(m=>m>state.minute);
-  function draw(){
-    const x=m=>left+(m-start)*width/windowMinutes();
+  let start;
+  let grid='',tracks='',devices='';
+  for(let i=0;i<=4;i++){
+    const x=left+i*width/4;
+    grid+=label(x,95,11,'')+`<path d="M${x} 103v87" stroke="var(--clock-grid)"/>`;
+  }
+  // The two-hour scale is fixed. Lay out the day once and pan beneath the clip.
+  for(const [device,title,y,color] of [['pc','电脑',128,'var(--clock-pc)'],['phone','手机',174,'var(--clock-phone)']]){
+    devices+=label(left-10,y+4,12,title,'end')+`<path d="M${left} ${y}h${width}" stroke="var(--clock-track)" stroke-width="22"/>`;
+    let segments='',names='';
+    for(const row of rows){
+      if(row.device!==device)continue;
+      const a=row.start*scale,b=row.end*scale;
+      segments+=`M${a} ${y}H${b}`;
+      if(b-a>row.name.length*12+10)names+=label((a+b)/2,y+4,11,row.name);
+    }
+    tracks+=`<path d="${segments}" stroke="${color}" stroke-width="20"/><g class="replay-app">${names}</g>`;
+  }
+  svg.innerHTML='<g class="replay-time">'+label(300,40,32,'')+'</g>'+label(300,63,12,'')+
+    '<g class="replay-grid">'+grid+'</g>'+devices+
+    `<defs><clipPath id="replay-viewport"><rect x="${left}" y="102" width="${width}" height="91"/></clipPath></defs>`+
+    '<g clip-path="url(#replay-viewport)"><g class="replay-tracks">'+tracks+'</g></g><path class="replay-cursor" stroke="var(--clock-hand)" stroke-width="2"/>';
+  const trackGroup=svg.querySelector('.replay-tracks'),ticks=svg.querySelectorAll('.replay-grid text');
+  const timeLabel=svg.querySelector('.replay-time text'),namesLabel=svg.querySelector(':scope > text'),cursor=svg.querySelector('.replay-cursor');
+  function draw(recenter){
+    const nextStart=recenter?startOfWindow():start;
+    if(start!==nextStart){
+      start=nextStart;
+      trackGroup.setAttribute('transform',`translate(${left-start*scale} 0)`);
+      ticks.forEach((tick,i)=>{tick.textContent=timeAt(start+i*span/4);});
+    }
     const time=timeAt(state.minute);
     const names=rows.filter(r=>r.start<=state.minute && state.minute<r.end).map(r=>r.name).join(' · ')||'无记录';
-    let marks='<g class="replay-time">'+label(300,40,32,time)+'</g>'+label(300,63,12,names);
-    for(let i=0;i<=4;i++){
-      const tick=start+i*windowMinutes()/4;
-      marks+=label(x(tick),95,11,timeAt(tick))+`<path d="M${x(tick)} 103v87" stroke="var(--clock-grid)"/>`;
-    }
-    for(const [device,title,y,color] of [['pc','电脑',128,'var(--clock-pc)'],['phone','手机',174,'var(--clock-phone)']]){
-      marks+=label(left-10,y+4,12,title,'end')+`<path d="M${left} ${y}h${width}" stroke="var(--clock-track)" stroke-width="22"/>`;
-      for(const row of rows.filter(r=>r.device===device)){
-        const a=Math.max(start,row.start),b=Math.min(start+windowMinutes(),row.end);
-        if(b<=a)continue;
-        marks+=`<path d="M${x(a)} ${y}H${x(b)}" stroke="${color}" stroke-width="20"/>`;
-        if(x(b)-x(a)>row.name.length*12+10)marks+='<g class="replay-app">'+label((x(a)+x(b))/2,y+4,11,row.name)+'</g>';
-      }
-    }
-    svg.innerHTML=marks+`<path d="M${x(state.minute)} 100v94" stroke="var(--clock-hand)" stroke-width="2"/>`;
+    timeLabel.textContent=time;namesLabel.textContent=names;
+    cursor.setAttribute('d',`M${left+(state.minute-start)*scale} 100v94`);
     svg.setAttribute('aria-valuenow',Math.floor(state.minute));svg.setAttribute('aria-valuetext',time+' '+names);
-    for(const b of host.querySelectorAll('[data-step]'))b.disabled=step(+b.dataset.step)===undefined;
-    for(const b of host.querySelectorAll('[data-zoom]'))b.setAttribute('aria-pressed',String(+b.dataset.zoom===state.zoom));
   }
   function select(m,recenter){
-    state.minute=clamp(m,dayMinutes-0.00001);state.selected=true;
-    if(recenter)start=startOfWindow();
-    draw();onChange();
+    const minute=clamp(m,dayMinutes-1);
+    if(minute===state.minute && state.selected && !recenter)return;
+    state.minute=minute;state.selected=true;draw(recenter);onChange();
   }
-  host.querySelector('.replay-controls').onclick=e=>{
-    const b=e.target.closest('button');
-    if(!b || !enabled())return;
-    if(b.dataset.zoom)state.zoom=+b.dataset.zoom;
-    select(b.dataset.step?step(+b.dataset.step):state.minute,true);
-  };
   function scrub(e){
     const p=new DOMPoint(e.clientX,e.clientY).matrixTransform(svg.getScreenCTM().inverse());
     if(e.type==='pointerdown'){
       if(p.x<left-5 || p.x>left+width+5 || p.y<82 || p.y>198)return;
-      svg.setPointerCapture(e.pointerId);
+      captureClockPointer(svg,e);
     }
-    select(Math.round(start+clamp((p.x-left)/width,1)*windowMinutes()),false);
+    select(Math.round(start+clamp((p.x-left)/width,1)*span),false);
   }
   svg.onpointerdown=e=>{if(enabled())scrub(e);};
   svg.onpointermove=e=>{if(enabled() && svg.hasPointerCapture(e.pointerId))scrub(e);};
@@ -168,8 +178,8 @@ function mountDailyReplay(host,rows,state,{onChange=()=>{},enabled=()=>true,time
     if(!enabled() || !['ArrowLeft','ArrowRight'].includes(e.key))return;
     e.preventDefault();select(state.minute+(e.key==='ArrowLeft'?-1:1),true);
   };
-  draw();
-  return ()=>{start=startOfWindow();draw();};
+  draw(true);
+  return ()=>draw(true);
 }
 
 function mountDailyRing(host,rows,state,dur,{onChange=()=>{},enabled=()=>true,timeAt=defaultClockTime,dayMinutes=1440,offset=240}={}){
@@ -188,9 +198,9 @@ function mountDailyRing(host,rows,state,dur,{onChange=()=>{},enabled=()=>true,ti
   }
   for(const [device,r,color] of [['pc',104,'var(--clock-pc)'],['phone',88,'var(--clock-phone)']]){
     marks+=`<circle cx="150" cy="150" r="${r}" fill="none" stroke="var(--clock-track)" stroke-width="10"/>`;
-    for(const part of rows.filter(row=>row.device===device)){
-      marks+=`<path d="M${path(part.start,r)}A${r} ${r} 0 0 1 ${path((part.start+part.end)/2,r)} A${r} ${r} 0 0 1 ${path(part.end,r)}" fill="none" stroke="${color}" stroke-width="10"/>`;
-    }
+    const arcs=rows.filter(row=>row.device===device).map(part=>
+      `M${path(part.start,r)}A${r} ${r} 0 0 1 ${path((part.start+part.end)/2,r)} A${r} ${r} 0 0 1 ${path(part.end,r)}`);
+    marks+=`<path d="${arcs.join(' ')}" fill="none" stroke="${color}" stroke-width="10"/>`;
   }
   svg.innerHTML=marks+`<defs><marker id="ringdesk-needle" orient="auto" markerUnits="userSpaceOnUse"
     viewBox="-53 -6 54 12" refX="0" refY="0" markerWidth="54" markerHeight="12">
@@ -211,14 +221,18 @@ function mountDailyRing(host,rows,state,dur,{onChange=()=>{},enabled=()=>true,ti
     svg.setAttribute('aria-valuetext',selected?timeAt(minute)+' '+names:'设备累计 '+total);
   }
   update();
-  function select(minute){state.minute=Math.min(dayMinutes-1,Math.max(0,minute));state.selected=true;update();onChange();}
+  function select(m){
+    const minute=Math.min(dayMinutes-1,Math.max(0,m));
+    if(state.selected && minute===state.minute)return;
+    state.minute=minute;state.selected=true;update();onChange();
+  }
   function position(e){return new DOMPoint(e.clientX,e.clientY).matrixTransform(svg.getScreenCTM().inverse());}
   function pick(p){select((Math.round(Math.atan2(p.x-150,150-p.y)*dayMinutes/(2*Math.PI))+dayMinutes*2-offset)%dayMinutes);}
   svg.onpointerdown=e=>{
     if(!enabled())return;
     const p=position(e);
     if(Math.abs(Math.hypot(p.x-150,p.y-150)-106)>36)return;
-    svg.setPointerCapture(e.pointerId);pick(p);
+    captureClockPointer(svg,e);pick(p);
   };
   svg.onpointermove=e=>{if(enabled() && svg.hasPointerCapture(e.pointerId))pick(position(e));};
   svg.onkeydown=e=>{

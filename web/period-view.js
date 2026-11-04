@@ -18,7 +18,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
  let selectedPoint=null, pointPeriod='';
  let chartStyle='line', dailyView=new URLSearchParams(location.search).get('view')==='ringdesk'?'ringdesk':null;
  let showLatestRecord=dailyView==='ringdesk';
- const clock={minute:0,zoom:240,selected:false};
+ const clock={minute:0,selected:false};
  let desktop=false, rankOffset=0, rankPeriod='';
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
  let today;
@@ -309,6 +309,8 @@ export function createPeriodView({api, escape, duration, details, report, refres
    try {
      const [current,previous]=await Promise.all([read(period,mode),comparison?read(comparison,mode==='year'?'year':'custom'):null]);
      if(revision!==pending || !host.isConnected)return;
+     // A poll already in flight may finish after the user starts dragging.
+     if(key===loadedKey && host.querySelector('.daily-clock [data-scrubbing]'))return;
      loadedKey=key;result=current;prior=previous;
      committed={mode,period,comparison,scope,followToday};
      paint();
@@ -325,6 +327,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
    }
  }
  function mount(element,data) {
+   if(element.querySelector('.daily-clock [data-scrubbing]'))return;
    const nextToday=num(dateKey(Date.now(),data.settings));
    const rollover=today!==nextToday;
    today=nextToday;
