@@ -1,7 +1,7 @@
 import {defaultTiming,validateTiming} from './timing.js';
 import {validDesktopLayout} from '../shared/desktop-card-layout.js';
 import {validCardLayout} from '../shared/period-layout.js';
-import {periodBounds,periodStats} from '../shared/period.js';
+import {readPeriod} from './period.js';
 import {dayBounds} from '../shared/time.js';
 import {createBehavior} from './behavior.js';
 import {uiFileFor} from './ui-files.js';
@@ -39,12 +39,7 @@ export async function createApp(options={}){
    if(method==='PUT')return behavior.change(body);
   }
   if(method==='GET'&&u.pathname==='/api/version')return {version:options.version??null,quitForUpdate:!!options.version};
-  if(method==='GET'&&u.pathname==='/api/period'){
-   const params=u.searchParams, from=params.get('from'), to=params.get('to');
-   const now=Date.now(), settings=store.get('settings'), bounds=periodBounds(from,to,settings,now);
-   const rows=store.db.prepare('SELECT * FROM sessions WHERE deleted_at IS NULL AND start<? AND end>?').all(bounds.end,bounds.start).map(row=>store.decode(row));
-   return periodStats(rows,store.devices(),settings,from,to,params.get('mode'),params.get('scope')||'all',now,true);
-  }
+  if(method==='GET'&&u.pathname==='/api/period')return readPeriod(store,u.searchParams);
   if(method==='GET'&&u.pathname==='/api/summary')return {...store.summary(u.searchParams.get('date')||undefined,u.searchParams.has('weekDate')?Math.min(Date.now(),dayBounds(u.searchParams.get('weekDate'),store.get('settings')).end-1):Date.now()),timing:store.get('timing',defaultTiming),version:options.version??sourceVersion,ledgerSequence:store.get('sequence',0),periodLayout:store.get('periodLayout'),browser:browser.status(),autostart:options.autostart?.get()??null,sync:{port:sync.port,addresses:sync.addresses(),error:syncError}};
   if(method==='POST'&&u.pathname==='/api/browser')return browser.configure(body.enabled===true);
   if(method==='PUT'&&u.pathname==='/api/appearance'){if(!validAppearance(body))throw new Error('外观选项无效');store.set('appearance',{theme:body.theme,accentColor:body.accentColor});return {ok:true};}
@@ -61,13 +56,13 @@ export async function createApp(options={}){
   if(method==='POST'&&u.pathname==='/api/pair/approve'){sync.approve(body.id,body.accept===true);return {ok:true};}
   if(method==='POST'&&u.pathname==='/api/sync')return sync.requestSync();
   if(method==='DELETE'&&u.pathname==='/api/peer'){sync.cancelPeer(body.id);store.db.prepare('DELETE FROM peers WHERE id=?').run(body.id);return {ok:true};}
-  if(method==='GET'&&u.pathname==='/api/sessions'&&u.searchParams.has('start')){
-   const params=u.searchParams,start=Number(params.get('start')),end=Number(params.get('end'));
+  if(method==='GET'&&u.pathname==='/api/sessions'){
+   const params=u.searchParams,application={deviceId:params.get('deviceId'),appId:params.get('appId')};
+   if(!params.has('start'))return store.recentSessions(application);
+   const start=Number(params.get('start')),end=Number(params.get('end'));
    if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||end<=start)throw new Error('时间范围无效');
-   return store.db.prepare('SELECT * FROM sessions WHERE device_id=? AND app_id=? AND deleted_at IS NULL AND start<? AND end>? ORDER BY start DESC')
-    .all(params.get('deviceId'),params.get('appId'),end,start).map(row=>store.decode(row));
+   return store.sessionsInRange(start,end,application);
   }
-  if(method==='GET'&&u.pathname==='/api/sessions')return store.sessions().filter(s=>!s.deletedAt&&(!u.searchParams.get('appId')||s.appId===u.searchParams.get('appId'))&&(!u.searchParams.get('deviceId')||s.deviceId===u.searchParams.get('deviceId'))).slice(0,500);
   if(method==='DELETE'&&u.pathname==='/api/session'){store.markDeleted(body.id);collector.resetTracking();return {ok:true};}
   if(method==='DELETE'&&u.pathname==='/api/data'){if(body.confirm!=='删除')throw new Error('请输入“删除”确认');store.transaction(()=>{for(const s of store.sessions())store.markDeleted(s.id);store.db.exec('DROP TABLE IF EXISTS idle_parts');});collector.resetTracking();return {ok:true};}
   if(method==='GET'&&u.pathname==='/api/export'){

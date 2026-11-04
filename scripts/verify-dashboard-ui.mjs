@@ -21,12 +21,39 @@ try{
   page.setDefaultTimeout(6000);
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
+  await page.clock.setFixedTime(new Date(now));
+  await page.addInitScript(()=>{
+    const schedule=window.setInterval;
+    window.setInterval=(callback,delay,...args)=>{
+      if(delay===5000)window.pollDashboard=callback;
+      return schedule(callback,delay,...args);
+    };
+  });
   await page.goto(service.url);
   const click=selector=>page.locator(selector).click();
   const cal=name=>click('[data-cal="'+name+'"]');
   const modal=page.locator('.period-dialog');
   await page.locator('.period-total').waitFor();
   await page.locator('.rank-label img').first().evaluate(image=>image.decode());
+  const firstChart=await page.locator('.trend-card').elementHandle();
+  const reads=[];
+  const record=request=>{const url=new URL(request.url());if(url.pathname==='/api/period')reads.push(url.searchParams.get('detail'));};
+  page.on('request',record);
+  await page.evaluate(()=>window.pollDashboard());
+  assert.deepEqual(reads,[],'An unchanged summary must not read the period again');
+  assert.ok(await firstChart.evaluate(el=>el.isConnected));
+  service.store.write({id:'poll',appId:'notes',appName:'notes',deviceId:service.store.device.id,start:now-1,end:now});
+  await page.evaluate(()=>window.pollDashboard());
+  assert.deepEqual(reads,['chart']);
+  assert.ok(!await firstChart.evaluate(el=>el.isConnected));
+  const ringQuery=url=>url.pathname==='/api/period' && url.searchParams.get('detail')==='ring';
+  await page.route(ringQuery,route=>route.abort());
+  await click('[data-chart=ringdesk]');
+  await page.locator('#period-view[aria-busy=false]').waitFor();
+  assert.equal(await page.locator('[data-chart=line]').getAttribute('aria-pressed'),'true');
+  assert.ok(await page.locator('.ranking-card').isVisible());
+  await page.unroute(ringQuery);
+  page.off('request',record);
   const rowStyle=await page.locator('.desktop-rank-row').first().evaluate(row=>{
     const name=row.querySelector('.rank-name'),icon=row.querySelector('img'),bar=row.querySelector('.rank-track');
     return [getComputedStyle(name).fontSize,icon.offsetWidth,bar.offsetLeft-icon.offsetLeft,
@@ -49,6 +76,7 @@ try{
     assert.ok(firstScreen,'Default cards fill one desktop window');
     {
       await click('[data-chart=ringdesk]');
+      await page.locator('#clock-instrument').waitFor();
       assert.equal(await page.locator('.ranking-card:visible').count(),0);
       const instrument=page.locator('#clock-instrument');
       await instrument.focus();

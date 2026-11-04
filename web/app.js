@@ -6,6 +6,7 @@ import {mountBehavior} from './behavior-view.js';
 import {recordingStatus} from './recording-status.js';
 import {bindDesktopSettings,preferenceCard} from './desktop-settings.js';
 import {zoneSelect} from './desktop-insights.js';
+import {periodData} from './period-data.js';
 import {createPeriodView} from './period-view.js';
 import {askForDeletion} from './delete-confirm.js';
 import {createDeviceList} from './device-list.js';
@@ -13,7 +14,8 @@ import {openWeekReport} from './report-view.js';
 import {ACCENT_COLORS as accentColors,validAppearance} from './shared/appearance.js';
 import {completeLayout,defaultsFor,layoutKey} from './shared/layout.js';
 import {makeDashboard} from './dashboard.js';
-import {aggregate,dateKey,dayBounds,weekBounds,DEFAULT_SETTINGS} from './shared/time.js';
+import {summaryStats} from './shared/summary.js';
+import {dateKey,dayBounds,weekBounds,DEFAULT_SETTINGS} from './shared/time.js';
 import {bindDesktopMotion,switchDesktopPage} from './desktop-motion.js';
 const native=Boolean(window.TimeLedgerNative);
 const pending=new Map();let serial=0;
@@ -32,12 +34,19 @@ function duration(ms,compact=false){const m=Math.floor(Math.max(0,ms)/60000),h=M
 function clock(t){return new Intl.DateTimeFormat('zh-CN',{timeZone:state.data?.settings.timeZone??'Asia/Hong_Kong',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(t);}
 function stamp(t){return t?new Intl.DateTimeFormat('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(t):'尚未同步';}
 function toast(message){const el=document.querySelector('#toast');el.textContent=message;el.style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.style.display='none',4500);}
-function normalise(raw,selected=state.date,weekDate=state.page==='week'?state.layoutDate:''){if(!raw.native)return raw;const settings=raw.settings??DEFAULT_SETTINGS,now=weekDate?Math.min(Date.now(),dayBounds(weekDate,settings).end-1):Date.now(),date=selected||dateKey(now,settings),bounds=dayBounds(date,settings),w=weekBounds(now,settings);const current=aggregate(raw.sessions,w.start,w.end,raw.devices),previous=aggregate(raw.sessions,w.previous,w.previousEnd,raw.devices);const combined=new Map(current.apps.map(a=>[a.key,{...a,previous:0}]));for(const a of previous.apps){if(!combined.has(a.key))combined.set(a.key,{...a,duration:0,previous:0});combined.get(a.key).previous=a.duration;}return {...raw,date,today:aggregate(raw.sessions,bounds.start,Math.min(bounds.end,now),raw.devices),week:{...w,current,previous,changes:[...combined.values()].map(a=>({...a,change:a.duration-a.previous})).sort((a,b)=>Math.abs(b.change)-Math.abs(a.change))}};}
+function normalise(raw,selected=state.date,weekDate=state.page==='week'?state.layoutDate:''){
+ if(!raw.native)return raw;
+ const settings=raw.settings??DEFAULT_SETTINGS;
+ const now=weekDate?Math.min(Date.now(),dayBounds(weekDate,settings).end-1):Date.now();
+ const date=selected||dateKey(now,settings);
+ return {...raw,date,...summaryStats(raw.sessions,raw.devices,dayBounds(date,settings),weekBounds(now,settings),now)};
+}
+
 async function refresh(force=false){try{const raw=normalise(await api('/api/summary?'+new URLSearchParams({...((state.page==='home'||state.page==='week')&&state.date?{date:state.date}:{}),...(state.page==='week'&&state.layoutDate?{weekDate:state.layoutDate}:{})})));if(!state.appearanceLoaded){if(validAppearance(raw.appearance)){state.theme=raw.appearance.theme;state.accentColor=raw.appearance.accentColor;}const legacyTheme=!native&&state.theme==='system';if(legacyTheme)state.theme=appearanceMedia.matches?'dark':'light';state.appearanceLoaded=true;if(!raw.appearance||legacyTheme){try{await persistAppearance();}catch(e){toast(e.message);}}}state.data={...raw,layout:{widgets:completeLayout(raw.layout,'home')},weekLayout:{widgets:completeLayout(raw.weekLayout,'week')}};state.error=null;
 if(state.page==='behavior'&&behaviorView){behaviorView.refresh(raw);return;}
 if(force||(!state.edit&&!document.querySelector('#dialog').open&&!['settings','behavior'].includes(state.page)&&!(native&&state.page==='devices'&&document.activeElement?.id==='pairUri')&&!(state.page==='dashboard'&&periodView.choosing))){
  const periodHost=!native && state.page==='dashboard' && document.querySelector('.dashboard-view #period-view');
- if(periodHost && !!raw.settingsConflict===!!periodHost.parentElement.querySelector('[data-resolve]'))periodView.mount(periodHost,state.data);
+ if(periodHost && !!raw.settingsConflict===!!periodHost.parentElement.querySelector('[data-resolve]'))await periodView.refresh(state.data,force);
  else render();
 }}catch(e){state.error=e.message;if(!state.data)render();else toast(e.message);}}
 const layout=()=>state.edit?state.draft:(state.data?.[layoutKey(state.page==='week'?'week':'home')]?.widgets??defaultsFor(state.page));
@@ -123,7 +132,7 @@ function bindDrag(){document.querySelectorAll('.drag-handle').forEach(handle=>ha
 window.ledgerPairUri=uri=>{manualPairOpen=true;state.pairUri=uri;state.page='devices';render();};
 window.ledgerBack=()=>{const wheel=document.querySelector(".wheel-sheet[open]");if(wheel){wheel.close();return true;}if(periodView.closeModal())return true;const dialog=document.querySelector('#dialog');if(dialog.open){dialog.close();return true;}if(state.edit){toast('请先完成或取消布局编辑');return true;}if(state.page!=='dashboard'){state.page='dashboard';render();return true;}return false;};
 const periodView=createPeriodView({
- api,escape:esc,duration,details,onError:toast,refreshPhone:()=>refresh(true),
+ ...periodData(api),escape:esc,duration,details,onError:toast,refreshPhone:()=>refresh(true),
  async report(date,selection){
    if(selection){
      const {openPeriodReport}=await import('./reports/period.js');
@@ -144,4 +153,4 @@ const dashboard=makeDashboard({state,layout,esc,icon,duration,stamp,appsList,hou
 if(!native)mountDesktopWheels(document);
 appearanceMedia.addEventListener('change',applyAppearance);
 if(!native)bindDesktopMotion();
-await refresh(true);setInterval(()=>{if(document.visibilityState==='visible')refresh();},5000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh(true);});
+await refresh(true);setInterval(()=>document.visibilityState==='visible' && refresh(),5000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh(true);});

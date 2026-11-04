@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 const check=process.argv.includes('--check');
 for(const [source,target,css,feature] of [
+ ['web/desktop-behavior.css','design/review/boards/behavior.css',true,'desktop-behavior'],
  ['web/desktop-insights.js','design/review/review.js',false],
  ['web/desktop-insights.css','design/review/boards/style.css',true],
  ['web/desktop-wheels.js','design/review/review.js',false,'wheels'],
@@ -16,6 +17,8 @@ for(const [source,target,css,feature] of [
  const prev=read(target), start=prev.indexOf(first), stop=prev.indexOf(last,start+first.length);
  if(start<0||stop<0)throw Error('Missing review markers: '+target);
  const src=(css||feature?read(source):read('shared/desktop-card-layout.js')+'\n'+read('shared/rank-initial.js')+'\n'+read('web/refresh-control.js')+'\n'+read(source)).replace(/^export /gm,'').trimEnd();
- const next=prev.slice(0,start)+first+'\n'+src+'\n'+prev.slice(stop);
+ // The board also displays older proposals. Apply the desktop theme only to its hourglass variant.
+ const scoped=feature==='desktop-behavior'?src.replaceAll('.desk-ui','.hourglass-study'):src;
+ const next=prev.slice(0,start)+first+'\n'+scoped+'\n'+prev.slice(stop);
  if(prev!==next){if(check)throw Error('Run node scripts/build-review-insights.mjs');fs.writeFileSync(target,next);}
 }

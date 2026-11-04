@@ -1,7 +1,8 @@
+import {summaryStats} from '../shared/summary.js';
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import os from 'node:os';
-import { DEFAULT_SETTINGS, aggregate, dateKey, dayBounds, weekBounds, validSettings } from '../shared/time.js';
+import { DEFAULT_SETTINGS, dateKey, dayBounds, weekBounds, validSettings } from '../shared/time.js';
 
 export class Store {
  constructor(path,platform='windows',name=os.hostname()){
@@ -26,6 +27,20 @@ export class Store {
  devices(){return this.db.prepare('SELECT * FROM devices').all().map(r=>({id:r.id,name:r.name,platform:r.platform,lastSeen:r.last_seen,local:r.id===this.device.id}));}
  decode(r){return {id:r.id,deviceId:r.device_id,appId:r.app_id,appName:r.app_name,start:r.start,end:r.end,sourceSeq:r.source_seq,seq:r.seq,updatedAt:r.updated_at,site:r.site??null,deletedAt:r.deleted_at};}
  sessions(){return this.db.prepare('SELECT * FROM sessions ORDER BY start DESC').all().map(r=>this.decode(r));}
+ // Intersections use epoch milliseconds and the half-open interval [start, end).
+ sessionsInRange(start,end,application){
+  const filter=application?' AND device_id=? AND app_id=? ORDER BY start DESC':'';
+  const params=application?[end,start,application.deviceId,application.appId]:[end,start];
+  return this.db.prepare('SELECT * FROM sessions WHERE deleted_at IS NULL AND start<? AND end>?'+filter)
+   .all(...params).map(row=>this.decode(row));
+ }
+ recentSessions({deviceId,appId}){
+  const where=['deleted_at IS NULL'],params=[];
+  if(deviceId){where.push('device_id=?');params.push(deviceId);}
+  if(appId){where.push('app_id=?');params.push(appId);}
+  return this.db.prepare('SELECT * FROM sessions WHERE '+where.join(' AND ')+' ORDER BY start DESC LIMIT 500')
+   .all(...params).map(row=>this.decode(row));
+ }
  write(s,local=true){
   const old=this.db.prepare('SELECT * FROM sessions WHERE id=?').get(s.id);
   if(old?.deleted_at)return false;
@@ -42,9 +57,9 @@ export class Store {
  updateSettings(input){const old=this.get('settings');const value={...old,dayStart:Number(input.dayStart),timeZone:input.timeZone,weekStart:1,baseRevision:old.revision,revision:randomUUID()};if(!validSettings(value))throw new Error('请检查日界线和时区');this.set('settings',value);return value;}
  summary(date,now=Date.now()){
   const settings=this.get('settings'),key=date??dateKey(now,settings);if(!/^\d{4}-\d{2}-\d{2}$/.test(key)||!Number.isFinite(Date.parse(key+'T12:00:00Z'))||new Date(key+'T12:00:00Z').toISOString().slice(0,10)!==key)throw new Error('日期无效');
-  const bounds=dayBounds(key,settings),w=weekBounds(now,settings),sessions=this.db.prepare('SELECT * FROM sessions WHERE deleted_at IS NULL AND ((end>? AND start<?) OR (end>? AND start<?))').all(bounds.start,bounds.end,w.previous,w.end).map(r=>this.decode(r)),devices=this.devices();const today=aggregate(sessions,bounds.start,Math.min(bounds.end,now),devices);const current=aggregate(sessions,w.start,w.end,devices),previous=aggregate(sessions,w.previous,w.previousEnd,devices);const apps=new Map();for(const a of current.apps)apps.set(a.key,{...a,previous:0});for(const a of previous.apps){if(!apps.has(a.key))apps.set(a.key,{...a,duration:0,previous:0});apps.get(a.key).previous=a.duration;}
-  const changes=[...apps.values()].map(a=>({...a,change:a.duration-a.previous})).sort((a,b)=>Math.abs(b.change)-Math.abs(a.change));
-  return {device:this.device,devices,settings,date:key,today,week:{...w,current,previous,changes},paused:this.get('paused',false),collector:this.get('collector',{state:'starting'}),appearance:this.get('appearance'),layout:this.get('layout'),weekLayout:this.get('weekLayout'),settingsConflict:this.get('settingsConflict'),peers:this.db.prepare('SELECT id,name,created_at,last_sync FROM peers').all(),requests:this.db.prepare("SELECT id,name,device_id,created_at FROM requests WHERE status='pending' AND created_at>?").all(Date.now()-300000)};
+  const bounds=dayBounds(key,settings),w=weekBounds(now,settings),sessions=this.db.prepare('SELECT * FROM sessions WHERE deleted_at IS NULL AND ((end>? AND start<?) OR (end>? AND start<?))').all(bounds.start,bounds.end,w.previous,w.end).map(r=>this.decode(r)),devices=this.devices();
+  const stats=summaryStats(sessions,devices,bounds,w,now);
+  return {device:this.device,devices,settings,date:key,...stats,paused:this.get('paused',false),collector:this.get('collector',{state:'starting'}),appearance:this.get('appearance'),layout:this.get('layout'),weekLayout:this.get('weekLayout'),settingsConflict:this.get('settingsConflict'),peers:this.db.prepare('SELECT id,name,created_at,last_sync FROM peers').all(),requests:this.db.prepare("SELECT id,name,device_id,created_at FROM requests WHERE status='pending' AND created_at>?").all(Date.now()-300000)};
  }
  close(){this.db.close();}
 }

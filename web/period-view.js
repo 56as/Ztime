@@ -5,7 +5,6 @@ import {bindPhoneUsage} from './phone-usage.js';
 import {refreshControl} from './refresh-control.js';
 import {cardTitles,defaultCardLayout,validCardLayout} from './shared/period-layout.js';
 import {dateKey} from './shared/time.js';
-import {periodStats} from './shared/period.js';
 
 const windowsRankNames=new Map([
  ['chrome.exe','Chrome'],['weixin.exe','微信'],['code.exe','VS Code'],['ztime.exe','Ztime'],
@@ -14,7 +13,7 @@ const windowsRankNames=new Map([
 ]);
 
 // Keep the selection when moving between dashboard, devices and settings.
-export function createPeriodView({api, escape, duration, details, report, refreshPhone, onError}) {
+export function createPeriodView({readPeriod, saveLayout, escape, duration, details, report, refreshPhone, onError}) {
  let selectedPoint=null, pointPeriod='';
  let chartStyle='line', dailyView=new URLSearchParams(location.search).get('view')==='ringdesk'?'ringdesk':null;
  let showLatestRecord=dailyView==='ringdesk';
@@ -36,12 +35,18 @@ export function createPeriodView({api, escape, duration, details, report, refres
 
  const label=r=>len(r)===1?stamp(r[0]):stamp(r[0])+' – '+short(r[1]);
  let mode='day', period, comparison=null, scope='all', picker=null, followToday=true;
- let host, snapshot, revision=0, result, prior, loadedKey, pendingKey, committed;
+ let host, snapshot, revision=0, result, prior, loadedKey, loadedStamp, pendingKey, committed;
  const queryScope=()=>({all:'all',phone:'android',pc:'windows'})[scope];
- async function read(range, kind) {
-   const from=iso(range[0]), to=iso(range[1]);
-   if(snapshot.native)return periodStats(snapshot.sessions,snapshot.devices,snapshot.settings,from,to,kind,queryScope());
-   return api('/api/period?'+new URLSearchParams({from,to,mode:kind,scope:queryScope()}));
+ const detailForView=()=>desktop && mode==='day' && dailyView==='ringdesk'?'ring':'chart';
+ const selectionKey=()=>JSON.stringify([mode,period,comparison,scope,snapshot.settings,detailForView()]);
+ function dataStamp(){
+   // The end of a live bin is displayed to the minute, even when collection is paused.
+   const live=period[1]===today || comparison?.[1]===today;
+   return JSON.stringify([snapshot.ledgerSequence,snapshot.devices.map(d=>[d.id,d.platform]),
+     live?Math.floor(Date.now()/60000):null,live?snapshot.today?.totals:null]);
+ }
+ function read(range,kind,detail){
+   return readPeriod(snapshot,{from:iso(range[0]),to:iso(range[1]),mode:kind,scope:queryScope(),detail});
  }
  let layout, draft=null, saving=false, openerSelector;
  const dialog=document.createElement('dialog');
@@ -91,7 +96,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
    if(button.hasAttribute('data-save')){
      saving=true;button.disabled=true;
      try{
-       await api('/api/period-layout','PUT',{cards:draft});
+       await saveLayout(draft);
        layout=draft;saving=false;closeModal();paint();
        host.querySelector('[data-tool=layout]')?.focus();
      }catch(error){saving=false;button.disabled=false;dialog.querySelector('.layout-error').textContent=error.message;}
@@ -179,7 +184,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
      return desktopRankRow({name,icon,device,percent,index,minutes:Math.floor(app.duration/60000)});
    }).join('');
    const series=desktop && result?chartSeries():null;
-   const dailyChart=desktop && mode==='day'?dailyView:null;
+   const dailyChart=desktop && mode==='day' && result?.sessions?dailyView:null;
    const formats=[['line','折线图'],['bar','柱形图']];
    if(mode==='day')formats.push(['ringdesk','环台']);
    const styleButtons='<div class="chart-style" role="group" aria-label="图表类型">'+formats.map(([key,label])=>`<button data-chart="${key}" aria-pressed="${(dailyChart||chartStyle)===key}">${label}</button>`).join('')+'</div>';
@@ -270,7 +275,14 @@ export function createPeriodView({api, escape, duration, details, report, refres
          const next=button.dataset.chart;
          dailyView=next==='ringdesk'?next:null;
          if(!dailyView)chartStyle=next;
-         paint();host.querySelector('[data-chart="'+next+'"]').focus({preventScroll:true});
+         if(detailForView()==='ring' && !result.sessions)await update();
+         else {
+           // The ring response also contains everything needed by a line or bar chart.
+           ++revision;pendingKey=null;loadedKey=selectionKey();
+           Object.assign(committed,{dailyView,chartStyle});
+           paint();markPending(false);
+         }
+         if((dailyView||chartStyle)===next && (document.activeElement===button || document.activeElement===document.body))host.querySelector('[data-chart="'+next+'"]')?.focus({preventScroll:true});
        } else if(button.hasAttribute('data-rank')){
          const app=result.apps[Number(button.dataset.rank)];
          await details(app.appId,app.deviceId,{start:result.start,end:result.end,label:label(period),single:mode==='day'});
@@ -297,26 +309,27 @@ export function createPeriodView({api, escape, duration, details, report, refres
    for(const button of host.querySelectorAll('[data-scope]'))button.setAttribute('aria-pressed',String(button.dataset.scope===scope));
  }
  async function update(force=false) {
-   const key=JSON.stringify([mode,period,comparison,scope,snapshot.settings]);
+   const key=selectionKey(),stamp=dataStamp();
    if(key===pendingKey)return;
    const pending=++revision;
-   if(!force && key===loadedKey && result){
-     pendingKey=null;markPending(false);return;
+   if(!force && key===loadedKey && stamp===loadedStamp && result){
+     if(pendingKey){pendingKey=null;markPending(false);}
+     return;
    }
    pendingKey=key;
    if(!result && !host.childElementCount)paint();
    markPending(key!==loadedKey);
    try {
-     const [current,previous]=await Promise.all([read(period,mode),comparison?read(comparison,mode==='year'?'year':'custom'):null]);
+     const [current,previous]=await Promise.all([read(period,mode,detailForView()),comparison?read(comparison,mode==='year'?'year':'custom','totals'):null]);
      if(revision!==pending || !host.isConnected)return;
      // A poll already in flight may finish after the user starts dragging.
      if(key===loadedKey && host.querySelector('.daily-clock [data-scrubbing]'))return;
-     loadedKey=key;result=current;prior=previous;
-     committed={mode,period,comparison,scope,followToday};
+     loadedKey=key;loadedStamp=stamp;result=current;prior=previous;
+     committed={mode,period,comparison,scope,followToday,dailyView,chartStyle};
      paint();
    }catch(error){
      if(revision!==pending || !host.isConnected)return;
-     if(committed)({mode,period,comparison,scope,followToday}=committed);
+     if(committed)({mode,period,comparison,scope,followToday,dailyView,chartStyle}=committed);
      else host.querySelector('[role=status]')?.replaceChildren('统计暂时无法读取，请点更新重试。');
      onError(error.message);
    }finally{
@@ -326,17 +339,26 @@ export function createPeriodView({api, escape, duration, details, report, refres
      }
    }
  }
+ function receive(data){
+   snapshot=data;
+   today=num(dateKey(Date.now(),data.settings));
+   // Compare the selection so a failed request at the day boundary can retry.
+   if(!period || (followToday && mode!=='custom' && period[1]!==today))choose(mode,today);
+ }
+ function refresh(data,force=false){
+   if(host.querySelector('.daily-clock [data-scrubbing]'))return;
+   receive(data);
+   return update(force || data.ledgerSequence==null);
+ }
  function mount(element,data) {
-   if(element.querySelector('.daily-clock [data-scrubbing]'))return;
-   const nextToday=num(dateKey(Date.now(),data.settings));
-   const rollover=today!==nextToday;
-   today=nextToday;
-   if(!period || (rollover && followToday && mode!=='custom'))choose(mode,today);
-   host=element;snapshot=data;
+   host=element;
+   revision++;pendingKey=null;
+   receive(data);
    desktop=!data.native;
    layout??=desktop?desktopLayout(data.periodLayout?.cards):validCardLayout(data.periodLayout?.cards)?data.periodLayout.cards:defaultCardLayout();
-   if(!host.childElementCount && result)paint();
-   update(true);
+   if(loadedKey!==selectionKey()){result=null;prior=null;committed=null;}
+   if(result)paint();
+   return update(true);
  }
- return {mount,closeModal,get choosing(){return dialog.open;}};
+ return {mount,refresh,closeModal,get choosing(){return dialog.open;}};
 }

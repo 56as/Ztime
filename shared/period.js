@@ -12,7 +12,9 @@ export function periodBounds(from, to, settings, now = Date.now()) {
   return {start:dayBounds(from, settings).start, end:Math.min(now, dayBounds(to, settings).end), days};
 }
 
-export function periodStats(rows, devices, settings, from, to, mode, scope, now = Date.now(), includeBinApps = false) {
+export function periodStats(rows, devices, settings, from, to, mode, scope, now = Date.now(), detail = false) {
+  const {includeBinApps,includeSessions} = typeof detail === 'boolean'
+    ? {includeBinApps:detail,includeSessions:detail} : detail;
   const {start, end, days} = periodBounds(from, to, settings, now);
   const bins = [];
   if (mode === 'day') {
@@ -28,7 +30,7 @@ export function periodStats(rows, devices, settings, from, to, mode, scope, now 
     for (let key = from; key <= to; key = addDays(key,1))
       bins.push({start:dayBounds(key, settings).start, label:String(Number(key.slice(-2))), duration:0});
   }
-  const sessions = includeBinApps && mode === 'day' && from === to ? [] : null;
+  const sessions = includeSessions && mode === 'day' && from === to ? [] : null;
   const perBin = includeBinApps ? bins.map(()=>new Map()) : null;
   const platforms = new Map(devices.map(d=>[d.id,d.platform]));
   const apps = new Map();
