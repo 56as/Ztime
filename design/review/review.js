@@ -1268,6 +1268,10 @@ function mountPeriodDashboard(d,onChange){
  const root=d.createElement('section');root.id='period-dashboard';root.hidden=true;d.body.append(root);
  let mode='day',period=[today,today],comparison=null,scope='all',picker=null;
  const desktop=currentDraft();
+ const previewParams=new URLSearchParams(location.search);
+ const insights=desktop && previewParams.get('insights')==='1';
+ root.classList.toggle('insights-preview',insights);
+ let pendingFilter;
  if(desktop)updatePreviewRecording(d);
  const recording=desktop?(d.querySelector('#app .statusbar')?.outerHTML||''):'';
  const mobile=d.body.dataset.reviewDevice==='mobile';
@@ -1382,7 +1386,20 @@ function mountPeriodDashboard(d,onChange){
        }
        trend.querySelector('.pd-top small').replaceWith(selector);
        const details=series.map(bin=>({...bin,rows:(bin.values||[]).map((minutes,i)=>({minutes,name:apps[i][0],platform:apps[i][1]==='pc'?'windows':'android'})).filter(row=>row.minutes).sort((a,b)=>b.minutes-a.minutes)}));
-       bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange});
+       if(insights)for(const bin of details)bin.rows=bin.rows.slice(0,3);
+       bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange:()=>{
+         if(insights){
+           const list=trend.querySelector('.desktop-point-detail ul');
+           if(list){
+             list.setAttribute('aria-label','用时最多的应用');
+             if(!list.previousElementSibling?.matches('.point-list-label')){
+               const caption=d.createElement('small');caption.className='point-list-label';
+               caption.textContent='应用排行 · 前 '+list.children.length;list.before(caption);
+             }
+           }
+         }
+         onChange();
+       }});
      }
      if(desktop)ranking.classList.add('desktop-rank-card');
      const scroll=d.createElement('div');scroll.className='rank-scroll';scroll.tabIndex=0;scroll.setAttribute('aria-label','应用排行');scroll.setAttribute('role','region');
@@ -1443,6 +1460,8 @@ function mountPeriodDashboard(d,onChange){
      <footer><h4>${mobile?'保存为':'导出格式'}</h4>${['TXT','CSV','PDF','PNG'].map(fmt=>`<button data-cal="report-format" data-format="${fmt}">${fmt}</button>`).join(' ')}<small role="status">设计稿演示 · 使用示例数据</small>${mobile?'<div class="sample-save" hidden><p>保存到下载文件夹（演示）</p><b></b><div><button data-cal="cancel-save">取消</button><button data-cal="confirm-save">保存</button></div></div>':''}</footer></section>`;
  }
  function draw(){
+  clearTimeout(pendingFilter);
+  root.removeAttribute('aria-busy');
   if(desktop && currentDraft()){
     const preview=picker?.target==='report';
     showReference(preview?mode+'-report':mode,preview?'报告预览':'默认视图');
@@ -1514,6 +1533,7 @@ function mountPeriodDashboard(d,onChange){
  function choose(m,n){mode=m;period=span(m,n);comparison=null;picker=null;}
  function act(button){
   const a=button.dataset.cal;if(!a)return false;
+  if(insights && ['mode','scope'].includes(a) && button.getAttribute('aria-pressed')==='true')return true;
   if(a==='chart-style'){desktopPreview.chart=button.dataset.chart;draw();root.querySelector('[data-chart="'+desktopPreview.chart+'"]').focus({preventScroll:true});return true;}
   if(['mode','prev','next','apply-year','apply','scope'].includes(a))pointIndex=null;
   const wasOpen=!!picker || !!layoutDraft;
@@ -1565,6 +1585,22 @@ function mountPeriodDashboard(d,onChange){
    else if(s.slice(0,7)!==picker.start.slice(0,7)){picker.error='结束日必须与开始日在同一个月。';}
    else{[picker.start,picker.end]=[picker.start,s].sort();picker.second=false;picker.error='';}}
   if(a==='apply'){const p=picker;p.error=p.error||valid(p);if(!p.error){const r=[num(p.start),num(p.end)];if(p.target==='comparison')comparison=r;else{period=r;mode=len(r)===1?'day':'custom';comparison=null;}picker=null;}}
+  if(insights && ['mode','scope'].includes(a) && previewParams.get('latency')==='slow'){
+    clearTimeout(pendingFilter);
+    root.setAttribute('aria-busy','true');
+    for(const item of root.querySelectorAll('[data-cal=mode],[data-cal=scope]')){
+      item.setAttribute('aria-pressed',String(item.dataset.mode===mode || item.dataset.scope===scope));
+    }
+    root.querySelector('.pd-bottom').inert=true;
+    const report=root.querySelector('[data-cal=report]');
+    if(report)report.disabled=true;
+    pendingFilter=setTimeout(()=>{
+      const focused=d.activeElement;
+      draw();
+      if(focused===button)root.querySelector('[data-'+a+'="'+button.dataset[a]+'"]')?.focus({preventScroll:true});
+    },760);
+    return true;
+  }
   draw();
   if(wasOpen && !picker && !layoutDraft)root.querySelector('[data-cal="'+returnFocus+'"]')?.focus({preventScroll:true});
   return true;

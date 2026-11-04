@@ -770,3 +770,20 @@ body.desktop-v2.hourglass-study:not(.dark) {
 body.desktop-v2.unified.hourglass-study .devices-view > .page-header + .panel {border-top:1px solid var(--line)}
 
 body.desktop-v2.hourglass-study.dark {--accent:#409cff!important;--tint:color-mix(in srgb,var(--accent) 13%,var(--surface))!important}
+
+/* Unapproved statistics study, enabled only from its review link. */
+.desktop-v2 .insights-preview .desktop-point-detail {
+  position:static;flex:none;width:auto;max-height:none;margin-top:10px;padding:10px 0 0;
+  border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none
+}
+.desktop-v2 .insights-preview .desktop-point-detail ul {display:flex;flex-wrap:wrap;gap:8px}
+.desktop-v2 .insights-preview .desktop-point-detail li {gap:12px;padding:4px 9px;border:0;background:var(--bg);border-radius:8px}
+.desktop-v2 .insights-preview .desktop-point-detail li small {color:var(--muted)}
+.desktop-v2 .insights-preview[aria-busy=true] :is(.usage-chart,.pd-total-value,.rank-scroll,.desktop-point-detail) {visibility:hidden}
+.desktop-v2 .insights-preview[aria-busy=true] [data-card-key] > :not(.pd-top,h3) {visibility:hidden}
+.desktop-v2 .insights-preview[aria-busy=true] [data-card-key=trend]::after {
+  content:"读取中…";position:absolute;inset:50% 0 auto;text-align:center;color:var(--muted);font-size:12px;
+  animation:review-wait-label 160ms step-end both
+}
+@keyframes review-wait-label {from{opacity:0}to{opacity:1}}
+.desktop-v2 .insights-preview[aria-busy=true] [data-cal=report] {opacity:1}
