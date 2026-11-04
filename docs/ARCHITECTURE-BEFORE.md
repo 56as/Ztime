@@ -1,0 +1,25 @@
+# Ztime 架构快照 · 重构前
+
+基线为 Git 提交 `cb8c299`。本文记录本次修改前的实现，供与[重构后架构](ARCHITECTURE.md)逐项对照。
+
+## 平台与入口
+
+- Windows 由 `desktop/main.cjs` 启动。应用通过 `desktop/server.js` 提供页面和 HTTP API，`desktop/store.js` 持有 SQLite 数据和同步状态。采集、同步协议和浏览器桥接各有独立模块。
+- Android 由原生 Activity、数据库和 WebView 提供数据与界面。Web 入口 `web/app.js` 适配原生摘要。手机统计还会消费摘要中的会话列表。
+- 可批注设计稿位于 `design/review/`，使用示例数据。环台等桌面控件以 `web/desktop-insights.js` 和同名 CSS 为源，通过 `scripts/build-review-insights.mjs` 同步到评审页。
+
+## 统计页与刷新
+
+桌面摘要 → `web/app.js` → `web/period-view.js` → `/api/period` → `shared/period.js` → 图卡。统计规则已经独立于 DOM，报表模型与输出也分开。问题在页面生命周期。统计页首次挂载与后台五秒刷新都调用 `mount`，继而强制读取时段数据。即使采集数据未变，展开的页面也可能重建图卡。拖动已有局部保护，不能用应用级重绘替代。
+
+## 会话查询与明细
+
+时段 API 在路由内直接访问 SQLite，再把记录交给纯统计函数。`periodStats` 的最后一个布尔参数同时打开每个分桶的应用排行和日会话，桌面接口固定开启。折线、柱状与环台对明细的需求无法分别表达。会话列表还有两条路径：精确区间在路由内查 SQL；最近记录则先从 store 读取整张表，再在 JS 中排除删除项、筛选和截取 500 条。同步和备份也使用全量方法，它们与面向页面的读取有不同约束。
+
+## 设计稿与正式版
+
+环台已有共同源码。行为页汇总数字的字号、行高和对齐却分别保存在 `web/hourglass.css` 和 `design/review/boards/behavior.css`。修改数字时需要找到两份选择器，并保持各自的作用域和层叠顺序。
+
+## 维护与验证
+
+改统计规则先读 `shared/period.js` 及单元测试，改图形先读 `web/desktop-insights.js`。改日视图数据量还要查路由、周期视图和报表调用。Android 使用相同的统计规则，但数据来自本地桥，不能直接删减摘要字段。设计稿生成段由构建脚本维护。重构的可观察目标是保留日期边界、设备筛选、报表、拖动与设计稿批注，同时减少一次局部需求涉及的源码位置。
