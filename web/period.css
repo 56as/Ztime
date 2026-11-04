@@ -66,21 +66,22 @@
 .desk-ui .period-total .pd-modes {order:-1}
 .desk-ui .period-total .pd-range {margin-inline-start:auto;min-height:36px;white-space:nowrap}
 .desk-ui .period-total .total-value {gap:8px;white-space:nowrap}
-.desk-ui .rank-scroll {scrollbar-width:none;scrollbar-gutter:auto;padding-right:0}
+.desk-ui .desktop-rank-card .desktop-rank-row {box-sizing:border-box;height:41px}
+.desk-ui .rank-scroll {max-height:123px;flex:none;scrollbar-width:none;scrollbar-gutter:auto;padding-right:0}
 .desk-ui .pd-bottom {gap:12px}
 .desk-ui .pd-bottom .period-card {padding:16px 18px}
 @media (min-width:701px) {
   .desk-ui .dashboard-view:has(.default-pair) {display:flex;flex-direction:column;height:100dvh;min-height:560px}
   .desk-ui #period-view:has(.default-pair) {flex:1;min-height:0;display:flex;flex-direction:column}
   .desk-ui #period-view:has(.default-pair) > :not(.pd-bottom) {flex:none}
-  .desk-ui #period-view .default-pair {flex:1;min-height:0;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1.2fr) minmax(0,1fr);align-items:stretch}
-  .desk-ui #period-view .default-pair:has(> .ranking-card:first-child) {grid-template-rows:minmax(0,1fr) minmax(0,1.2fr)}
+  .desk-ui #period-view .default-pair {flex:1;min-height:0;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;align-items:stretch}
+  .desk-ui #period-view .default-pair:has(> .ranking-card:first-child) {grid-template-rows:auto minmax(0,1fr)}
   .desk-ui .default-pair .period-card {display:flex;flex-direction:column;min-height:0}
   .desk-ui .default-pair .usage-chart {flex:1;min-height:0;margin-top:8px}
   .desk-ui .default-pair .usage-chart > div:last-child {display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}
   .desk-ui .default-pair .usage-chart svg {height:100%;min-height:0}
   .desk-ui .default-pair .usage-y {height:auto;margin-bottom:20px}
-  .desk-ui .default-pair .rank-scroll {flex:1;min-height:0;max-height:none}
+
 }
 
 @media(min-width:701px){.desk-ui .pd-bottom{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}}

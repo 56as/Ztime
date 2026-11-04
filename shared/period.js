@@ -28,6 +28,7 @@ export function periodStats(rows, devices, settings, from, to, mode, scope, now 
     for (let key = from; key <= to; key = addDays(key,1))
       bins.push({start:dayBounds(key, settings).start, label:String(Number(key.slice(-2))), duration:0});
   }
+  const sessions = includeBinApps && mode === 'day' && from === to ? [] : null;
   const perBin = includeBinApps ? bins.map(()=>new Map()) : null;
   const platforms = new Map(devices.map(d=>[d.id,d.platform]));
   const apps = new Map();
@@ -37,6 +38,7 @@ export function periodStats(rows, devices, settings, from, to, mode, scope, now 
     if (row.deletedAt || (scope !== 'all' && scope !== platform)) continue;
     const a = Math.max(start,row.start), b = Math.min(end,row.end);
     if (a >= b) continue;
+    if(sessions)sessions.push({device:platform==='android'?'phone':'pc',name:row.appName,start:(a-start)/60000,end:(b-start)/60000,minutes:(b-a)/60000});
     const key = JSON.stringify([row.deviceId,row.appId]);
     const app = apps.get(key) || {name:row.appName,appId:row.appId,deviceId:row.deviceId,platform,duration:0};
     app.duration += b-a;
@@ -52,5 +54,5 @@ export function periodStats(rows, devices, settings, from, to, mode, scope, now 
   if(perBin)bins.forEach((bin,i)=>{
     bin.apps=Array.from(perBin[i],([key,duration])=>({...apps.get(key),duration})).sort((a,b)=>b.duration-a.duration);
   });
-  return {start,end,days,total,bins,apps:[...apps.values()].sort((a,b)=>b.duration-a.duration)};
+  return {start,end,days,total,bins,...(sessions?{sessions,dayMinutes:(dayBounds(to,settings).end-start)/60000}:{}),apps:[...apps.values()].sort((a,b)=>b.duration-a.duration)};
 }
