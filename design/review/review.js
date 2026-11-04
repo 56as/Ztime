@@ -1419,6 +1419,18 @@ function reviewDeviceSessions(series,apps){
   return rows.sort((a,b)=>a.start-b.start);
 }
 
+// Prototype the needle on the existing hand so its tip follows the calibrated time position.
+function addReviewNeedle(panel){
+  const hand=panel.querySelector('.clock-hand');
+  hand.insertAdjacentHTML('beforebegin',`<defs><marker id="ringdesk-needle" orient="auto" markerUnits="userSpaceOnUse"
+    viewBox="-53 -6 54 12" refX="0" refY="0" markerWidth="54" markerHeight="12">
+    <path class="needle-body" d="M0 0 L-34 3.6 L-48 1.8 Q-51 0 -48 -1.8 L-34 -3.6 Z"/>
+    <path class="needle-facet" d="M-1 0 L-34 -3.1 L-47 -1.5 L-43 0 Z"/>
+    <circle class="needle-pin" cx="-44" cy="0" r="1.4"/>
+  </marker></defs>`);
+  hand.setAttribute('marker-end','url(#ringdesk-needle)');
+}
+
 function mountPeriodDashboard(d,onChange){
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
  const today=num(new Date(Date.now()-4*3600000).toLocaleDateString('sv-SE',{timeZone:'Asia/Hong_Kong'}));
@@ -1470,7 +1482,8 @@ function mountPeriodDashboard(d,onChange){
  }
  let pointIndex=null;
  const entry=new URLSearchParams(location.search);
- const clockState={view:['dial','replay','ringdesk'].includes(entry.get('view'))?'dial':null,minute:684,selected:entry.get('view')==='replay',zoom:240};
+ const previewNeedle=entry.get('pointer')==='needle';
+ const clockState={view:['dial','replay','ringdesk'].includes(entry.get('view'))?'dial':null,minute:previewNeedle?1245:684,selected:previewNeedle || entry.get('view')==='replay',zoom:240};
  let openPeak=desktop && entry.get('dial')==='1' && entry.get('peak')==='1';
  function enablePointDetails(card,series){
    const svg=card.querySelector('.usage-chart svg');
@@ -1567,6 +1580,7 @@ function mountPeriodDashboard(d,onChange){
          trend.querySelector('.usage-chart').replaceWith(panel);
          const sessions=reviewDeviceSessions(series,apps);
          mountRingDesk(panel,sessions,clockState,dur,{onChange,enabled:()=>!picking});
+         addReviewNeedle(panel);
        }else bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange});
      }
      if(desktop)ranking.classList.add('desktop-rank-card');

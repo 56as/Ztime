@@ -481,7 +481,7 @@ html:has(.desk-ui .behavior),
 .desktop-v2 #period-dashboard h1 {margin:0;line-height:1.35}
 .desktop-v2 .pd-header .statusbar {margin:7px 0 0;font-size:11px;line-height:1.5;min-height:0}
 .desktop-v2.unified .page-header.topbar {margin-bottom:14px}
-.desktop-v2 .pd-main {padding-inline:clamp(20px,4vw,56px)}
+.desktop-v2 :is(.pd-main,.app-shell > main) {max-width:none;padding-inline:clamp(14px,2vw,32px)}
 @media(min-width:1101px){.desktop-v2 .pd-layout {grid-template-columns:208px minmax(0,1fr)}}
 .desktop-v2 .pd-header {margin-bottom:14px}
 .desktop-v2 .pd-controls {margin-bottom:0;border-top:3px solid var(--accent);border-bottom:0;border-radius:14px 14px 0 0;padding:10px 14px 4px}
@@ -871,3 +871,12 @@ body.desktop-v2.imprint-study #period-dashboard .pd-card {border:0;border-top:1p
 body.desktop-v2.imprint-study #period-dashboard .usage-chart {color:var(--print-ink)}
 body.desktop-v2.imprint-study #period-dashboard .rank-track i {background:var(--print-ink)}
 body.desktop-v2.imprint-study #period-dashboard .rank-track {background:var(--line)}
+
+/* Pointer study. Keep native text selection outside the two scrub surfaces. */
+.ring-desk .clock-face svg,.ring-desk .clock-face svg * {user-select:none;-webkit-user-select:none}
+.ring-desk .clock-hand[marker-end] {stroke-opacity:0;pointer-events:none}
+.ring-desk .needle-body {fill:#865936;stroke:#573d26;stroke-width:.65;stroke-linejoin:round}
+.ring-desk .needle-facet {fill:#e9c593}
+.ring-desk .needle-pin {fill:#fff1d6;stroke:#745034;stroke-width:.5}
+.dark .ring-desk .needle-body {fill:#c29b6c;stroke:#f3dfbf}
+.dark .ring-desk .needle-facet {fill:#f8d9a7}
