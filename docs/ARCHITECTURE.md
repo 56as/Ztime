@@ -12,12 +12,14 @@
 
 `web/app.js` 装配 `createPeriodView`，注入 `readPeriod(snapshot, query)` 和 `saveLayout(cards)`。日期、设备筛选、图表选择、对比区间和指针由 `web/period-view.js` 持有。`web/period-data.js` 把同一个区间请求交给 Windows HTTP 或 Android 本地聚合。
 
-页面首次进入通过 `mount(element, data)` 建立视图。桌面后台摘要通过 `refresh(data, force)` 通知现有页面。判断分两步：
+页面首次进入通过 `mount(element, data)` 建立视图。Windows 统计、设置、设备和行为页只轮询 `GET /api/status`，读取设备、采集、配置和账本序号。完整 `/api/summary` 用于需要日周聚合的页面或周报。设备页只在显示字段变化时重绘。桌面后台状态通过 `refresh(data, force)` 通知现有页面。判断分两步：
 
 1. 选区由统计周期、起止日、对比期、设备范围、统计设置和明细类型决定。查询进行期间，旧图可见，过期应答不能覆盖新选区。
-2. 同一选区比较账本序号与设备的平台信息。涉及今天时还比较显示分钟和今日累计，支持暂停采集后时钟继续前进。相同快照跳过查询和重绘。手动更新可重读，拖动中的环台保留当前节点。
+2. 同一选区比较账本序号与设备的平台信息。涉及今天时还比较显示分钟，支持暂停采集后时钟继续前进。相同快照跳过查询和重绘。手动更新可重读，拖动中的环台保留当前节点。
 
 **常见改动**　修改指针、双环和回溯刻度，先找 `web/desktop-insights.js` 的 `mountRingDesk` 与同名 CSS。修改自动刷新、切图或失败回退，先找 `web/period-view.js` 的 `update`。修改报表预览或导出，从 `web/reports/period.js` 和 `shared/report-*.js` 进入。
+
+**第三轮改动入口**　`web/period-calendar.js` 管理日期区间、跨月导航、上一年同期和日历内容。`web/period-dialog.js` 持有弹窗焦点、选区草稿与布局保存状态，成功后通过回调提交。`web/period-cards.js` 按布局顺序生成可见图卡，环台展开时跳过应用排行的格式化。报表复用同一份图表序列转换。页面仍负责指针与选中点的联动。
 
 ## 会话查询与明细
 
@@ -41,4 +43,4 @@ Windows 的时段数据路径为 `web/period-data.js` → `GET /api/period` → 
 - **桌面统计交互**　运行 `node scripts/verify-dashboard-ui.mjs`。该检查覆盖摘要轮询命中、账本变化、环台首次加载失败、快速切换选区、布局与拖动节点复用。
 - **设计稿同步**　运行 `node scripts/build-review-insights.mjs --check`。需要核对渲染时，运行 `node scripts/verify-release-parity.mjs`，它也会执行桌面统计交互检查。行为页与报表另有 `verify-behavior-ui.mjs` 和 `verify-report-ui.mjs`，均在 `scripts/`。
 
-**仍有成本的边界**　Windows 仍定时读取并计算摘要，账本序号变化时统计页仍会重算所选区间。Android 摘要仍跨桥传完整会话，手机小时详情和历史统计会使用这些数据。后续缩减摘要时，先让这两个调用方按区间读取，再收紧原生桥契约。统计页的日历、布局弹窗及图卡渲染目前同属一个文件，下一次单独改日历时可以沿现有日期选择事件拆出，无需同时搬动环台。
+**仍有成本的边界**　账本序号变化时，Windows 统计页会重算选中区间。窗口可见时仍按五秒读取元数据。Android 摘要的数据量和原生桥审查由安卓开发会话负责。

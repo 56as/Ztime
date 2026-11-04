@@ -10,7 +10,7 @@ const paths=[
  'web/style.css',
  'web/controls.css',
  'web/period.css',
- 'web/period-view.js','web/period-data.js',
+ 'web/period-view.js','web/period-data.js','web/period-calendar.js','web/period-dialog.js','web/period-cards.js',
  'web/phone-usage.js',
  'web/phone.css',
  'web/recording-status.js',

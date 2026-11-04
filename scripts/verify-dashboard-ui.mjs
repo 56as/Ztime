@@ -196,6 +196,12 @@ try{
   const tools=page.locator('[data-tool=layout], [data-tool=refresh]');
   assert.deepEqual(await tools.evaluateAll(nodes=>nodes.map(n=>n.offsetHeight)),[36,49]);
   assert.equal(await page.getByRole('heading',{name:'期间对比'}).count(),0);
+  await click('[data-tool=layout]');await click('[data-toggle=compare]');
+  await page.route('**/api/period-layout',route=>route.fulfill({status:500,json:{error:'测试保存失败'}}));
+  await click('[data-save]');await modal.getByText('测试保存失败').waitFor();
+  assert.equal(await modal.locator('[data-toggle=compare]').getAttribute('aria-pressed'),'true');
+  await page.unroute('**/api/period-layout');await cal('cancel');
+  assert.equal(await page.getByRole('heading',{name:'期间对比'}).count(),0);
   await click('[data-tool=layout]');await click('[data-toggle=compare]');await click('[data-toggle=devices]');await click('[data-toggle=focus]');await click('[data-save]');
   await page.getByRole('heading',{name:'设备用时占比'}).waitFor();
   assert.match(await page.locator('.share-row').first().innerText(),/100%/);

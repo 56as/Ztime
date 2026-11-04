@@ -2,6 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {periodStats,periodBounds} from '../shared/period.js';
 import {DEFAULT_SETTINGS,dayBounds} from '../shared/time.js';
+import {adjacentPeriod,previousYearPeriod,num,iso} from '../web/period-calendar.js';
+
+test('calendar navigation clips custom ranges to the month and leap day to the prior year',()=>{
+ const range=(from,to)=>[num(from),num(to)];
+ assert.deepEqual(previousYearPeriod(range('2024-01-01','2024-02-29')).map(iso),['2023-01-01','2023-02-28']);
+ assert.deepEqual(adjacentPeriod('custom',range('2024-03-01','2024-03-31'),false,num('2024-04-04')).map(iso),['2024-02-01','2024-02-29']);
+ assert.deepEqual(adjacentPeriod('custom',range('2024-03-01','2024-03-31'),true,num('2024-04-04')).map(iso),['2024-04-01','2024-04-04']);
+});
 
 test('yearly bins split at the configured month boundary and conserve overlapping device time',()=>{
  const edge=dayBounds('2024-03-01',DEFAULT_SETTINGS).start;
