@@ -97,6 +97,26 @@ try{
   assert.ok(await page.locator('.desktop-hour-chart rect[rx]').count()>0);
   await click('[aria-label=关闭时段明细]');await click('[data-chart=line]');
 
+  // A refresh must not replace the report action or interrupt the moving selection.
+  const reportAction=await page.locator('[data-tool=report]').elementHandle();
+  await page.evaluate(()=>{
+    window.segmentSlides=[];
+    document.addEventListener('animationstart',event=>{
+      if(event.animationName==='review-choice-slide'){
+        window.segmentSlides.push({button:event.target.dataset,offset:parseFloat(event.target.style.getPropertyValue('--slide-from'))});
+      }
+    });
+  });
+  for(const [key,value] of [['mode','day'],['mode','week'],['scope','pc'],['scope','all'],['chart','bar'],['chart','line']]){
+    await click('[data-'+key+'="'+value+'"]');
+    await page.waitForFunction(([key,value])=>window.segmentSlides.some(s=>s.button[key]===value && Math.abs(s.offset)>1),[key,value]);
+    await page.locator('#period-view[aria-busy=false]').waitFor();
+    assert.ok(await reportAction.evaluate(e=>e.isConnected));
+  }
+  const chartButtons=await page.locator('.chart-style button').evaluateAll(buttons=>buttons.map(b=>[
+    b.offsetWidth,b.offsetHeight,getComputedStyle(b).backgroundColor,getComputedStyle(b,'::before').backgroundColor
+  ]));
+  assert.deepEqual(chartButtons,[[52,24,'rgba(0, 0, 0, 0)','rgb(255, 253, 248)'],[52,24,'rgba(0, 0, 0, 0)','rgba(0, 0, 0, 0)']]);
   const bars=page.locator('.rank-track i');
   await bars.first().waitFor();
   assert.equal(await bars.count(),2);

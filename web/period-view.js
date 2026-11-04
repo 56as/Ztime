@@ -206,9 +206,27 @@ export function createPeriodView({api, escape, duration, details, report, refres
        const previous=icons.get(img.getAttribute('src'));
        if(previous){img.replaceWith(previous);icons.delete(img.getAttribute('src'));}
      }
-     const seal=host.querySelector('.sand-seal');
-     if(seal)template.content.querySelector('.sand-seal').replaceWith(seal);
-     host.replaceChildren(template.content);
+     const existingHeader=host.querySelector('.page-header');
+     const existingToolbar=host.querySelector('.period-total');
+     if(existingHeader){
+       // Keep the toolbar and its focused buttons mounted during asynchronous data refreshes.
+       const reportButton=existingHeader.querySelector('[data-tool=report]');
+       const nextReport=template.content.querySelector('[data-tool=report]');
+       if(nextReport && !reportButton)existingHeader.querySelector('.sand-seal').before(nextReport);
+       else if(!nextReport)reportButton?.remove();
+       else if(reportButton.textContent!==nextReport.textContent)reportButton.textContent=nextReport.textContent;
+       template.content.querySelector('.page-header').remove();
+     }
+     if(existingToolbar && toolbar){
+       for(const selector of ['.pd-range','.total-value']){
+         existingToolbar.querySelector(selector).replaceWith(toolbar.querySelector(selector));
+       }
+       toolbar.remove();
+     }
+     for(const child of [...host.children]){
+       if(child!==existingHeader && !(child===existingToolbar && toolbar))child.remove();
+     }
+     host.append(template.content);
      if(focus)host.querySelector(focus)?.focus({preventScroll:true});
    }else host.innerHTML=header+controls+summary;
    if(!desktop)for(const img of host.querySelectorAll('.phone-app-icon img')){

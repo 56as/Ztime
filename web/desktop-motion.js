@@ -43,7 +43,7 @@ export function bindDesktopMotion(){
     if(!previous || previous===button)return;
     const origin=previous.getBoundingClientRect();
     const offset=origin.left-group.getBoundingClientRect().left;
-    const key=Object.keys(button.dataset)[0];
+    const key=['mode','scope','chart','theme','device'].find(name=>name in button.dataset);
     if(!key)return;
     const value=button.dataset[key];
     const find=()=>Array.from(document.querySelectorAll(selector+'>button[aria-pressed=true]')).find(b=>b.dataset[key]===value);
