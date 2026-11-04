@@ -856,3 +856,18 @@ body.desktop-v2.imprint-study #period-dashboard .pd-card {border:0;border-top:1p
 body.desktop-v2.imprint-study #period-dashboard .usage-chart {color:var(--print-ink)}
 body.desktop-v2.imprint-study #period-dashboard .rank-track i {background:var(--print-ink)}
 body.desktop-v2.imprint-study #period-dashboard .rank-track {background:var(--line)}
+
+/* Daily ring desk proposal for the annotatable desktop board. */
+.desktop-v2 .pd-main:has(.ring-desk) {max-width:none;padding-inline:clamp(14px,2vw,32px)}
+.desktop-v2 .pd-bottom.clock-only:has(.ring-desk) {align-items:stretch}
+.desktop-v2 .ring-desk {display:grid;grid-template-columns:minmax(0,0.95fr) minmax(0,1.25fr);align-items:stretch;gap:clamp(12px,2.5vw,40px)}
+.ring-desk > section {display:grid;grid-template-rows:auto minmax(0,1fr);min-width:0;min-height:0;padding-block:12px}
+.ring-desk h4 {margin:0;font-size:13px;color:var(--muted);font-weight:550}
+.ring-desk .desk-replay {border-inline-start:1px solid var(--line);padding-inline-start:clamp(12px,2.5vw,40px)}
+.ring-desk .clock-face {padding-inline:0}
+.ring-desk .desk-replay .clock-replay {grid-template-rows:minmax(0,1fr) auto}
+@media(max-width:900px){
+  .desktop-v2 .ring-desk {gap:12px;grid-template-columns:minmax(0,.85fr) minmax(0,1.25fr)}
+  .ring-desk .desk-replay {padding-inline-start:12px}
+  .ring-desk .replay-controls {gap:4px 8px}
+}

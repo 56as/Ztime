@@ -1409,6 +1409,21 @@ function reviewDeviceSessions(series,apps){
   return rows.sort((a,b)=>a.start-b.start);
 }
 
+function mountReviewRingDesk(panel,rows,state,dur,onChange){
+  panel.innerHTML='<section class="desk-dial" aria-label="全天分布"><h4>全天分布</h4><div></div></section><section class="desk-replay" aria-label="时段回溯"><h4>时段回溯</h4><div></div></section>';
+  const dial=panel.querySelector('.desk-dial > div'),replay=panel.querySelector('.desk-replay > div');
+  const enabled=()=>!picking;
+  // Redraw only the partner so the active instrument keeps focus and pointer capture.
+  function drawRing(){
+    mountDailyRing(dial,rows,state,dur,{enabled,onChange(){drawReplay();onChange();}});
+  }
+  function drawReplay(){
+    mountDailyReplay(replay,rows,state,{enabled,onChange(){drawRing();onChange();}});
+    replay.querySelector('svg').id='replay-instrument';
+  }
+  drawRing();drawReplay();
+}
+
 function mountPeriodDashboard(d,onChange){
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
  const today=num(new Date(Date.now()-4*3600000).toLocaleDateString('sv-SE',{timeZone:'Asia/Hong_Kong'}));
@@ -1460,7 +1475,7 @@ function mountPeriodDashboard(d,onChange){
  }
  let pointIndex=null;
  const entry=new URLSearchParams(location.search);
- const clockState={view:['dial','replay'].includes(entry.get('view'))?entry.get('view'):null,minute:684,selected:entry.get('view')==='replay',zoom:240};
+ const clockState={view:['dial','replay','ringdesk'].includes(entry.get('view'))?'dial':null,minute:684,selected:entry.get('view')==='replay',zoom:240};
  let openPeak=desktop && entry.get('dial')==='1' && entry.get('peak')==='1';
  function enablePointDetails(card,series){
    const svg=card.querySelector('.usage-chart svg');
@@ -1540,7 +1555,7 @@ function mountPeriodDashboard(d,onChange){
        const selector=d.createElement('div');selector.className='chart-style';selector.setAttribute('role','group');selector.setAttribute('aria-label','图表类型');
        const clockView=mode==='day'?clockState.view:null;
        const formats=[['line','折线图'],['bar','柱形图']];
-       if(mode==='day')formats.push(['dial','环'],['replay','台']);
+       if(mode==='day')formats.push(['dial','环台']);
        for(const [key,label] of formats){
          const button=d.createElement('button');button.dataset.cal='chart-style';button.dataset.chart=key;
          button.textContent=label;button.setAttribute('aria-pressed',String((clockView||desktopPreview.chart)===key));selector.append(button);
@@ -1553,11 +1568,10 @@ function mountPeriodDashboard(d,onChange){
          if(maximum>0)pointIndex=details.findIndex(bin=>bin.minutes===maximum);
        }
        if(clockView){
-         const panel=d.createElement('section');panel.id='review-clock';panel.className='daily-clock';panel.setAttribute('aria-label',clockView==='replay'?'台':'环');
+         const panel=d.createElement('section');panel.id='review-clock';panel.className='daily-clock ring-desk';panel.setAttribute('aria-label','环台');
          trend.querySelector('.usage-chart').replaceWith(panel);
          const sessions=reviewDeviceSessions(series,apps);
-         if(clockView==='replay')mountDailyReplay(panel,sessions,clockState,{onChange,enabled:()=>!picking});
-         else mountDailyRing(panel,sessions,clockState,dur,{onChange,enabled:()=>!picking});
+         mountReviewRingDesk(panel,sessions,clockState,dur,onChange);
        }else bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange});
      }
      if(desktop)ranking.classList.add('desktop-rank-card');
@@ -1708,8 +1722,7 @@ function mountPeriodDashboard(d,onChange){
   if(desktop && ['mode','scope'].includes(a) && button.getAttribute('aria-pressed')==='true')return true;
   if(a==='chart-style'){
     const chart=button.dataset.chart;
-    clockState.view=['dial','replay'].includes(chart)?chart:null;
-    if(chart==='replay')clockState.selected=true;
+    clockState.view=chart==='dial'?chart:null;
     if(!clockState.view)desktopPreview.chart=chart;
     draw();root.querySelector('.chart-style [data-chart="'+chart+'"]').focus({preventScroll:true});return true;
   }
@@ -1773,7 +1786,7 @@ function mountPeriodDashboard(d,onChange){
   const sane=v=>/^-?\d{1,6}$/.test(v)&&+v>=ymd(1900,0)&&+v<=today;
   if(!Object.hasOwn(modes,m)||!sane(a)||!sane(b)||+b<+a||+b-+a>366||!['all','phone','pc'].includes(sc))return;
   mode=m;period=[+a,+b];scope=sc;comparison=sane(c)&&sane(e)&&+e>=+c&&+e-+c<=366?[+c,+e]:null;picker=null;
-  clockState.view=desktop && ['dial','replay'].includes(clockView)?clockView:null;
+  clockState.view=desktop && ['dial','replay'].includes(clockView)?'dial':null;
   if(clockState.view){clockState.minute=Math.min(1439,Math.max(0,Number(minute)||0));clockState.zoom=[120,240,1440].includes(+zoom)?+zoom:240;clockState.selected=selected==='1';}
   pointIndex=mobile && /^\d+$/.test(point) && +point<bins().length?+point:null;
   layoutDraft=t==='layout'?structuredClone(layout):null;
