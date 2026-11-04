@@ -1293,8 +1293,72 @@ function reviewDeviceSessions(series,apps){
   return rows.sort((a,b)=>a.start-b.start);
 }
 
+function reviewClockTime(minute){
+  const t=(minute+240)%1440;
+  return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
+}
+
+function mountReviewReplay(host,rows,state,onChange){
+  const starts=[...new Set(rows.map(row=>row.start))].sort((a,b)=>a-b);
+  host.innerHTML='<div class="clock-face clock-replay"><svg id="clock-instrument" data-style-native viewBox="0 0 600 215" tabindex="0" role="slider" aria-label="选择回溯时刻" aria-valuemin="0" aria-valuemax="1439"></svg><div class="replay-controls"><div role="group" aria-label="切换记录"><button data-step="-1">上一段</button><button data-step="1">下一段</button></div><div role="group" aria-label="时间范围">'+[120,240,1440].map(m=>'<button data-zoom="'+m+'">'+m/60+' 小时</button>').join('')+'</div></div></div>';
+  const svg=host.querySelector('svg'),left=54,width=520;
+  const clamp=(m,max)=>Math.max(0,Math.min(max,m));
+  const startOfWindow=()=>clamp(Math.round(state.minute-state.zoom/2),1440-state.zoom);
+  let start=startOfWindow();
+  const label=(x,y,size,text,anchor='middle')=>`<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="${size}">${html(text)}</text>`;
+  const step=direction=>direction<0?starts.findLast(m=>m<state.minute):starts.find(m=>m>state.minute);
+  function draw(){
+    const x=m=>left+(m-start)*width/state.zoom;
+    const time=reviewClockTime(state.minute);
+    const names=rows.filter(r=>r.start<=state.minute && state.minute<r.end).map(r=>r.name).join(' · ')||'无记录';
+    let marks=label(300,40,32,time)+label(300,63,12,names);
+    for(let i=0;i<=4;i++){
+      const tick=start+i*state.zoom/4;
+      marks+=label(x(tick),95,11,reviewClockTime(tick))+`<path d="M${x(tick)} 103v87" stroke="var(--clock-grid)"/>`;
+    }
+    for(const [device,title,y,color] of [['pc','电脑',128,'var(--clock-pc)'],['phone','手机',174,'var(--clock-phone)']]){
+      marks+=label(left-10,y+4,12,title,'end')+`<path d="M${left} ${y}h${width}" stroke="var(--clock-track)" stroke-width="22"/>`;
+      for(const row of rows.filter(r=>r.device===device)){
+        const a=Math.max(start,row.start),b=Math.min(start+state.zoom,row.end);
+        if(b<=a)continue;
+        marks+=`<path d="M${x(a)} ${y}H${x(b)}" stroke="${color}" stroke-width="20"/>`;
+        if(x(b)-x(a)>row.name.length*12+10)marks+='<g class="replay-app">'+label((x(a)+x(b))/2,y+4,11,row.name)+'</g>';
+      }
+    }
+    svg.innerHTML=marks+`<path d="M${x(state.minute)} 100v94" stroke="var(--clock-hand)" stroke-width="2"/>`;
+    svg.setAttribute('aria-valuenow',state.minute);svg.setAttribute('aria-valuetext',time+' '+names);
+    for(const b of host.querySelectorAll('[data-step]'))b.disabled=step(+b.dataset.step)===undefined;
+    for(const b of host.querySelectorAll('[data-zoom]'))b.setAttribute('aria-pressed',String(+b.dataset.zoom===state.zoom));
+  }
+  function select(m,recenter){
+    state.minute=clamp(Math.round(m),1439);state.selected=true;
+    if(recenter)start=startOfWindow();
+    draw();onChange();
+  }
+  host.querySelector('.replay-controls').onclick=e=>{
+    const b=e.target.closest('button');
+    if(!b || picking)return;
+    if(b.dataset.zoom)state.zoom=+b.dataset.zoom;
+    select(b.dataset.step?step(+b.dataset.step):state.minute,true);
+  };
+  function scrub(e){
+    const p=new DOMPoint(e.clientX,e.clientY).matrixTransform(svg.getScreenCTM().inverse());
+    if(e.type==='pointerdown'){
+      if(p.x<left-5 || p.x>left+width+5 || p.y<82 || p.y>198)return;
+      svg.setPointerCapture(e.pointerId);
+    }
+    select(start+clamp((p.x-left)/width,1)*state.zoom,false);
+  }
+  svg.onpointerdown=e=>{if(!picking)scrub(e);};
+  svg.onpointermove=e=>{if(!picking && svg.hasPointerCapture(e.pointerId))scrub(e);};
+  svg.onkeydown=e=>{
+    if(picking || !['ArrowLeft','ArrowRight'].includes(e.key))return;
+    e.preventDefault();select(state.minute+(e.key==='ArrowLeft'?-1:1),true);
+  };
+  draw();
+}
+
 function mountReviewClock(host,rows,state,dur,onChange){
-  const time=m=>{const t=(m+240)%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');};
   const ring=(m,r)=>{const a=(m+240)*Math.PI/720;return [150+r*Math.sin(a),150-r*Math.cos(a)];};
   const path=(m,r)=>ring(m,r).join(' ');
   host.innerHTML='<div class="clock-face"><svg id="clock-instrument" data-style-native viewBox="0 0 300 300" role="slider" tabindex="0" aria-label="选择时刻" aria-valuemin="0" aria-valuemax="1439"></svg><div class="clock-legend"><span><i></i>电脑</span><span><i></i>手机</span></div></div>';
@@ -1302,30 +1366,30 @@ function mountReviewClock(host,rows,state,dur,onChange){
   let marks='';
   for(let i=0;i<96;i++){
     const m=i*15;
-    marks+=`<path d="M${path(m,119)}L${path(m,i%4?122:127)}" stroke="#7e9e8f"/>`;
+    marks+=`<path d="M${path(m,119)}L${path(m,i%4?122:127)}" stroke="var(--clock-grid)"/>`;
   }
   for(const hour of [0,3,6,9,12,15,18,21]){
     const [x,y]=ring(hour*60-240,139);
     marks+=`<text x="${x}" y="${y+3}" text-anchor="middle" font-size="9">${String(hour).padStart(2,'0')}</text>`;
   }
-  for(const [device,r,color] of [['pc',104,'#a8dbc4'],['phone',88,'#edb47d']]){
-    marks+=`<circle cx="150" cy="150" r="${r}" fill="none" stroke="#355548" stroke-width="10"/>`;
+  for(const [device,r,color] of [['pc',104,'var(--clock-pc)'],['phone',88,'var(--clock-phone)']]){
+    marks+=`<circle cx="150" cy="150" r="${r}" fill="none" stroke="var(--clock-track)" stroke-width="10"/>`;
     for(const part of rows.filter(row=>row.device===device)){
       marks+=`<path d="M${path(part.start,r)}A${r} ${r} 0 0 1 ${path(part.end,r)}" fill="none" stroke="${color}" stroke-width="10"/>`;
     }
   }
-  svg.innerHTML=marks+'<path class="clock-hand" stroke="#fff2d5" stroke-width="2"/><text class="clock-value" x="150" y="152" text-anchor="middle"></text><text class="clock-caption" x="150" y="173" text-anchor="middle" font-size="11"></text>';
+  svg.innerHTML=marks+'<path class="clock-hand" stroke="var(--clock-hand)" stroke-width="2"/><text class="clock-value" x="150" y="152" text-anchor="middle"></text><text class="clock-caption" x="150" y="173" text-anchor="middle" font-size="11"></text>';
   const total=dur(rows.reduce((sum,row)=>sum+row.minutes,0));
   function update(){
     const {minute,selected}=state;
     const names=rows.filter(row=>row.start<=minute && minute<row.end).map(row=>row.name).join(' · ')||'无记录';
     const value=svg.querySelector('.clock-value'),hand=svg.querySelector('.clock-hand');
     hand.setAttribute('d',selected?'M'+path(minute,77)+'L'+path(minute,128):'');
-    value.textContent=selected?time(minute):total;
+    value.textContent=selected?reviewClockTime(minute):total;
     value.setAttribute('font-size',selected?29:20);
     svg.querySelector('.clock-caption').textContent=selected?names:'设备累计';
     svg.setAttribute('aria-valuenow',minute);
-    svg.setAttribute('aria-valuetext',selected?time(minute)+' '+names:'设备累计 '+total);
+    svg.setAttribute('aria-valuetext',selected?reviewClockTime(minute)+' '+names:'设备累计 '+total);
   }
   update();
   function select(minute){state.minute=Math.min(1439,Math.max(0,minute));state.selected=true;update();onChange();}
@@ -1395,7 +1459,7 @@ function mountPeriodDashboard(d,onChange){
  }
  let pointIndex=null;
  const entry=new URLSearchParams(location.search);
- const clockState={view:['dial','replay'].includes(entry.get('view'))?'dial':null,minute:684,selected:entry.get('view')==='replay',zoom:240};
+ const clockState={view:['dial','replay'].includes(entry.get('view'))?entry.get('view'):null,minute:684,selected:entry.get('view')==='replay',zoom:240};
  let openPeak=desktop && entry.get('dial')==='1' && entry.get('peak')==='1';
  function enablePointDetails(card,series){
    const svg=card.querySelector('.usage-chart svg');
@@ -1475,7 +1539,7 @@ function mountPeriodDashboard(d,onChange){
        const selector=d.createElement('div');selector.className='chart-style';selector.setAttribute('role','group');selector.setAttribute('aria-label','图表类型');
        const clockView=mode==='day'?clockState.view:null;
        const formats=[['line','折线图'],['bar','柱形图']];
-       if(mode==='day')formats.push(['dial','环']);
+       if(mode==='day')formats.push(['dial','环'],['replay','台']);
        for(const [key,label] of formats){
          const button=d.createElement('button');button.dataset.cal='chart-style';button.dataset.chart=key;
          button.textContent=label;button.setAttribute('aria-pressed',String((clockView||desktopPreview.chart)===key));selector.append(button);
@@ -1488,9 +1552,11 @@ function mountPeriodDashboard(d,onChange){
          if(maximum>0)pointIndex=details.findIndex(bin=>bin.minutes===maximum);
        }
        if(clockView){
-         const panel=d.createElement('section');panel.id='review-clock';panel.setAttribute('aria-label','环');
+         const panel=d.createElement('section');panel.id='review-clock';panel.setAttribute('aria-label',clockView==='replay'?'台':'环');
          trend.querySelector('.usage-chart').replaceWith(panel);
-         mountReviewClock(panel,reviewDeviceSessions(series,apps),clockState,dur,onChange);
+         const sessions=reviewDeviceSessions(series,apps);
+         if(clockView==='replay')mountReviewReplay(panel,sessions,clockState,onChange);
+         else mountReviewClock(panel,sessions,clockState,dur,onChange);
        }else bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange});
      }
      if(desktop)ranking.classList.add('desktop-rank-card');
@@ -1639,7 +1705,8 @@ function mountPeriodDashboard(d,onChange){
   if(desktop && ['mode','scope'].includes(a) && button.getAttribute('aria-pressed')==='true')return true;
   if(a==='chart-style'){
     const chart=button.dataset.chart;
-    clockState.view=chart==='dial'?'dial':null;
+    clockState.view=['dial','replay'].includes(chart)?chart:null;
+    if(chart==='replay')clockState.selected=true;
     if(!clockState.view)desktopPreview.chart=chart;
     draw();root.querySelector('.chart-style [data-chart="'+chart+'"]').focus({preventScroll:true});return true;
   }
@@ -1703,7 +1770,7 @@ function mountPeriodDashboard(d,onChange){
   const sane=v=>/^-?\d{1,6}$/.test(v)&&+v>=ymd(1900,0)&&+v<=today;
   if(!Object.hasOwn(modes,m)||!sane(a)||!sane(b)||+b<+a||+b-+a>366||!['all','phone','pc'].includes(sc))return;
   mode=m;period=[+a,+b];scope=sc;comparison=sane(c)&&sane(e)&&+e>=+c&&+e-+c<=366?[+c,+e]:null;picker=null;
-  clockState.view=desktop && ['dial','replay'].includes(clockView)?'dial':null;
+  clockState.view=desktop && ['dial','replay'].includes(clockView)?clockView:null;
   if(clockState.view){clockState.minute=Math.min(1439,Math.max(0,Number(minute)||0));clockState.zoom=[120,240,1440].includes(+zoom)?+zoom:240;clockState.selected=selected==='1';}
   pointIndex=mobile && /^\d+$/.test(point) && +point<bins().length?+point:null;
   layoutDraft=t==='layout'?structuredClone(layout):null;

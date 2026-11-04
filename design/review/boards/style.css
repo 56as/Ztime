@@ -826,11 +826,21 @@ body.desktop-v2.imprint-study #period-dashboard .rank-track {background:var(--li
 .desktop-v2 #review-clock {height:clamp(270px,52vh,620px);margin-top:10px}
 .desktop-v2 .pd-main:has(.default-pair #review-clock) {min-height:840px}
 .desktop-v2 .default-pair #review-clock {flex:1;min-height:0;height:auto}
-.clock-face {box-sizing:border-box;height:100%;display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;gap:5px;padding:10px 12px;color:#f1f2df;background:#19382f;border-radius:12px}
+.clock-face {box-sizing:border-box;height:100%;display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;gap:5px;padding:10px 12px;color:var(--text);--clock-pc:#397c65;--clock-phone:#b16a33;--clock-track:var(--line);--clock-grid:var(--muted);--clock-hand:var(--text)}
+.dark .clock-face {--clock-pc:#a8dbc4;--clock-phone:#edb47d}
 .clock-face svg {width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 .clock-face svg:focus-visible {outline:2px solid #edb47d;outline-offset:-2px}
 .clock-face svg text {fill:currentColor;pointer-events:none;font-family:"Segoe UI","Microsoft YaHei",sans-serif;font-variant-numeric:tabular-nums}
 .clock-legend,.clock-legend span {display:flex;gap:6px;align-items:center}
 .clock-legend {justify-content:center;gap:18px;font-size:12px}
-.clock-legend i {height:3px;width:16px;border-radius:2px;background:#a8dbc4}
-.clock-legend span+span i {background:#edb47d}
+.clock-legend i {height:3px;width:16px;border-radius:2px;background:var(--clock-pc)}
+.clock-legend span+span i {background:var(--clock-phone)}
+.clock-replay svg .replay-app {color:white}
+.dark .clock-replay svg .replay-app {color:#19382f}
+.replay-controls,.replay-controls > div {display:flex;justify-content:center;align-items:center;gap:5px}
+.replay-controls {flex-wrap:wrap;gap:8px 20px;padding-bottom:4px}
+#period-dashboard .replay-controls button {font-size:12px;color:var(--text);background:transparent;border:1px solid var(--line);border-radius:6px;padding:5px 10px}
+#period-dashboard .replay-controls button[aria-pressed=true] {background:var(--clock-pc);color:white}
+#period-dashboard .replay-controls button:disabled {opacity:.4}
+
+.dark #period-dashboard .replay-controls button[aria-pressed=true] {color:#19382f}
