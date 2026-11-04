@@ -43,7 +43,7 @@ function normalise(raw,selected=state.date,weekDate=state.page==='week'?state.la
 }
 
 const needsSummary=page=>page==='home'||page==='week';
-let desktopRefreshId=0;
+let desktopRefreshId=0,appliedRefreshId=0,renderedDevicesKey;
 async function refresh(force=false){try{
  const page=state.page,id=native?0:++desktopRefreshId;
  const params=new URLSearchParams();
@@ -51,9 +51,12 @@ async function refresh(force=false){try{
  if(page==='week'&&state.layoutDate)params.set('weekDate',state.layoutDate);
  const path=native||needsSummary(page)?'/api/summary?'+params:'/api/status';
  const raw=normalise(await api(path));
- if(!native&&(id!==desktopRefreshId||page!==state.page))return;
+ if(!native){
+  if(id<appliedRefreshId||page!==state.page)return;
+  appliedRefreshId=id;
+ }
  if(!state.appearanceLoaded){if(validAppearance(raw.appearance)){state.theme=raw.appearance.theme;state.accentColor=raw.appearance.accentColor;}const legacyTheme=!native&&state.theme==='system';if(legacyTheme)state.theme=appearanceMedia.matches?'dark':'light';state.appearanceLoaded=true;if(!raw.appearance||legacyTheme){try{await persistAppearance();}catch(e){toast(e.message);}}}
- const sameDevices=!native&&page==='devices'&&deviceList.statusKey(raw)===deviceList.statusKey(state.data);
+ const sameDevices=!native&&page==='devices'&&deviceList.statusKey(raw)===renderedDevicesKey;
  state.data={...raw,layout:{widgets:completeLayout(raw.layout,'home')},weekLayout:{widgets:completeLayout(raw.weekLayout,'week')}};state.error=null;
 if(sameDevices&&!force)return;
 if(state.page==='behavior'&&behaviorView){behaviorView.refresh(raw);return;}
@@ -73,6 +76,7 @@ function home(){return dashboard.render();}
 function weekPage(){return dashboard.render();}
 window.ledgerReportNotice=message=>toast(message);
 function devicesPage(){const d=state.data;
+ if(!native)renderedDevicesKey=deviceList.statusKey(d);
  const syncStatus=(d.peers?.length||state.syncMessage)?`<section class="${native?'':'panel '}sync-status" aria-live="polite"><h2>${state.syncing?'正在同步…':d.peers?.length?'已配对':'同步状态'}</h2><p>${esc(state.syncMessage||'手机和电脑在同一局域网时，可从任一端同步。')}</p></section>`:'';
  return `${d.requests?.map(r=>`<div class="banner"><span><strong>${esc(r.name)}</strong> 请求配对，请确认这是你的手机。</span><div class="row"><button data-approve="${esc(r.id)}" class="primary">允许配对</button><button data-reject="${esc(r.id)}">拒绝</button></div></div>`).join('')||''}<div class="panel current-devices"><div class="section-head"><h2>我的设备</h2><button data-action="sync" ${state.connecting||state.syncing?'disabled':''}>${state.syncing?'同步中…':'立即同步'}</button></div>${deviceList.render(d.devices,d.peers,!native)}${native?syncStatus:state.syncMessage?`<p class="small" role="status">${esc(state.syncMessage)}</p>`:''}</div><div class="panel"><h2>${native?'连接电脑':'添加手机'}</h2>${native?`<div class="row"><button data-action="scan" class="primary">扫描二维码</button></div><details id="manual-pair" ${manualPairOpen?'open':''}><summary>使用配对信息连接</summary><div class="field"><label for="pairUri">配对信息</label><textarea id="pairUri" placeholder="粘贴电脑显示的完整配对信息">${esc(state.pairUri)}</textarea></div><button data-action="connect" ${state.connecting?'disabled':''}>${state.connecting?'配对中…':'确认连接'}</button></details>`:state.invite?`<div class="pair-grid"><img class="qr" src="${state.invite.qr}" alt="手机配对二维码"><div><p class="small">配对码</p><div class="pair-code">${state.invite.code}</div><p class="small">5 分钟内有效 · 同一 Wi-Fi</p><p class="small">可用地址：${state.invite.addresses.map(esc).join(' / ')||'未检测到局域网地址'}</p><button data-action="copy-pair">复制完整配对信息</button></div></div>`:`<button data-action="pair" class="primary">生成配对二维码</button>`}</div>${browserSettings(d)}${d.sync?.error?`<div class="panel error-box">局域网服务未启动：${esc(d.sync.error)}</div>`:''}${native&&d.syncError?`<div class="panel error-box">${esc(d.syncError)}</div>`:''}`;}
 function browserSettings(d){

@@ -24,7 +24,7 @@ try{
  }
  browser=await chromium.launch({channel:process.env.ZTIME_BROWSER||'msedge'});
  const page=await browser.newPage({viewport:{width:1280,height:824},reducedMotion:'reduce'});
- await page.route('**/api/summary*',async route=>{const r=await route.fetch(),s=await r.json();s.sync.addresses=['192.0.2.1'];await route.fulfill({response:r,json:s});});
+ await page.route(url=>['/api/summary','/api/status'].includes(url.pathname),async route=>{const r=await route.fetch(),s=await r.json();s.sync.addresses=['192.0.2.1'];await route.fulfill({response:r,json:s});});
  await page.goto(service.url);
  const out=path.resolve('design/review/reference',version);
  mkdirSync(out,{recursive:true});
