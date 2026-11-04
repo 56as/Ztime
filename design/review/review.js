@@ -1255,6 +1255,27 @@ showBoard(...routeFromHash());
 load().catch(e=>status(e.message));
 
 // Independent calendar fixture. All numbers below come from one synthetic daily ledger.
+// Engrave the period's bins around the glass, starting at noon and reading clockwise.
+// Each ring is projected from the same profile so the resulting seal stays reproducible.
+function timeImprint(series){
+  const peak=Math.max(1,...series.map(bin=>bin.minutes||0));
+  const weights=series.map(bin=>(bin.minutes||0)/peak);
+  function ring(level){
+    const points=[];
+    for(let i=0;i<=120;i++){
+      const phase=i/120,angle=phase*Math.PI*2-Math.PI/2;
+      const pos=phase*weights.length,index=Math.floor(pos)%weights.length,mix=pos%1;
+      const weight=weights[index]*(1-mix)+weights[(index+1)%weights.length]*mix;
+      const radius=(7+65*Math.pow(Math.abs(level),.83))*(.72+.52*weight);
+      const x=radius*Math.cos(angle),y=level*65+radius*.23*Math.sin(angle);
+      points.push((i?'L':'M')+(132+x*.96-y*.27).toFixed(1)+' '+(90+x*.27+y*.96).toFixed(1));
+    }
+    return '<path d="'+points.join('')+'Z"/>';
+  }
+  const rings=Array.from({length:39},(_,i)=>ring(i/19-1)).join('');
+  return '<svg class="imprint-etching" aria-hidden="true" viewBox="0 0 264 180" fill="none" stroke="currentColor" stroke-width=".85">'+rings+'</svg>';
+}
+
 function mountPeriodDashboard(d,onChange){
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
  const today=num(new Date(Date.now()-4*3600000).toLocaleDateString('sv-SE',{timeZone:'Asia/Hong_Kong'}));
@@ -1505,6 +1526,19 @@ function mountPeriodDashboard(d,onChange){
     }
   }
   applyLayout(series);
+  if(desktop && currentDraft() && entry.get('skin')==='imprint'){
+    d.body.classList.add('imprint-study');
+    const summary=root.querySelector('.pd-summary');
+    const pageNumber=period[0]===period[1]?iso(period[0]).replaceAll('-','.'):dateText;
+    const plate=d.createElement('section');
+    plate.className='imprint-plate';
+    plate.setAttribute('aria-label','时间印记');
+    plate.innerHTML='<div class="imprint-lead"><div class="imprint-caption"><b>时间印记</b><span>'+pageNumber+'</span></div></div>'+
+      '<div class="imprint-block">'+timeImprint(series)+'</div>';
+    plate.querySelector('.imprint-lead').append(summary.querySelector('.pd-total-value'));
+    plate.querySelector('h2').innerHTML=html(dur(sum)).replace(/小时|分钟|天/g,unit=>'<span>'+unit+'</span>');
+    summary.before(plate);
+  }
   const content=picker?.target==='report'?reportPanel(v,series):layoutDraft?layoutPanel():calendar();
   if(content){
     const label=picker?.target==='report'?reportNames[mode]+'预览':layoutDraft?(desktop?'统计布局':'仪表盘布局'):picker.target==='year'?'选择年份':picker.target==='comparison'?'选择对比区间':'选择统计区间';

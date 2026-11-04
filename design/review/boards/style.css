@@ -791,3 +791,32 @@ body.desktop-v2.hourglass-study.dark {--accent:#409cff!important;--tint:color-mi
 .dial-study .sand-seal::before,.dial-study .sand-icon::before {animation:dial-turn 10s linear infinite}
 @keyframes dial-turn {0% {transform:rotate(-180deg);animation-timing-function:cubic-bezier(.22,.72,.22,1)} 6.4%,100% {transform:rotate(0)}}
 @media(prefers-reduced-motion:reduce){.dial-study .sand-motion::before {animation:none}}
+
+/* The time imprint is an opt-in Windows statistics cover. */
+.imprint-study {--print-ink:#222923;--print-red:#993c30;--print-paper:#f3f0e5}
+.imprint-study.dark {--print-ink:#f0eadb;--print-red:#71392f;--print-paper:#242723}
+body.desktop-v2.imprint-study #period-dashboard .pd-main {color:var(--print-ink);background:var(--print-paper)}
+body.desktop-v2.imprint-study #period-dashboard .pd-header {background:transparent;border:0;border-bottom:2px solid var(--print-ink);border-radius:0;padding-inline:0;margin-bottom:16px}
+body.desktop-v2.imprint-study #period-dashboard .pd-header h1,body.desktop-v2.imprint-study #period-dashboard .pd-card h3 {font-family:"Songti SC","SimSun",serif}
+body.desktop-v2.imprint-study #period-dashboard .pd-nav {background:#25302c;border-color:transparent}
+body.desktop-v2.imprint-study #period-dashboard .pd-brand {color:#f5efdf}
+body.desktop-v2.imprint-study #period-dashboard .pd-nav button {color:#deded1;border-radius:2px}
+body.desktop-v2.imprint-study #period-dashboard .pd-nav button:is(.active,[aria-current],:hover) {background:#f1ead8;color:#26302c}
+.imprint-study .imprint-plate {display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,44%);min-height:172px;border-bottom:1px solid var(--print-ink)}
+.imprint-study .imprint-lead {display:flex;flex-direction:column;justify-content:space-between;gap:12px;padding:12px 22px 24px 0}
+.imprint-study .imprint-caption {display:flex;align-items:baseline;flex-wrap:wrap;gap:15px}
+.imprint-study .imprint-caption b {font:600 19px/1.3 "SimSun",serif;letter-spacing:.16em}
+.imprint-study .imprint-caption span {font:12px/1.4 Consolas,monospace;color:var(--muted)}
+body.desktop-v2.imprint-study #period-dashboard .imprint-lead .pd-total-value small {display:block;font-size:13px;margin-bottom:3px;color:var(--muted)}
+body.desktop-v2.imprint-study #period-dashboard .imprint-lead h2 {margin:0;font:400 clamp(32px,4.2vw,68px)/1.14 Georgia,"SimSun",serif;letter-spacing:-.04em}
+.imprint-study .imprint-lead h2 span {font:500 16px/1.4 "Microsoft YaHei",sans-serif;margin-inline:4px 8px;letter-spacing:0}
+.imprint-study .imprint-block {position:relative;display:grid;place-items:center;background:var(--print-red);color:#ffedcc;overflow:hidden}
+.imprint-study .imprint-block::before,.imprint-study .imprint-block::after {content:"";position:absolute;width:8px;height:8px;border-color:currentColor;border-style:solid;opacity:.7}
+.imprint-study .imprint-block::before {inset:10px auto auto 10px;border-width:1px 0 0 1px}
+.imprint-study .imprint-block::after {inset:auto 10px 10px auto;border-width:0 1px 1px 0}
+.imprint-study .imprint-etching {width:100%;height:172px;display:block}
+body.desktop-v2.imprint-study #period-dashboard .pd-summary {padding:10px 0;margin:0;border:0;border-radius:0;background:transparent}
+body.desktop-v2.imprint-study #period-dashboard .pd-card {border:0;border-top:1px solid var(--print-ink);border-radius:0;background:transparent;padding:14px 0}
+body.desktop-v2.imprint-study #period-dashboard .usage-chart {color:var(--print-ink)}
+body.desktop-v2.imprint-study #period-dashboard .rank-track i {background:var(--print-ink)}
+body.desktop-v2.imprint-study #period-dashboard .rank-track {background:var(--line)}
