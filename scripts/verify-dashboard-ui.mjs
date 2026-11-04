@@ -47,6 +47,23 @@ try{
         rank.width===trend.width && rank.bottom>innerHeight-32 && scope.left<mode.left && mode.left<range.left && mode.top===scope.top && mode.height===scope.height;
     });
     assert.ok(firstScreen,'Default cards fill one desktop window');
+    for(const chart of ['dial','replay']){
+      await click('[data-chart='+chart+']');
+      assert.equal(await page.locator('.ranking-card:visible').count(),0);
+      const instrument=page.locator('#clock-instrument');
+      await instrument.focus();
+      await instrument.press('ArrowRight');
+      const metrics=await instrument.evaluate(el=>{
+        const card=el.closest('.trend-card').getBoundingClientRect();
+        return {outline:getComputedStyle(el).outlineStyle,gap:innerHeight-card.bottom,overflows:document.scrollingElement.scrollHeight>innerHeight};
+      });
+      assert.equal(metrics.outline,'none');
+      assert.ok(!metrics.overflows && metrics.gap>=0 && metrics.gap<=32,JSON.stringify(metrics));
+    }
+    for(const chart of ['bar','line']){
+      await click('[data-chart='+chart+']');
+      assert.equal(await page.locator('.ranking-card:visible').count(),1);
+    }
   }
   assert.ok(await page.locator('.period-total').evaluate(el=>
     el.querySelector('.pd-modes').getBoundingClientRect().right<=el.querySelector('.total-value').getBoundingClientRect().left));

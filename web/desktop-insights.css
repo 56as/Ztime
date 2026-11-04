@@ -85,12 +85,24 @@ html:has(.desk-ui .behavior),
 
 /* Daily device ring in the desktop Statistics board. */
 .desk-ui .daily-clock {height:clamp(270px,52vh,620px);margin-top:10px}
-.desk-ui :is(.pd-main,.dashboard-view):has(.default-pair .daily-clock) {min-height:840px}
+.desk-ui .pd-bottom.clock-only {display:flex;flex-direction:column}
+.desk-ui .pd-bottom.clock-only > :not([hidden]) {flex:1;min-height:0;display:flex;flex-direction:column}
+.desk-ui .clock-only .daily-clock {flex:1;min-height:0;height:auto}
+@media (min-width:701px) {
+  .desk-ui :is(.pd-main,.dashboard-view):has(.clock-only) {height:100dvh;min-height:560px;display:flex;flex-direction:column}
+  .desk-ui #period-view:has(.clock-only) {flex:1;min-height:0;display:flex;flex-direction:column}
+  .desk-ui :is(.pd-main,#period-view):has(.clock-only) > :not(.pd-bottom) {flex:none}
+  .desk-ui .pd-bottom.clock-only {flex:1;min-height:0}
+}
+@media (max-width:700px) {
+  .desk-ui .clock-only .daily-clock {flex:auto;height:clamp(270px,58vh,620px)}
+}
 .desk-ui .default-pair .daily-clock {flex:1;min-height:0;height:auto}
 .clock-face {box-sizing:border-box;height:100%;display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;gap:5px;padding:10px 12px;color:var(--text);--clock-pc:#397c65;--clock-phone:#b16a33;--clock-track:var(--line);--clock-grid:var(--muted);--clock-hand:var(--text)}
 .dark .clock-face {--clock-pc:#a8dbc4;--clock-phone:#edb47d}
 .clock-face svg {width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
-.clock-face svg:focus-visible {outline:2px solid #edb47d;outline-offset:-2px}
+.clock-face svg:focus {outline:none}
+.clock-face svg:focus-visible :is(.clock-value,.replay-time) {text-decoration:underline;text-underline-offset:4px}
 .clock-face svg text {fill:currentColor;pointer-events:none;font-family:"Segoe UI","Microsoft YaHei",sans-serif;font-variant-numeric:tabular-nums}
 .clock-legend,.clock-legend span {display:flex;gap:6px;align-items:center}
 .clock-legend {justify-content:center;gap:18px;font-size:12px}

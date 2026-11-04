@@ -188,9 +188,11 @@ export function createPeriodView({api, escape, duration, details, report, refres
      compare:renderComparison(),
      ...(desktop?Object.fromEntries(['devices','focus'].map(key=>[key,'<section class="period-card"><h2>'+desktopTitles[key]+'</h2>'+shareChart(key,result.apps,ms=>duration(ms,true))+'</section>'])):{})
    }:{};
-   const visibleCards=layout.filter(card=>card.visible);
+   const clockActive=dailyChart && layout.some(card=>card.visible && card.key==='trend');
+   const visibleCards=layout.filter(card=>card.visible && !(clockActive && card.key==='ranking'));
+   const clockOnly=clockActive && visibleCards.length===1;
    const defaultPair=visibleCards.length===2 && visibleCards.every(c=>['trend','ranking'].includes(c.key));
-   const summary=result?`<section class="period-card period-total"><div class="total-value"><small>${desktop?{all:'设备累计',phone:'手机累计',pc:'电脑累计'}[scope]:'设备累计'}</small><h2>${duration(result.total,true)}</h2></div><div class="pd-modes">${scopeHtml}</div></section><div class="pd-bottom${defaultPair?' default-pair':''}">${visibleCards.map(card=>cards[card.key]).join('')}</div>`:'<p role="status">正在读取所选期间…</p>';
+   const summary=result?`<section class="period-card period-total"><div class="total-value"><small>${desktop?{all:'设备累计',phone:'手机累计',pc:'电脑累计'}[scope]:'设备累计'}</small><h2>${duration(result.total,true)}</h2></div><div class="pd-modes">${scopeHtml}</div></section><div class="pd-bottom${clockOnly?' clock-only':defaultPair?' default-pair':''}">${visibleCards.map(card=>cards[card.key]).join('')}</div>`:'<p role="status">正在读取所选期间…</p>';
    const previousList=host.querySelector('.rank-scroll');
    if(previousList?.isConnected && previousList.clientHeight)rankOffset=previousList.scrollTop;
    if(desktop){
