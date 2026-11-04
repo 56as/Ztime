@@ -1,10 +1,8 @@
 const groups=['.pd-modes','.chart-style','#period-modes','#session-devices','#timeline-style','.appearance-options'];
 function turn(){
   const seal=document.querySelector('.sand-seal');
-  if(!seal)return;
-  seal.classList.remove('turn');
-  void seal.offsetWidth;
-  seal.classList.add('turn');
+  const animation=seal?.getAnimations({subtree:true}).find(item=>item.animationName==='dial-turn');
+  if(animation)animation.currentTime=0;
 }
 
 function whenPainted(ready,timeout=500){

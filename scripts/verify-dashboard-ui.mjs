@@ -95,7 +95,14 @@ try{
   await click('[data-chart=bar]');
   assert.equal(await page.locator('.desktop-point-detail').innerText(),selected);
   assert.ok(await page.locator('.desktop-hour-chart rect[rx]').count()>0);
-  await click('[aria-label=关闭时段明细]');await click('[data-chart=line]');
+  const bar=page.locator('.desktop-hour-chart g[aria-expanded=true]');
+  const shape=await bar.locator('.bar-selected').evaluate(path=>{
+    const curve=path.getBBox(),body=path.parentElement.querySelector('.bar-body');
+    return [curve.width-body.width.baseVal.value,body.y.baseVal.value-curve.y];
+  });
+  assert.ok(Math.abs(shape[0])<0.01 && Math.abs(shape[1]-2)<0.01);
+  await bar.press('Space');
+  assert.ok(await page.locator('.desktop-point-detail').isHidden());await click('[data-chart=line]');
 
   // A refresh must not replace the report action or interrupt the moving selection.
   const reportAction=await page.locator('[data-tool=report]').elementHandle();

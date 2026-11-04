@@ -81,11 +81,9 @@ html:has(> body.desk-ui) {scrollbar-width:none}
 .desk-ui:not(.dark) .usage-chart {color:#168e85}
 .desk-ui:not(.dark) .desktop-rank-row .rank-track {background:#e2f2ed}
 .desk-ui:not(.dark) .desktop-rank-row .rank-track i {background:#168e85}
-.desk-ui .sand-icon::before {animation:sand-sidebar-turn 8s linear infinite}
-@keyframes sand-sidebar-turn {0%{transform:rotate(-180deg);animation-timing-function:cubic-bezier(.22,.72,.22,1)} 8%,100%{transform:rotate(0)}}
-.desk-ui .sand-seal::before {animation:none}
-.desk-ui .sand-seal.turn::before {animation:sand-turn 640ms cubic-bezier(.22,.72,.22,1) both}
-@media(prefers-reduced-motion:reduce){.desk-ui .sand-motion::before,.desk-ui .sand-motion::after,.desk-ui .sand-seal.turn::before,.desk-ui .choice-sliding::before {animation:none!important}}
+.desk-ui .sand-icon::before,.desk-ui .sand-seal::before {animation:dial-turn 10s linear infinite}
+@keyframes dial-turn {0% {transform:rotate(-180deg);animation-timing-function:cubic-bezier(.22,.72,.22,1)} 6.4%,100% {transform:rotate(0)}}
+@media(prefers-reduced-motion:reduce){.desk-ui .sand-motion::before,.desk-ui .sand-motion::after,.desk-ui .choice-sliding::before {animation:none!important}}
 :root:has(.desk-ui)::view-transition-old(root),:root:has(.desk-ui)::view-transition-new(root){animation:none}
 
 .desk-ui .appearance-options {gap:0;padding:3px;background:var(--bg);border-radius:10px}

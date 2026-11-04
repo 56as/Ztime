@@ -57,6 +57,10 @@ try {
         await check('[data-theme='+theme+']');
       }
       await check('.sand-seal','.sand-seal',true);
+      for(const side of [live,frame]){
+        const dial=side.locator('.sand-seal');
+        assert.equal(await dial.evaluate(el=>getComputedStyle(el,'::before').animationDuration),'10s');
+      }
       if(tab==='dashboard'){
         for(const selector of ['[data-mode=day]','[data-chart=bar]','[data-scope=pc]'])await check(selector);
         await check('[data-tool=report]','[data-cal=report]');
@@ -79,7 +83,11 @@ try {
           const detail=side.locator('.desktop-point-detail:visible');
           assert.ok(await detail.evaluate(el=>el.getBoundingClientRect().top >= el.parentElement.querySelector('.usage-chart').getBoundingClientRect().bottom));
           assert.ok(await detail.locator('li').count()<=3);
-          await detail.locator('button').click();
+          assert.equal(await detail.locator('header, :scope > small').count(),0);
+          assert.equal(await detail.locator('.point-total').evaluate(row=>row.lastElementChild.getBoundingClientRect().left-row.firstElementChild.getBoundingClientRect().right),8);
+          assert.equal(await chart.locator('.usage-x span').first().evaluate(el=>getComputedStyle(el,'::before').height),'5px');
+          await chart.locator('g[aria-expanded=true]').press('Escape');
+          assert.ok(await side.locator('.desktop-point-detail').isHidden());
         }
       }
       await active.screenshot({path:evidence+'/'+theme+'-'+key+'-review.png',animations:'disabled'});

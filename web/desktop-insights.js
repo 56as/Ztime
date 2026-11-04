@@ -55,8 +55,11 @@ export function desktopUsageChart(series,mode,style){
        const center=' cx="'+x+'" cy="'+y+'"';
        return '<g><path class="chart-dot" d="M'+x+' '+y+'h.01"/><circle class="dot-hit"'+center+' r="2"/></g>';
      }
-     const bar='<rect x="'+(x-slot*.3)+'" y="'+y+'" width="'+slot*.6+'" height="'+(height-y)+'" rx="2" fill="currentColor"/>';
-     return '<g>'+bar+'<path class="bar-tip" d="M'+x+' '+y+'h.01"/><rect x="'+(x-slot/2)+'" width="'+slot+'" height="'+height+'" fill="transparent"/></g>';
+     const left=x-slot*.3,right=x+slot*.3;
+     const bar=`<rect class="bar-body" x="${left}" y="${y}" width="${right-left}" height="${height-y}" rx="2" fill="currentColor"/>`;
+     // A shallow arch spans the selected column; its baseline stays at the data axis.
+     const rounded=y<height?`<path class="bar-selected" d="M${left} ${height} V${y} Q${x} ${y-4} ${right} ${y} V${height} Z" fill="currentColor"/>`:'';
+     return '<g>'+bar+rounded+'<rect x="'+(x-slot/2)+'" width="'+slot+'" height="'+height+'" fill="transparent"/></g>';
    }).join('');
    const labels=series.map((bin,i)=>'<span>'+(i%(mode==='day'?2:Math.ceil(series.length/8))===0?html(bin.label):'')+'</span>').join('');
    return '<div class="usage-chart desktop-hour-chart"><div class="usage-y">'+ticks.map(t=>'<span>'+t+' 小时</span>').join('')+'</div><div><svg viewBox="0 0 640 126" preserveAspectRatio="none">'+guides+drawing+marks+'</svg><div class="usage-x" style="grid-template-columns:repeat('+series.length+',1fr)">'+labels+'</div></div></div>';
@@ -76,16 +79,16 @@ export function bindDesktopPoints(card,series,{pointIndex,onSelect,dur,enabled=(
      const bin=series[index];pointIndex=index;onSelect(index);detail.hidden=false;
      points.forEach((g,i)=>{g.setAttribute('aria-expanded',String(i===index));});
      const rows=[...bin.rows].sort((a,b)=>b.minutes-a.minutes).slice(0,3);
-     detail.innerHTML='<header><strong>'+html(bin.detail)+'</strong><button type="button" aria-label="关闭时段明细">×</button></header><div class="point-total"><span>累计用时</span><b>'+dur(bin.minutes)+'</b></div>'+
-       (rows.length?'<small>应用排行 · 前 '+rows.length+'</small><ul>'+rows.map(({name,platform,minutes})=>'<li><span>'+html(name)+' <small>'+(platform==='windows'?'电脑':'手机')+'</small></span><b>'+dur(minutes)+'</b></li>').join('')+'</ul>':'<p>这段时间没有使用记录。</p>');
-     detail.querySelector('button').onclick=()=>{close();points[index]?.focus();};
+     detail.innerHTML='<div class="point-total"><span>累计用时</span><b>'+dur(bin.minutes)+'</b></div>'+
+       (rows.length?'<ul>'+rows.map(({name,platform,minutes})=>'<li><span>'+html(name)+' <small>'+(platform==='windows'?'电脑':'手机')+'</small></span><b>'+dur(minutes)+'</b></li>').join('')+'</ul>':'<p>这段时间没有使用记录。</p>');
      onChange();
    }
    points.forEach((g,index)=>{
      g.setAttribute('role','button');g.setAttribute('tabindex','0');g.setAttribute('aria-controls','point-detail');g.setAttribute('aria-expanded','false');
      g.setAttribute('aria-label',series[index].detail+' · '+dur(series[index].minutes));
-     g.onclick=()=>{if(enabled())inspect(index);};
-     g.onkeydown=e=>{if(enabled() && ['Enter',' '].includes(e.key)){e.preventDefault();inspect(index);}};
+     const toggle=()=>{if(pointIndex===index)close();else inspect(index);};
+     g.onclick=()=>{if(enabled())toggle();};
+     g.onkeydown=e=>{if(enabled() && ['Enter',' '].includes(e.key)){e.preventDefault();toggle();}};
    });
    card.addEventListener('keydown',e=>{if(e.key==='Escape' && !detail.hidden){const index=pointIndex;close();points[index]?.focus();e.stopPropagation();}});
    if(pointIndex!==null && series[pointIndex]?.minutes!=null)inspect(pointIndex);

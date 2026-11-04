@@ -18,8 +18,12 @@
 .desktop-hour-chart g .chart-dot {stroke:currentColor;stroke-width:5px;vector-effect:non-scaling-stroke;stroke-linecap:round;fill:none}
 .desktop-hour-chart g:is(:hover,:focus-visible,[aria-expanded=true]) .chart-dot {stroke-width:8px}
 .desktop-hour-chart g circle.dot-hit {fill:transparent;stroke:transparent;stroke-width:16px;vector-effect:non-scaling-stroke;pointer-events:all}
-.desktop-hour-chart .bar-tip {opacity:0;fill:none;stroke:currentColor;stroke-width:4px;stroke-linecap:round;vector-effect:non-scaling-stroke;pointer-events:none}
-.desktop-hour-chart g:is([aria-expanded=true],:focus-visible) .bar-tip {opacity:1}
+.desktop-hour-chart .bar-selected,.desktop-hour-chart g[aria-expanded=true] .bar-body {display:none}
+.desktop-hour-chart g[aria-expanded=true] .bar-selected {display:inline}
+.desk-ui .desktop-hour-chart .usage-x {border-top:1px solid var(--line);padding-top:0;gap:0}
+.desk-ui .desktop-hour-chart .usage-x span {position:relative;padding-top:7px;text-align:center}
+.desk-ui .desktop-hour-chart .usage-x span::before {content:"";position:absolute;inset:0 auto auto 50%;width:1px;height:3px;background:var(--line)}
+.desk-ui .desktop-hour-chart .usage-x span:not(:empty)::before {height:5px;background:var(--muted)}
 
 /* Match the approved desktop ranking, including the typography of each interactive row. */
 .desktop-rank-card {--rank-ink:#172538;--rank-muted:#67788f;font:400 15px/1.5 system-ui,"Microsoft YaHei",sans-serif;color:var(--rank-ink)}
@@ -76,3 +80,5 @@ html:has(.desk-ui .behavior),
 .desk-ui :is(#period-view,#period-dashboard) .desktop-point-detail ul {display:flex;flex-wrap:wrap;gap:8px}
 .desk-ui :is(#period-view,#period-dashboard) .desktop-point-detail li {gap:12px;padding:4px 9px;border:0;background:var(--bg);border-radius:8px}
 .desk-ui :is(#period-view,#period-dashboard) .desktop-point-detail li small {color:var(--muted)}
+
+.desk-ui :is(#period-view,#period-dashboard) .desktop-point-detail .point-total {justify-content:flex-start;gap:8px}
