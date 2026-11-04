@@ -43,7 +43,7 @@ export function createPeriodView({readPeriod, saveLayout, escape, duration, deta
    // The end of a live bin is displayed to the minute, even when collection is paused.
    const live=period[1]===today || comparison?.[1]===today;
    return JSON.stringify([snapshot.ledgerSequence,snapshot.devices.map(d=>[d.id,d.platform]),
-     live?Math.floor(Date.now()/60000):null,live?snapshot.today?.totals:null]);
+     live?Math.floor(Date.now()/60000):null]);
  }
  function read(range,kind,detail){
    return readPeriod(snapshot,{from:iso(range[0]),to:iso(range[1]),mode:kind,scope:queryScope(),detail});

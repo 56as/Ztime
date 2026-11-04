@@ -12,6 +12,9 @@ let startup=true;
 const service=await createApp({dataDir:dir,port:0,syncPort:0,collect:false,autostart:{get:()=>startup,set:value=>{startup=value;}}});
 let browser;
 try{
+  let summaries=0;
+  const summary=service.store.summary.bind(service.store);
+  service.store.summary=(...args)=>{summaries++;return summary(...args);};
   const now=Date.now();
   service.store.set('collector',{state:'active',appName:'Editor <Example>'});
   for(const [appId,minutes] of [['notes',20],['reader',5]])
@@ -40,6 +43,7 @@ try{
   const record=request=>{const url=new URL(request.url());if(url.pathname==='/api/period')reads.push(url.searchParams.get('detail'));};
   page.on('request',record);
   await page.evaluate(()=>window.pollDashboard());
+  assert.equal(summaries,0,'Dashboard polls should only read status');
   assert.deepEqual(reads,[],'An unchanged summary must not read the period again');
   assert.ok(await firstChart.evaluate(el=>el.isConnected));
   service.store.write({id:'poll',appId:'notes',appName:'notes',deviceId:service.store.device.id,start:now-1,end:now});
@@ -224,9 +228,16 @@ try{
   await scroll.locator('[data-rank]').last().click();await page.locator('#dialog[open]').waitFor();await page.keyboard.press('Escape');
   await click('[data-page=devices]');
   await page.getByRole('heading',{name:'浏览器识别'}).waitFor();
+  const previousSummaries=summaries;
+  const devicesCard=await page.locator('.current-devices').elementHandle();
+  await page.evaluate(()=>window.pollDashboard());
+  assert.equal(summaries,previousSummaries);
+  assert.ok(await devicesCard.evaluate(el=>el.isConnected));
   assert.ok(await page.evaluate(()=>document.scrollingElement.scrollHeight===innerHeight));
   await click('[data-action=pair]');await page.locator('.qr').waitFor();
   await click('[data-page=settings]');await click('[data-theme=dark]');await page.waitForFunction(()=>document.body.classList.contains('dark'));
+  await page.evaluate(()=>window.pollDashboard());
+  assert.equal(summaries,previousSummaries,'Settings polls must not aggregate sessions');
   const grid=page.locator('.settings-grid');
   assert.equal(await page.getByRole('heading',{name:'浏览器识别'}).count(),0);
   assert.ok(await grid.evaluate(el=>{

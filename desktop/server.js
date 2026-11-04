@@ -40,7 +40,12 @@ export async function createApp(options={}){
   }
   if(method==='GET'&&u.pathname==='/api/version')return {version:options.version??null,quitForUpdate:!!options.version};
   if(method==='GET'&&u.pathname==='/api/period')return readPeriod(store,u.searchParams);
-  if(method==='GET'&&u.pathname==='/api/summary')return {...store.summary(u.searchParams.get('date')||undefined,u.searchParams.has('weekDate')?Math.min(Date.now(),dayBounds(u.searchParams.get('weekDate'),store.get('settings')).end-1):Date.now()),timing:store.get('timing',defaultTiming),version:options.version??sourceVersion,ledgerSequence:store.get('sequence',0),periodLayout:store.get('periodLayout'),browser:browser.status(),autostart:options.autostart?.get()??null,sync:{port:sync.port,addresses:sync.addresses(),error:syncError}};
+  if(method==='GET' && (u.pathname==='/api/status' || u.pathname==='/api/summary')){
+   const params=u.searchParams;
+   const snapshot=u.pathname==='/api/status'?store.status():store.summary(params.get('date')||undefined,
+    params.has('weekDate')?Math.min(Date.now(),dayBounds(params.get('weekDate'),store.get('settings')).end-1):Date.now());
+   return {...snapshot,timing:store.get('timing',defaultTiming),version:options.version??sourceVersion,ledgerSequence:store.get('sequence',0),periodLayout:store.get('periodLayout'),browser:browser.status(),autostart:options.autostart?.get()??null,sync:{port:sync.port,addresses:sync.addresses(),error:syncError}};
+  }
   if(method==='POST'&&u.pathname==='/api/browser')return browser.configure(body.enabled===true);
   if(method==='PUT'&&u.pathname==='/api/appearance'){if(!validAppearance(body))throw new Error('外观选项无效');store.set('appearance',{theme:body.theme,accentColor:body.accentColor});return {ok:true};}
   if(method==='POST'&&u.pathname==='/api/autostart'){if(!options.autostart)throw new Error('开机启动仅在桌面程序中设置');options.autostart.set(body.enabled===true);return {ok:true};}

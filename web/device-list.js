@@ -1,6 +1,12 @@
 // UI-only device directory. Pairing, sync and storage remain outside this module.
 export function createDeviceList({esc,icon,stamp}){
  let historyOpen=false;
+ function statusKey(data){
+  if(!data)return null;
+  const devices=data.devices.map(({id,name,platform,local})=>[id,name,platform,local]);
+  return JSON.stringify([devices,data.peers,data.requests,data.browser,data.sync?.error,
+   data.collector?.state,data.collector?.appName,data.settingsConflict]);
+ }
  function render(devices,peers=[],showPaired=false){
   const byId=new Map(peers.map(peer=>[peer.id,peer]));
   const active=[],history=[];
@@ -17,5 +23,5 @@ export function createDeviceList({esc,icon,stamp}){
  function bind(details){
   if(details)details.ontoggle=()=>{if(details.isConnected)historyOpen=details.open;};
  }
- return {render,bind};
+ return {render,bind,statusKey};
 }

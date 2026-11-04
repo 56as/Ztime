@@ -55,11 +55,14 @@ export class Store {
  receiveSettings(remote){if(!validSettings(remote))throw new Error('统计设置无效');const local=this.get('settings');if(JSON.stringify([local.dayStart,local.timeZone])===JSON.stringify([remote.dayStart,remote.timeZone])){this.set('settingsConflict',null);return false;}if(remote.revision===local.baseRevision)return false;if(local.revision==='default'||remote.baseRevision===local.revision){this.set('settings',remote);this.set('settingsConflict',null);return false;}if(remote.revision!=='default')this.set('settingsConflict',remote);return true;}
  resolveSettings(choice){const remote=this.get('settingsConflict');if(!remote)return;if(choice==='remote')this.set('settings',remote);else this.set('settings',{...this.get('settings'),baseRevision:remote.revision,revision:randomUUID()});this.set('settingsConflict',null);}
  updateSettings(input){const old=this.get('settings');const value={...old,dayStart:Number(input.dayStart),timeZone:input.timeZone,weekStart:1,baseRevision:old.revision,revision:randomUUID()};if(!validSettings(value))throw new Error('请检查日界线和时区');this.set('settings',value);return value;}
+ status(now=Date.now()){
+  const settings=this.get('settings');
+  return {device:this.device,devices:this.devices(),settings,date:dateKey(now,settings),paused:this.get('paused',false),collector:this.get('collector',{state:'starting'}),appearance:this.get('appearance'),layout:this.get('layout'),weekLayout:this.get('weekLayout'),settingsConflict:this.get('settingsConflict'),peers:this.db.prepare('SELECT id,name,created_at,last_sync FROM peers').all(),requests:this.db.prepare("SELECT id,name,device_id,created_at FROM requests WHERE status='pending' AND created_at>?").all(Date.now()-300000)};
+ }
  summary(date,now=Date.now()){
-  const settings=this.get('settings'),key=date??dateKey(now,settings);if(!/^\d{4}-\d{2}-\d{2}$/.test(key)||!Number.isFinite(Date.parse(key+'T12:00:00Z'))||new Date(key+'T12:00:00Z').toISOString().slice(0,10)!==key)throw new Error('日期无效');
-  const bounds=dayBounds(key,settings),w=weekBounds(now,settings),sessions=this.db.prepare('SELECT * FROM sessions WHERE deleted_at IS NULL AND ((end>? AND start<?) OR (end>? AND start<?))').all(bounds.start,bounds.end,w.previous,w.end).map(r=>this.decode(r)),devices=this.devices();
-  const stats=summaryStats(sessions,devices,bounds,w,now);
-  return {device:this.device,devices,settings,date:key,...stats,paused:this.get('paused',false),collector:this.get('collector',{state:'starting'}),appearance:this.get('appearance'),layout:this.get('layout'),weekLayout:this.get('weekLayout'),settingsConflict:this.get('settingsConflict'),peers:this.db.prepare('SELECT id,name,created_at,last_sync FROM peers').all(),requests:this.db.prepare("SELECT id,name,device_id,created_at FROM requests WHERE status='pending' AND created_at>?").all(Date.now()-300000)};
+  const status=this.status(now),settings=status.settings,key=date??status.date;if(!/^\d{4}-\d{2}-\d{2}$/.test(key)||!Number.isFinite(Date.parse(key+'T12:00:00Z'))||new Date(key+'T12:00:00Z').toISOString().slice(0,10)!==key)throw new Error('日期无效');
+  const bounds=dayBounds(key,settings),w=weekBounds(now,settings),sessions=this.db.prepare('SELECT * FROM sessions WHERE deleted_at IS NULL AND ((end>? AND start<?) OR (end>? AND start<?))').all(bounds.start,bounds.end,w.previous,w.end).map(r=>this.decode(r));
+  return {...status,date:key,...summaryStats(sessions,status.devices,bounds,w,now)};
  }
  close(){this.db.close();}
 }
