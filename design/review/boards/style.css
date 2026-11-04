@@ -789,3 +789,7 @@ body.desktop-v2.hourglass-study.dark {--accent:#409cff!important;--tint:color-mi
 .dial-study .desktop-hour-chart .usage-x span::before {content:"";position:absolute;inset:0 auto auto 50%;width:1px;height:3px;background:var(--line)}
 .dial-study .desktop-hour-chart .usage-x span:not(:empty)::before {height:5px;background:var(--muted)}
 @media(prefers-reduced-motion:reduce){.dial-study .sand-motion::before {animation:none}}
+
+/* Review #177–178: the period and its duration are enough context for the app list. */
+.dial-study #point-detail > small {display:none}
+.dial-study #point-detail .point-total {justify-content:flex-start;gap:8px}

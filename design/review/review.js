@@ -1301,6 +1301,8 @@ function mountPeriodDashboard(d,onChange){
    });
  }
  let pointIndex=null;
+ const entry=new URLSearchParams(location.search);
+ let openPeak=desktop && entry.get('dial')==='1' && entry.get('peak')==='1';
  function enablePointDetails(card,series){
    const svg=card.querySelector('.usage-chart svg');
    const plot=d.createElement('div');
@@ -1383,6 +1385,11 @@ function mountPeriodDashboard(d,onChange){
        }
        trend.querySelector('.pd-top small').replaceWith(selector);
        const details=series.map(bin=>({...bin,rows:(bin.values||[]).map((minutes,i)=>({minutes,name:apps[i][0],platform:apps[i][1]==='pc'?'windows':'android'})).filter(row=>row.minutes).sort((a,b)=>b.minutes-a.minutes)}));
+       if(openPeak){
+         openPeak=false;
+         const maximum=Math.max(...details.map(bin=>bin.minutes??0));
+         if(maximum>0)pointIndex=details.findIndex(bin=>bin.minutes===maximum);
+       }
        bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange});
      }
      if(desktop)ranking.classList.add('desktop-rank-card');
