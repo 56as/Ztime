@@ -16,7 +16,9 @@ app.whenReady().then(async()=>{
  window=new BrowserWindow({width:1320,height:900,minWidth:820,minHeight:620,show:process.env.TIME_LEDGER_HEADLESS!=='1',icon:iconPath,title:'Ztime',backgroundColor:'#f7f8fa',webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
  window.setMenuBarVisibility(false);window.webContents.setWindowOpenHandler(()=>({action:'deny'}));
  window.webContents.on('will-navigate',(event,url)=>{if(!url.startsWith(service.url+'/')&&url!==service.url)event.preventDefault();});
- await window.loadURL(service.url);
+ const startUrl=new URL(service.url);
+ if(process.env.ZTIME_START_VIEW==='ringdesk')startUrl.searchParams.set('view','ringdesk');
+ await window.loadURL(startUrl.href);
  const icon=nativeImage.createFromPath(iconPath);
  tray=new Tray(icon.resize({width:16,height:16}));tray.setToolTip('Ztime · 本地应用计时');
  tray.setContextMenu(Menu.buildFromTemplate([{label:'打开Ztime',click:()=>window.show()},{label:'暂停 / 恢复记录',click:()=>service.collector.pause(!service.store.get('paused',false))},{type:'separator'},{label:'退出并停止记录',click:()=>{quitting=true;app.quit();}}]));tray.on('double-click',()=>window.show());

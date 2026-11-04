@@ -1,6 +1,6 @@
 import {recordingStatus} from './recording-status.js';
 import {desktopTitles,desktopLayout} from './shared/desktop-card-layout.js';
-import {usageArea,shareChart,mountDailyReplay,mountDailyRing,desktopUsageChart,bindDesktopPoints,desktopRankRow,desktopPeriodLabel} from './desktop-insights.js';
+import {usageArea,shareChart,mountRingDesk,desktopUsageChart,bindDesktopPoints,desktopRankRow,desktopPeriodLabel} from './desktop-insights.js';
 import {bindPhoneUsage} from './phone-usage.js';
 import {refreshControl} from './refresh-control.js';
 import {cardTitles,defaultCardLayout,validCardLayout} from './shared/period-layout.js';
@@ -16,7 +16,7 @@ const windowsRankNames=new Map([
 // Keep the selection when moving between dashboard, devices and settings.
 export function createPeriodView({api, escape, duration, details, report, refreshPhone, onError}) {
  let selectedPoint=null, pointPeriod='';
- let chartStyle='line', dailyView=null;
+ let chartStyle='line', dailyView=new URLSearchParams(location.search).get('view')==='ringdesk'?'ringdesk':null;
  const clock={minute:0,zoom:240,selected:false};
  let desktop=false, rankOffset=0, rankPeriod='';
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
@@ -180,10 +180,10 @@ export function createPeriodView({api, escape, duration, details, report, refres
    const series=desktop && result?chartSeries():null;
    const dailyChart=desktop && mode==='day'?dailyView:null;
    const formats=[['line','折线图'],['bar','柱形图']];
-   if(mode==='day')formats.push(['dial','环'],['replay','台']);
+   if(mode==='day')formats.push(['ringdesk','环台']);
    const styleButtons='<div class="chart-style" role="group" aria-label="图表类型">'+formats.map(([key,label])=>`<button data-chart="${key}" aria-pressed="${(dailyChart||chartStyle)===key}">${label}</button>`).join('')+'</div>';
    const cards=result?{
-     trend:`<section class="period-card trend-card"><div class="pd-top"><h2>使用时间</h2>${desktop?styleButtons:'<small>单位：小时</small>'}</div>${dailyChart?'<section class="daily-clock" aria-label="'+(dailyChart==='dial'?'环':'台')+'"></section>':desktop?desktopUsageChart(series,mode,chartStyle):usageArea(result.bins.map(b=>b.start>=result.end?{...b,duration:null}:b),ms=>duration(ms,true))}</section>`,
+     trend:`<section class="period-card trend-card"><div class="pd-top"><h2>使用时间</h2>${desktop?styleButtons:'<small>单位：小时</small>'}</div>${dailyChart?'<section class="daily-clock ring-desk" aria-label="环台"></section>':desktop?desktopUsageChart(series,mode,chartStyle):usageArea(result.bins.map(b=>b.start>=result.end?{...b,duration:null}:b),ms=>duration(ms,true))}</section>`,
      ranking:`<section class="period-card ranking-card${desktop?' desktop-rank-card':''}"><h2>应用排行</h2>${ranking?'<div class="rank-scroll" tabindex="0" role="region" aria-label="应用排行">'+ranking+'</div>':ranking||'<p>所选期间暂无使用记录</p>'}</section>`,
      compare:renderComparison(),
      ...(desktop?Object.fromEntries(['devices','focus'].map(key=>[key,'<section class="period-card"><h2>'+desktopTitles[key]+'</h2>'+shareChart(key,result.apps,ms=>duration(ms,true))+'</section>'])):{})
@@ -250,9 +250,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
        const rows=result.sessions, panel=trend.querySelector('.daily-clock');
        if(!clock.selected)clock.minute=rows.length?rows.reduce((last,row)=>Math.max(last,row.start),0):0;
        clock.minute=Math.min(clock.minute,result.dayMinutes-1/60000);
-       if(dailyChart==='replay')clock.selected=true;
-       if(dailyChart==='replay')mountDailyReplay(panel,rows,clock,options);
-       else mountDailyRing(panel,rows,clock,m=>duration(m*60000,true),options);
+       mountRingDesk(panel,rows,clock,m=>duration(m*60000,true),options);
      }else if(desktop && trend)bindDesktopPoints(trend,series,{pointIndex:selectedPoint,onSelect:i=>{selectedPoint=i;},dur:m=>duration(m*60000,true)});
      if(!desktop)bindPhoneUsage(host,{result,snapshot,scope:queryScope(),mode,selected:selectedPoint,onSelect:i=>{selectedPoint=i;},escape,duration});
    }
@@ -268,7 +266,7 @@ export function createPeriodView({api, escape, duration, details, report, refres
      try {
        if(button.dataset.chart){
          const next=button.dataset.chart;
-         dailyView=['dial','replay'].includes(next)?next:null;
+         dailyView=next==='ringdesk'?next:null;
          if(!dailyView)chartStyle=next;
          paint();host.querySelector('[data-chart="'+next+'"]').focus({preventScroll:true});
        } else if(button.hasAttribute('data-rank')){

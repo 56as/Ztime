@@ -35,11 +35,9 @@ try{
   await page.locator('.desktop-rank-row img').evaluateAll(imgs=>Promise.all(imgs.map(img=>img.decode())));
   await shot(mode);
   if(mode==='day'){
-   for(const style of ['dial','replay']){
-    await page.locator('[data-chart='+style+']').click();
-    await page.locator('.daily-clock #clock-instrument').waitFor();
-    await shot(style);
-   }
+   await page.locator('[data-chart=ringdesk]').click();
+   await page.locator('#replay-instrument').waitFor();
+   await shot('dial');
    await page.locator('[data-chart=line]').click();
   }
   await page.locator('[data-tool=report]').click();

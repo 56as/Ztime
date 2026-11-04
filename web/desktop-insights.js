@@ -110,10 +110,10 @@ function defaultClockTime(minute){
   return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
 }
 
-export function mountDailyReplay(host,rows,state,{onChange=()=>{},enabled=()=>true,timeAt=defaultClockTime,dayMinutes=1440}={}){
+function mountDailyReplay(host,rows,state,{onChange=()=>{},enabled=()=>true,timeAt=defaultClockTime,dayMinutes=1440}={}){
   const windowMinutes=()=>state.zoom===1440?dayMinutes:Math.min(dayMinutes,state.zoom);
   const starts=[...new Set(rows.map(row=>row.start))].sort((a,b)=>a-b);
-  host.innerHTML='<div class="clock-face clock-replay"><svg id="clock-instrument" data-style-native viewBox="0 0 600 215" tabindex="0" role="slider" aria-label="选择回溯时刻" aria-valuemin="0" aria-valuemax="'+(dayMinutes-1)+'"></svg><div class="replay-controls"><div role="group" aria-label="切换记录"><button data-step="-1">上一段</button><button data-step="1">下一段</button></div><div role="group" aria-label="时间范围">'+[120,240,1440].map(m=>'<button data-zoom="'+m+'">'+(m===1440 && dayMinutes!==1440?'全天':m/60+' 小时')+'</button>').join('')+'</div></div></div>';
+  host.innerHTML='<div class="clock-face clock-replay"><svg id="replay-instrument" data-style-native viewBox="0 0 600 215" tabindex="0" role="slider" aria-label="选择回溯时刻" aria-valuemin="0" aria-valuemax="'+(dayMinutes-1)+'"></svg><div class="replay-controls"><div role="group" aria-label="切换记录"><button data-step="-1">上一段</button><button data-step="1">下一段</button></div><div role="group" aria-label="时间范围">'+[120,240,1440].map(m=>'<button data-zoom="'+m+'">'+(m===1440 && dayMinutes!==1440?'全天':m/60+' 小时')+'</button>').join('')+'</div></div></div>';
   const svg=host.querySelector('svg'),left=54,width=520;
   const clamp=(m,max)=>Math.max(0,Math.min(max,m));
   const startOfWindow=()=>clamp(Math.round(state.minute-windowMinutes()/2),dayMinutes-windowMinutes());
@@ -169,9 +169,10 @@ export function mountDailyReplay(host,rows,state,{onChange=()=>{},enabled=()=>tr
     e.preventDefault();select(state.minute+(e.key==='ArrowLeft'?-1:1),true);
   };
   draw();
+  return ()=>{start=startOfWindow();draw();};
 }
 
-export function mountDailyRing(host,rows,state,dur,{onChange=()=>{},enabled=()=>true,timeAt=defaultClockTime,dayMinutes=1440,offset=240}={}){
+function mountDailyRing(host,rows,state,dur,{onChange=()=>{},enabled=()=>true,timeAt=defaultClockTime,dayMinutes=1440,offset=240}={}){
   const ring=(m,r)=>{const a=(m+offset)*2*Math.PI/dayMinutes;return [150+r*Math.sin(a),150-r*Math.cos(a)];};
   const path=(m,r)=>ring(m,r).join(' ');
   host.innerHTML='<div class="clock-face"><svg id="clock-instrument" data-style-native viewBox="0 0 300 300" role="slider" tabindex="0" aria-label="选择时刻" aria-valuemin="0" aria-valuemax="'+(dayMinutes-1)+'"></svg><div class="clock-legend"><span><i></i>电脑</span><span><i></i>手机</span></div></div>';
@@ -219,4 +220,13 @@ export function mountDailyRing(host,rows,state,dur,{onChange=()=>{},enabled=()=>
     if(!enabled() || !['ArrowLeft','ArrowRight'].includes(e.key))return;
     e.preventDefault();select(state.minute+(e.key==='ArrowLeft'?-1:1));
   };
+  return update;
+}
+
+export function mountRingDesk(panel,rows,state,dur,options={}){
+  panel.innerHTML='<section class="desk-dial" aria-label="全天分布"><h4>全天分布</h4><div></div></section><section class="desk-replay" aria-label="时段回溯"><h4>时段回溯</h4><div></div></section>';
+  const dial=panel.querySelector('.desk-dial > div'),replay=panel.querySelector('.desk-replay > div');
+  // Keep both sliders mounted during a drag; only refresh the other instrument.
+  const refreshRing=mountDailyRing(dial,rows,state,dur,{...options,onChange(){refreshReplay();options.onChange?.();}});
+  const refreshReplay=mountDailyReplay(replay,rows,state,{...options,onChange(){refreshRing();options.onChange?.();}});
 }

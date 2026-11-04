@@ -47,12 +47,18 @@ try{
         rank.width===trend.width && rank.bottom>innerHeight-32 && scope.left<mode.left && mode.left<range.left && mode.top===scope.top && mode.height===scope.height;
     });
     assert.ok(firstScreen,'Default cards fill one desktop window');
-    for(const chart of ['dial','replay']){
-      await click('[data-chart='+chart+']');
+    {
+      await click('[data-chart=ringdesk]');
       assert.equal(await page.locator('.ranking-card:visible').count(),0);
       const instrument=page.locator('#clock-instrument');
       await instrument.focus();
       await instrument.press('ArrowRight');
+      const replay=page.locator('#replay-instrument');
+      assert.equal(await replay.getAttribute('aria-valuenow'),await instrument.getAttribute('aria-valuenow'));
+      await replay.focus();await replay.press('ArrowLeft');
+      assert.equal(await replay.getAttribute('aria-valuenow'),await instrument.getAttribute('aria-valuenow'));
+      const left=await instrument.boundingBox(),right=await replay.boundingBox();
+      assert.ok(left.x+left.width<=right.x+1);
       const metrics=await instrument.evaluate(el=>{
         const card=el.closest('.trend-card').getBoundingClientRect();
         return {outline:getComputedStyle(el).outlineStyle,gap:innerHeight-card.bottom,overflows:document.scrollingElement.scrollHeight>innerHeight};

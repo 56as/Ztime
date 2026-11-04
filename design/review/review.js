@@ -146,7 +146,7 @@ function defaultClockTime(minute){
 function mountDailyReplay(host,rows,state,{onChange=()=>{},enabled=()=>true,timeAt=defaultClockTime,dayMinutes=1440}={}){
   const windowMinutes=()=>state.zoom===1440?dayMinutes:Math.min(dayMinutes,state.zoom);
   const starts=[...new Set(rows.map(row=>row.start))].sort((a,b)=>a-b);
-  host.innerHTML='<div class="clock-face clock-replay"><svg id="clock-instrument" data-style-native viewBox="0 0 600 215" tabindex="0" role="slider" aria-label="选择回溯时刻" aria-valuemin="0" aria-valuemax="'+(dayMinutes-1)+'"></svg><div class="replay-controls"><div role="group" aria-label="切换记录"><button data-step="-1">上一段</button><button data-step="1">下一段</button></div><div role="group" aria-label="时间范围">'+[120,240,1440].map(m=>'<button data-zoom="'+m+'">'+(m===1440 && dayMinutes!==1440?'全天':m/60+' 小时')+'</button>').join('')+'</div></div></div>';
+  host.innerHTML='<div class="clock-face clock-replay"><svg id="replay-instrument" data-style-native viewBox="0 0 600 215" tabindex="0" role="slider" aria-label="选择回溯时刻" aria-valuemin="0" aria-valuemax="'+(dayMinutes-1)+'"></svg><div class="replay-controls"><div role="group" aria-label="切换记录"><button data-step="-1">上一段</button><button data-step="1">下一段</button></div><div role="group" aria-label="时间范围">'+[120,240,1440].map(m=>'<button data-zoom="'+m+'">'+(m===1440 && dayMinutes!==1440?'全天':m/60+' 小时')+'</button>').join('')+'</div></div></div>';
   const svg=host.querySelector('svg'),left=54,width=520;
   const clamp=(m,max)=>Math.max(0,Math.min(max,m));
   const startOfWindow=()=>clamp(Math.round(state.minute-windowMinutes()/2),dayMinutes-windowMinutes());
@@ -202,6 +202,7 @@ function mountDailyReplay(host,rows,state,{onChange=()=>{},enabled=()=>true,time
     e.preventDefault();select(state.minute+(e.key==='ArrowLeft'?-1:1),true);
   };
   draw();
+  return ()=>{start=startOfWindow();draw();};
 }
 
 function mountDailyRing(host,rows,state,dur,{onChange=()=>{},enabled=()=>true,timeAt=defaultClockTime,dayMinutes=1440,offset=240}={}){
@@ -252,6 +253,15 @@ function mountDailyRing(host,rows,state,dur,{onChange=()=>{},enabled=()=>true,ti
     if(!enabled() || !['ArrowLeft','ArrowRight'].includes(e.key))return;
     e.preventDefault();select(state.minute+(e.key==='ArrowLeft'?-1:1));
   };
+  return update;
+}
+
+function mountRingDesk(panel,rows,state,dur,options={}){
+  panel.innerHTML='<section class="desk-dial" aria-label="全天分布"><h4>全天分布</h4><div></div></section><section class="desk-replay" aria-label="时段回溯"><h4>时段回溯</h4><div></div></section>';
+  const dial=panel.querySelector('.desk-dial > div'),replay=panel.querySelector('.desk-replay > div');
+  // Keep both sliders mounted during a drag; only refresh the other instrument.
+  const refreshRing=mountDailyRing(dial,rows,state,dur,{...options,onChange(){refreshReplay();options.onChange?.();}});
+  const refreshReplay=mountDailyReplay(replay,rows,state,{...options,onChange(){refreshRing();options.onChange?.();}});
 }
 // @generated desk-preview:end
 // All state lives in the current fixture document; no calls to the product or the notes API.
@@ -319,16 +329,16 @@ function pageTitle(id) {
   return titles[id] || ({week:'每周（历史批注）','week-edit':'每周编辑（历史批注）'})[id];
 }
 // The reference comes from a packaged Windows build, independent of the editable board.
-const referenceLabels={dial:'日统计 · 环',replay:'日统计 · 台',day:'日统计',week:'周统计',month:'月统计',year:'年统计','day-report':'日报预览','week-report':'周报预览','month-report':'月报预览','year-report':'年报预览',behavior:'行为',devices:'设备',settings:'设置'};
+const referenceLabels={dial:'日统计 · 环台',day:'日统计',week:'周统计',month:'月统计',year:'年统计','day-report':'日报预览','week-report':'周报预览','month-report':'月报预览','year-report':'年报预览',behavior:'行为',devices:'设备',settings:'设置'};
 function showReference(key,detail=''){
   const panel=$('reference');
   panel.hidden=!referenceLabels[key];
   if(panel.hidden)return;
-  const src='reference/0.2.40/'+key+'.png';
+  const src='reference/0.2.41/'+key+'.png';
   $('reference-thumb').src=src;
   $('reference-caption').textContent=referenceLabels[key]+' · '+(detail||'默认视图');
   $('reference-difference').textContent=key.endsWith('-report')?'正式版支持 TXT、CSV、PDF 和 PNG，可展开查看文字明细。':'截图使用全部设备和默认布局。';
-  $('reference-title').textContent='Windows 0.2.40 · '+referenceLabels[key];
+  $('reference-title').textContent='Windows 0.2.41 · '+referenceLabels[key];
 }
 $('reference-thumb').onload=()=>{$('reference-open').hidden=false;$('reference-fallback').hidden=true;};
 $('reference-thumb').onerror=()=>{
@@ -758,7 +768,7 @@ function applySecondDesktopDraft(d,pageId){
     nav.setAttribute('aria-label','主导航');
     nav.innerHTML=desktopNavButtons(pageId);
     const version=d.createElement('small');
-    version.id='desktop-version';version.textContent='版本 0.2.40';
+    version.id='desktop-version';version.textContent='版本 0.2.41';
     d.querySelector('.sidebar').append(version);
   }
 
@@ -1409,21 +1419,6 @@ function reviewDeviceSessions(series,apps){
   return rows.sort((a,b)=>a.start-b.start);
 }
 
-function mountReviewRingDesk(panel,rows,state,dur,onChange){
-  panel.innerHTML='<section class="desk-dial" aria-label="全天分布"><h4>全天分布</h4><div></div></section><section class="desk-replay" aria-label="时段回溯"><h4>时段回溯</h4><div></div></section>';
-  const dial=panel.querySelector('.desk-dial > div'),replay=panel.querySelector('.desk-replay > div');
-  const enabled=()=>!picking;
-  // Redraw only the partner so the active instrument keeps focus and pointer capture.
-  function drawRing(){
-    mountDailyRing(dial,rows,state,dur,{enabled,onChange(){drawReplay();onChange();}});
-  }
-  function drawReplay(){
-    mountDailyReplay(replay,rows,state,{enabled,onChange(){drawRing();onChange();}});
-    replay.querySelector('svg').id='replay-instrument';
-  }
-  drawRing();drawReplay();
-}
-
 function mountPeriodDashboard(d,onChange){
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
  const today=num(new Date(Date.now()-4*3600000).toLocaleDateString('sv-SE',{timeZone:'Asia/Hong_Kong'}));
@@ -1571,7 +1566,7 @@ function mountPeriodDashboard(d,onChange){
          const panel=d.createElement('section');panel.id='review-clock';panel.className='daily-clock ring-desk';panel.setAttribute('aria-label','环台');
          trend.querySelector('.usage-chart').replaceWith(panel);
          const sessions=reviewDeviceSessions(series,apps);
-         mountReviewRingDesk(panel,sessions,clockState,dur,onChange);
+         mountRingDesk(panel,sessions,clockState,dur,{onChange,enabled:()=>!picking});
        }else bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange});
      }
      if(desktop)ranking.classList.add('desktop-rank-card');
@@ -1670,7 +1665,7 @@ function mountPeriodDashboard(d,onChange){
     const total=summary.firstElementChild;total.className='pd-total-value';
     summary.append(summary.querySelector('.pd-scope'),controls.querySelector('.pd-modes'),controls.querySelector('.pd-range'),total);
     controls.remove();
-    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.40';
+    const version=d.createElement('small');version.id='desktop-version';version.textContent='版本 0.2.41';
     root.querySelector('.pd-nav').append(version);
   }
   if(mobile){

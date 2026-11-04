@@ -117,3 +117,18 @@ html:has(.desk-ui .behavior),
 :is(#period-dashboard,#period-view) .replay-controls button:disabled {opacity:.4}
 
 .dark :is(#period-dashboard,#period-view) .replay-controls button[aria-pressed=true] {color:#19382f}
+
+/* Linked daily ring and replay workspace. */
+.desk-ui :is(.pd-main,.dashboard-view):has(.ring-desk) {max-width:none;padding-inline:clamp(14px,2vw,32px)}
+.desk-ui .pd-bottom.clock-only:has(.ring-desk) {align-items:stretch}
+.desk-ui .ring-desk {display:grid;grid-template-columns:minmax(0,0.95fr) minmax(0,1.25fr);align-items:stretch;gap:clamp(12px,2.5vw,40px)}
+.ring-desk > section {display:grid;grid-template-rows:auto minmax(0,1fr);min-width:0;min-height:0;padding-block:12px}
+.ring-desk h4 {margin:0;font-size:13px;color:var(--muted);font-weight:550}
+.ring-desk .desk-replay {border-inline-start:1px solid var(--line);padding-inline-start:clamp(12px,2.5vw,40px)}
+.ring-desk .clock-face {padding-inline:0}
+.ring-desk .desk-replay .clock-replay {grid-template-rows:minmax(0,1fr) auto}
+@media(max-width:900px){
+  .desk-ui .ring-desk {gap:12px;grid-template-columns:minmax(0,.85fr) minmax(0,1.25fr)}
+  .ring-desk .desk-replay {padding-inline-start:12px}
+  .ring-desk .replay-controls {gap:4px 8px}
+}
