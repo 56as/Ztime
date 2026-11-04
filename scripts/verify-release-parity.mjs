@@ -73,6 +73,14 @@ try {
           await side.locator('[data-chart=line][aria-pressed=true]').waitFor();
         }
         await check('[data-chart=line]');
+        for(const side of [live,frame]){
+          const chart=side.locator('.desktop-hour-chart:visible').first();
+          await chart.locator('g[role=button]').first().press('Enter');
+          const detail=side.locator('.desktop-point-detail:visible');
+          assert.ok(await detail.evaluate(el=>el.getBoundingClientRect().top >= el.parentElement.querySelector('.usage-chart').getBoundingClientRect().bottom));
+          assert.ok(await detail.locator('li').count()<=3);
+          await detail.locator('button').click();
+        }
       }
       await active.screenshot({path:evidence+'/'+theme+'-'+key+'-review.png',animations:'disabled'});
       await live.screenshot({path:evidence+'/'+theme+'-'+key+'.png',animations:'disabled'});

@@ -56,7 +56,7 @@ export function desktopUsageChart(series,mode,style){
        return '<g><path class="chart-dot" d="M'+x+' '+y+'h.01"/><circle class="dot-hit"'+center+' r="2"/></g>';
      }
      const bar='<rect x="'+(x-slot*.3)+'" y="'+y+'" width="'+slot*.6+'" height="'+(height-y)+'" rx="2" fill="currentColor"/>';
-     return '<g>'+bar+'<circle cx="'+x+'" cy="'+y+'" r="2.3" fill="currentColor"/><rect x="'+(x-slot/2)+'" width="'+slot+'" height="'+height+'" fill="transparent"/></g>';
+     return '<g>'+bar+'<path class="bar-tip" d="M'+x+' '+y+'h.01"/><rect x="'+(x-slot/2)+'" width="'+slot+'" height="'+height+'" fill="transparent"/></g>';
    }).join('');
    const labels=series.map((bin,i)=>'<span>'+(i%(mode==='day'?2:Math.ceil(series.length/8))===0?html(bin.label):'')+'</span>').join('');
    return '<div class="usage-chart desktop-hour-chart"><div class="usage-y">'+ticks.map(t=>'<span>'+t+' 小时</span>').join('')+'</div><div><svg viewBox="0 0 640 126" preserveAspectRatio="none">'+guides+drawing+marks+'</svg><div class="usage-x" style="grid-template-columns:repeat('+series.length+',1fr)">'+labels+'</div></div></div>';
@@ -75,9 +75,9 @@ export function bindDesktopPoints(card,series,{pointIndex,onSelect,dur,enabled=(
    function inspect(index){
      const bin=series[index];pointIndex=index;onSelect(index);detail.hidden=false;
      points.forEach((g,i)=>{g.setAttribute('aria-expanded',String(i===index));});
-     const rows=bin.rows;
+     const rows=[...bin.rows].sort((a,b)=>b.minutes-a.minutes).slice(0,3);
      detail.innerHTML='<header><strong>'+html(bin.detail)+'</strong><button type="button" aria-label="关闭时段明细">×</button></header><div class="point-total"><span>累计用时</span><b>'+dur(bin.minutes)+'</b></div>'+
-       (rows.length?'<ul>'+rows.map(({name,platform,minutes})=>'<li><span>'+html(name)+' <small>'+(platform==='windows'?'电脑':'手机')+'</small></span><b>'+dur(minutes)+'</b></li>').join('')+'</ul>':'<p>这段时间没有使用记录。</p>');
+       (rows.length?'<small>应用排行 · 前 '+rows.length+'</small><ul>'+rows.map(({name,platform,minutes})=>'<li><span>'+html(name)+' <small>'+(platform==='windows'?'电脑':'手机')+'</small></span><b>'+dur(minutes)+'</b></li>').join('')+'</ul>':'<p>这段时间没有使用记录。</p>');
      detail.querySelector('button').onclick=()=>{close();points[index]?.focus();};
      onChange();
    }
