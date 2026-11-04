@@ -63,7 +63,7 @@
 /* Brand study: the same cream field and graphite ink as the original launcher artwork. */
 .hourglass-study .behavior > header {position:relative;isolation:isolate;display:grid;grid-template-columns:1fr auto;min-height:67px;padding:7px 18px;box-sizing:border-box;overflow:hidden;border:1px solid var(--line);border-radius:22px;background:var(--sand,var(--surface))}
 .hourglass-study .behavior h1 {font-size:30px;line-height:1.2;letter-spacing:-.04em;margin:0}
-.hourglass-study .sand-seal {grid-area:1/2;align-self:center;justify-self:end;margin-right:2px}
+.hourglass-study .sand-seal {grid-area:1/2;align-self:center;justify-self:end}
 .hourglass-study .sand-seal img {display:block;width:49px;height:49px}
 .hourglass-study #rules-open {grid-area:1/1;justify-self:end;margin-right:25px}
 .hourglass-study .behavior > header > div:first-child {grid-area:1/1;justify-self:start}

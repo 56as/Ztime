@@ -715,6 +715,7 @@ body:has(#style-lab) #app {display:none}
 .sand-motion.sand-paused::after {animation-play-state:paused}
 @media(prefers-reduced-motion:reduce){.sand-motion::before,.sand-motion::after{animation:none;opacity:0}}
 
+html:has(> body.desktop-v2.hourglass-study) {scrollbar-width:none}
 body.desktop-v2.hourglass-study:not(.dark) {
   --sand:#fbf6e9;--ink:#2f2f33;--bg:#f2efe7;--surface:#fffdf8;--text:#2f2f33;--muted:#706a60;--line:#d9d4c8;
   --accent:#2f2f33!important;--tint:#e8e3d7!important;background:var(--bg);color:var(--text)
