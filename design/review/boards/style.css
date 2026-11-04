@@ -232,7 +232,8 @@ body.desktop-v2.unified .devices-view > .page-header + .panel {border-top:3px so
 .desktop-hour-chart g .chart-dot {stroke:currentColor;stroke-width:5px;vector-effect:non-scaling-stroke;stroke-linecap:round;fill:none}
 .desktop-hour-chart g:is(:hover,:focus-visible,[aria-expanded=true]) .chart-dot {stroke-width:8px}
 .desktop-hour-chart g circle.dot-hit {fill:transparent;stroke:transparent;stroke-width:16px;vector-effect:non-scaling-stroke;pointer-events:all}
-.desktop-hour-chart:has(rect[rx]) g[aria-expanded=true] circle {r:5px}
+.desktop-hour-chart .bar-tip {opacity:0;fill:none;stroke:currentColor;stroke-width:4px;stroke-linecap:round;vector-effect:non-scaling-stroke;pointer-events:none}
+.desktop-hour-chart g:is([aria-expanded=true],:focus-visible) .bar-tip {opacity:1}
 
 /* Match the approved desktop ranking, including the typography of each interactive row. */
 .desktop-rank-card {--rank-ink:#172538;--rank-muted:#67788f;font:400 15px/1.5 system-ui,"Microsoft YaHei",sans-serif;color:var(--rank-ink)}
@@ -281,6 +282,14 @@ html:has(.desk-ui .behavior),
 .desk-ui :is(#period-view,#period-dashboard) :is(.pd-modes,.pd-scope,.chart-style) button[aria-pressed=true] {font-weight:650}
 .desk-ui #period-view[aria-busy=true] [data-tool=report]:disabled {opacity:1}
 .desk-ui .settings-view :is(.desktop-preferences,#design-settings-data) .appearance-options {margin:0;border:0;padding:3px}
+
+.desk-ui :is(#period-view,#period-dashboard) .desktop-point-detail {
+  position:static;flex:none;width:auto;max-height:none;margin-top:10px;padding:10px 0 0;
+  border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none
+}
+.desk-ui :is(#period-view,#period-dashboard) .desktop-point-detail ul {display:flex;flex-wrap:wrap;gap:8px}
+.desk-ui :is(#period-view,#period-dashboard) .desktop-point-detail li {gap:12px;padding:4px 9px;border:0;background:var(--bg);border-radius:8px}
+.desk-ui :is(#period-view,#period-dashboard) .desktop-point-detail li small {color:var(--muted)}
 /* @generated desk-preview:end */
 
 /* The phone boards share one bottom tab bar. */
@@ -771,19 +780,12 @@ body.desktop-v2.unified.hourglass-study .devices-view > .page-header + .panel {b
 
 body.desktop-v2.hourglass-study.dark {--accent:#409cff!important;--tint:color-mix(in srgb,var(--accent) 13%,var(--surface))!important}
 
-/* Unapproved statistics study, enabled only from its review link. */
-.desktop-v2 .insights-preview .desktop-point-detail {
-  position:static;flex:none;width:auto;max-height:none;margin-top:10px;padding:10px 0 0;
-  border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none
-}
-.desktop-v2 .insights-preview .desktop-point-detail ul {display:flex;flex-wrap:wrap;gap:8px}
-.desktop-v2 .insights-preview .desktop-point-detail li {gap:12px;padding:4px 9px;border:0;background:var(--bg);border-radius:8px}
-.desktop-v2 .insights-preview .desktop-point-detail li small {color:var(--muted)}
-.desktop-v2 .insights-preview[aria-busy=true] :is(.usage-chart,.pd-total-value,.rank-scroll,.desktop-point-detail) {visibility:hidden}
-.desktop-v2 .insights-preview[aria-busy=true] [data-card-key] > :not(.pd-top,h3) {visibility:hidden}
-.desktop-v2 .insights-preview[aria-busy=true] [data-card-key=trend]::after {
-  content:"读取中…";position:absolute;inset:50% 0 auto;text-align:center;color:var(--muted);font-size:12px;
-  animation:review-wait-label 160ms step-end both
-}
-@keyframes review-wait-label {from{opacity:0}to{opacity:1}}
-.desktop-v2 .insights-preview[aria-busy=true] [data-cal=report] {opacity:1}
+
+/* Ten-second hourglass and engraved time ruler, review only. */
+.dial-study .sand-seal::before,.dial-study .sand-icon::before {animation:dial-turn 10s linear infinite}
+@keyframes dial-turn {0% {transform:rotate(-180deg);animation-timing-function:cubic-bezier(.22,.72,.22,1)} 6.4%,100% {transform:rotate(0)}}
+.dial-study .desktop-hour-chart .usage-x {border-top:1px solid var(--line);padding-top:0;gap:0}
+.dial-study .desktop-hour-chart .usage-x span {position:relative;padding-top:7px;text-align:center}
+.dial-study .desktop-hour-chart .usage-x span::before {content:"";position:absolute;inset:0 auto auto 50%;width:1px;height:3px;background:var(--line)}
+.dial-study .desktop-hour-chart .usage-x span:not(:empty)::before {height:5px;background:var(--muted)}
+@media(prefers-reduced-motion:reduce){.dial-study .sand-motion::before {animation:none}}
