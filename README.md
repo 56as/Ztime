@@ -84,6 +84,8 @@ node --test tests/*.test.js
 node scripts/package-windows.js
 ```
 
+Windows 打包、覆盖更新和发行归档会先运行 `node scripts/verify-release-parity.mjs`。检查使用临时账本，在 Edge 中对照已确认的桌面画板，覆盖四页页头、浅色和深色、分段控件尺寸、滑动和连续切换。任一断言失败即停止发布。对照截图保存在 `artifacts/release-parity/`。本机需可加载 Playwright 并安装 Edge。
+
 Windows 原生采集由 `desktop/collector.ps1` 调用系统 API，仅查询前台进程名和锁屏状态。受限沙箱可能无法读取前台窗口，需要从正常 Windows 桌面启动程序。
 
 项目中 `scripts/verify-ui.mjs` 和 `scripts/verify-electron.mjs` 支持 Playwright 检查。将 `PLAYWRIGHT_PATH` 设置为自己的 `playwright` 模块路径；测试数据位于临时目录，截图文件名注明测试数据，不写入真实账本。

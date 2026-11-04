@@ -2,6 +2,7 @@ import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';import path from 'node:path';import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url),root=process.cwd(),out=process.env.ZTIME_BUILD_OUTPUT||path.join(root,'dist','TimeLedger-windows-x64');
 const exists=fs.existsSync(out);if(exists&&!process.argv.includes('--refresh-code'))throw new Error('Windows output already exists. Rename the previous build or pass --refresh-code to update program files without touching data.');
+execFileSync(process.execPath,['scripts/verify-release-parity.mjs'],{stdio:'inherit'});
 const electronRoot=path.dirname(require.resolve('electron/package.json'));if(!fs.existsSync(path.join(electronRoot,'dist','electron.exe')))throw new Error('Install the Electron runtime first.');
 fs.mkdirSync(out,{recursive:true});if(!exists){fs.cpSync(path.join(electronRoot,'dist'),out,{recursive:true});fs.renameSync(path.join(out,'electron.exe'),path.join(out,'Ztime.exe'));}
 const brandedExe=path.join(out,'Ztime.exe');if(!fs.existsSync(brandedExe))fs.copyFileSync(path.join(electronRoot,'dist','electron.exe'),brandedExe);

@@ -3,6 +3,7 @@ from pathlib import Path
 import zipfile,subprocess,hashlib,json
 root=Path(__file__).resolve().parents[1];dist=root/'dist'
 program=dist/'TimeLedger-windows-x64'
+subprocess.run(['node','scripts/verify-release-parity.mjs',str(program/'resources/app')],cwd=root,check=True)
 with zipfile.ZipFile(dist/'Ztime-windows-x64.zip','w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
  for p in program.rglob('*'):
   relative=p.relative_to(program)

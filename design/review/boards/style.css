@@ -768,3 +768,5 @@ body.desktop-v2.hourglass-study:not(.dark) {
 .hourglass-study #period-dashboard .rank-track i,.hourglass-study #period-dashboard .rank-track span {background:var(--chart-jade,var(--muted))}
 .hourglass-study .settings-view button[data-export] {background:var(--bg);color:var(--text);border:1px solid var(--line)}
 body.desktop-v2.unified.hourglass-study .devices-view > .page-header + .panel {border-top:1px solid var(--line)}
+
+body.desktop-v2.hourglass-study.dark {--accent:#409cff!important;--tint:color-mix(in srgb,var(--accent) 13%,var(--surface))!important}
