@@ -946,6 +946,7 @@ function targetFor(note) {
   try {
     if([146,172].includes(note.id) && doc().body.classList.contains('hourglass-study') && doc().querySelector('.sand-header .sand-seal'))return doc().querySelector('.sand-header .sand-seal');
     if(note.board==='desktop-home' && [177,179].includes(note.id))return doc().querySelector('#point-detail:not([hidden]) .point-total') || doc().querySelector('.desktop-hour-chart');
+    if(note.board==='desktop-home' && note.id===181)return doc().querySelector('#clock-instrument');
     if(note.board==='desktop-behavior' && note.id===170)return doc().querySelector('.behavior > header h1');
     if(note.board==='desktop-devices' && note.id===148)return doc().querySelector('.paired-status');
     if(note.board==='desktop-settings' && note.id===149)return doc().querySelector('.preview-rules h2');
@@ -1277,7 +1278,7 @@ function timeImprint(series){
 }
 
 // The fixture has hourly app totals. Place those minutes in deterministic sample sessions
-// so the rings, playback tracks and application ranking all describe the same day.
+// so the rings and application ranking all describe the same day.
 function reviewDeviceSessions(series,apps){
   const rows=[];
   series.forEach((bin,hour)=>{
@@ -1292,84 +1293,55 @@ function reviewDeviceSessions(series,apps){
   return rows.sort((a,b)=>a.start-b.start);
 }
 
-function mountReviewClock(host,rows,state,dur,onChange,fromView){
-  const d=host.ownerDocument,view=d.defaultView,devices=[['pc','电脑'],['phone','手机']];
-  const colors={pc:'#a8dbc4',phone:'#edb47d'};
+function mountReviewClock(host,rows,state,dur,onChange){
   const time=m=>{const t=(m+240)%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');};
-  const bound=n=>Math.max(0,Math.min(1439,Math.round(n)));
-  const replay=state.view==='replay';
-  const hits=()=>rows.filter(r=>r.start<=state.minute && state.minute<r.end);
-  const boundaries=[...new Set(rows.map(r=>r.start))].sort((a,b)=>a-b);
-  const ring=(m,r)=>{const a=(m+240)*Math.PI/720;return [250+r*Math.sin(a),151-r*Math.cos(a)];};
-  const label=(x,y,value,size)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}">${html(value)}</text>`;
-  let windowStart=0;
-  host.innerHTML='<div class="clock-face '+(replay?'clock-tape':'')+'"><svg id="clock-instrument" data-style-native viewBox="0 0 500 300" role="slider" tabindex="0" aria-label="选择时刻" aria-valuemin="0" aria-valuemax="1439"></svg><div class="clock-legend"><span><i></i>电脑</span><span><i></i>手机</span></div></div><div class="clock-readout" id="clock-readout"></div>';
-  const svg=host.querySelector('svg'),aside=host.lastElementChild;
-  function plot(animate=false){
-    const {minute,zoom}=state;
-    const x=m=>44+(m-windowStart)/zoom*412;
-    let marks='';
-    if(replay){
-      for(let tick=Math.ceil(windowStart/(zoom/4))*(zoom/4);tick<=windowStart+zoom;tick+=zoom/4){
-        marks+=`<path d="M${x(tick)} 104v113" stroke="#4a6458"/>`+label(x(tick),96,time(tick),12);
-      }
-      marks+=label(250,58,time(minute),35);
-    }else{
-      for(let i=0;i<96;i++){const m=i*15;marks+='<path d="M'+ring(m,119).join(' ')+'L'+ring(m,i%4?122:127).join(' ')+'" stroke="#7e9e8f"/>';}
-      for(const hour of [0,3,6,9,12,15,18,21]){const [xx,yy]=ring(hour*60-240,140);marks+=label(xx,yy+4,String(hour).padStart(2,'0'),11);}
-    }
-    for(const [i,[device]] of devices.entries()){
-      const r=104-i*16,y=142+i*49;
-      marks+=replay?`<path d="M44 ${y}h412" stroke="#355548" stroke-width="20"/>`:`<circle cx="250" cy="151" r="${r}" stroke="#355548" stroke-width="10" fill="none"/>`;
-      for(const part of rows.filter(v=>v.device===device)){
-        const a=replay?Math.max(part.start,windowStart):part.start,b=replay?Math.min(part.end,windowStart+zoom):part.end;
-        if(b<=a)continue;
-        const arc='M'+ring(a,r).join(' ')+' A'+r+' '+r+' 0 0 1 '+ring(b,r).join(' ');
-        const path=replay?`M${x(a)} ${y}H${x(b)}`:arc;
-        marks+=`<path d="${path}" stroke="${colors[device]}" stroke-width="${replay?18:10}" fill="none"/>`;
-        if(replay && x(b)-x(a)>Math.max(42,part.name.length*12))marks+=`<text class="clock-track-name" x="${(x(a)+x(b))/2}" y="${y+4}" text-anchor="middle">${html(part.name)}</text>`;
-        if(animate && replay && a<=minute && minute<b && !view.matchMedia('(prefers-reduced-motion: reduce)').matches){
-          // Two polylines with equal point counts let the selected arc unroll into its track.
-          const shape=fn=>Array.from({length:13},(_,k)=>(k?'L':'M')+fn(a+(b-a)*k/12).join(' ')).join(' ');
-          marks+=`<path fill="none" stroke="${colors[device]}" stroke-width="10" pointer-events="none" opacity="0"><animate attributeName="d" from="${shape(m=>ring(m,r))}" to="${shape(m=>[x(m),y])}" dur=".32s"/><animate attributeName="opacity" values="1;1;0" dur=".32s"/></path>`;
-        }
-      }
-    }
-    const names=hits().map(r=>r.name).join(' · ')||'无记录';
-    marks+=replay?`<path d="M${x(minute)} 112v104" stroke="#fff2d5" stroke-width="2"/>`:'<path d="M'+ring(minute,77).join(' ')+'L'+ring(minute,128).join(' ')+'" stroke="#fff2d5" stroke-width="2"/>'+label(250,151,state.selected?time(minute):dur(rows.reduce((n,r)=>n+r.minutes,0)),state.selected?31:20)+label(250,176,state.selected?names:'设备累计',12);
-    svg.innerHTML=marks;svg.setAttribute('aria-valuenow',minute);svg.setAttribute('aria-valuetext',time(minute));
-    const active=hits();
-    const detail=devices.map(([key,name])=>{const hit=active.find(r=>r.device===key);return '<div class="clock-row"><span>'+name+'</span><b>'+html(hit?.name||'无记录')+'</b>'+(hit?'<small>'+time(hit.start)+'–'+time(hit.end)+'</small>':'')+'</div>';}).join('');
-    const button=(action,name,disabled=false)=>'<button data-style-native data-clock="'+action+'" '+(disabled?'disabled':'')+'>'+name+'</button>';
-    aside.innerHTML='<small>所选时刻</small><strong>'+time(minute)+'</strong>'+detail+
-      (replay?'<div class="clock-steps">'+button('prev','上一段',!boundaries.some(m=>m<minute))+button('next','下一段',!boundaries.some(m=>m>minute))+'</div><div class="clock-zoom">'+[120,240,1440].map(z=>'<button data-style-native data-clock="zoom" data-minutes="'+z+'" aria-pressed="'+(zoom===z)+'">'+z/60+' 小时</button>').join('')+'</div>':'')+
-      '<button class="clock-open" data-cal="chart-style" data-chart="'+(replay?'dial':'replay')+'">'+(replay?'返回当天双环':'查看这一刻　→')+'</button>';
+  const ring=(m,r)=>{const a=(m+240)*Math.PI/720;return [150+r*Math.sin(a),150-r*Math.cos(a)];};
+  const path=(m,r)=>ring(m,r).join(' ');
+  host.innerHTML='<div class="clock-face"><svg id="clock-instrument" data-style-native viewBox="0 0 300 300" role="slider" tabindex="0" aria-label="选择时刻" aria-valuemin="0" aria-valuemax="1439"></svg><div class="clock-legend"><span><i></i>电脑</span><span><i></i>手机</span></div></div>';
+  const svg=host.querySelector('svg');
+  let marks='';
+  for(let i=0;i<96;i++){
+    const m=i*15;
+    marks+=`<path d="M${path(m,119)}L${path(m,i%4?122:127)}" stroke="#7e9e8f"/>`;
   }
-  function center(){windowStart=Math.round(Math.max(0,Math.min(1440-state.zoom,state.minute-state.zoom/2)));}
-  center();plot(fromView==='dial');
-  function select(value){state.minute=bound(value);state.selected=true;plot();onChange();}
-  aside.onclick=e=>{
-    if(picking)return;
-    const button=e.target.closest('[data-clock]');if(!button)return;
-    const action=button.dataset.clock;
-    if(action==='zoom')state.zoom=Number(button.dataset.minutes);
-    else state.minute=action==='prev'?boundaries.findLast(m=>m<state.minute):boundaries.find(m=>m>state.minute);
-    state.selected=true;center();plot();onChange();
-    aside.querySelector('[data-clock="'+action+'"]'+(action==='zoom'?'[aria-pressed=true]':''))?.focus({preventScroll:true});
-  };
-  function pick(e){
-    const p=new DOMPoint(e.clientX,e.clientY).matrixTransform(svg.getScreenCTM().inverse());
-    if(replay)select(windowStart+Math.max(0,Math.min(1,(p.x-44)/412))*state.zoom);
-    else select((Math.round(Math.atan2(p.x-250,151-p.y)*720/Math.PI)+2640)%1440);
+  for(const hour of [0,3,6,9,12,15,18,21]){
+    const [x,y]=ring(hour*60-240,139);
+    marks+=`<text x="${x}" y="${y+3}" text-anchor="middle" font-size="9">${String(hour).padStart(2,'0')}</text>`;
   }
+  for(const [device,r,color] of [['pc',104,'#a8dbc4'],['phone',88,'#edb47d']]){
+    marks+=`<circle cx="150" cy="150" r="${r}" fill="none" stroke="#355548" stroke-width="10"/>`;
+    for(const part of rows.filter(row=>row.device===device)){
+      marks+=`<path d="M${path(part.start,r)}A${r} ${r} 0 0 1 ${path(part.end,r)}" fill="none" stroke="${color}" stroke-width="10"/>`;
+    }
+  }
+  svg.innerHTML=marks+'<path class="clock-hand" stroke="#fff2d5" stroke-width="2"/><text class="clock-value" x="150" y="152" text-anchor="middle"></text><text class="clock-caption" x="150" y="173" text-anchor="middle" font-size="11"></text>';
+  const total=dur(rows.reduce((sum,row)=>sum+row.minutes,0));
+  function update(){
+    const {minute,selected}=state;
+    const names=rows.filter(row=>row.start<=minute && minute<row.end).map(row=>row.name).join(' · ')||'无记录';
+    const value=svg.querySelector('.clock-value'),hand=svg.querySelector('.clock-hand');
+    hand.setAttribute('d',selected?'M'+path(minute,77)+'L'+path(minute,128):'');
+    value.textContent=selected?time(minute):total;
+    value.setAttribute('font-size',selected?29:20);
+    svg.querySelector('.clock-caption').textContent=selected?names:'设备累计';
+    svg.setAttribute('aria-valuenow',minute);
+    svg.setAttribute('aria-valuetext',selected?time(minute)+' '+names:'设备累计 '+total);
+  }
+  update();
+  function select(minute){state.minute=Math.min(1439,Math.max(0,minute));state.selected=true;update();onChange();}
+  function position(e){return new DOMPoint(e.clientX,e.clientY).matrixTransform(svg.getScreenCTM().inverse());}
+  function pick(p){select((Math.round(Math.atan2(p.x-150,150-p.y)*720/Math.PI)+2640)%1440);}
   svg.onpointerdown=e=>{
     if(picking)return;
-    const p=new DOMPoint(e.clientX,e.clientY).matrixTransform(svg.getScreenCTM().inverse());
-    if(replay?(p.y<85 || p.y>225):(Math.abs(Math.hypot(p.x-250,p.y-151)-106)>36))return;
-    svg.setPointerCapture(e.pointerId);pick(e);
+    const p=position(e);
+    if(Math.abs(Math.hypot(p.x-150,p.y-150)-106)>36)return;
+    svg.setPointerCapture(e.pointerId);pick(p);
   };
-  svg.onpointermove=e=>{if(!picking && svg.hasPointerCapture(e.pointerId))pick(e);};
-  svg.onkeydown=e=>{if(!picking && ['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();state.minute=bound(state.minute+(e.key==='ArrowLeft'?-1:1));center();select(state.minute);}};
+  svg.onpointermove=e=>{if(!picking && svg.hasPointerCapture(e.pointerId))pick(position(e));};
+  svg.onkeydown=e=>{
+    if(picking || !['ArrowLeft','ArrowRight'].includes(e.key))return;
+    e.preventDefault();select(state.minute+(e.key==='ArrowLeft'?-1:1));
+  };
 }
 
 function mountPeriodDashboard(d,onChange){
@@ -1423,8 +1395,7 @@ function mountPeriodDashboard(d,onChange){
  }
  let pointIndex=null;
  const entry=new URLSearchParams(location.search);
- const clockState={view:['dial','replay'].includes(entry.get('view'))?entry.get('view'):null,minute:684,selected:entry.get('view')==='replay',zoom:240};
- let previousClockView=null;
+ const clockState={view:['dial','replay'].includes(entry.get('view'))?'dial':null,minute:684,selected:entry.get('view')==='replay',zoom:240};
  let openPeak=desktop && entry.get('dial')==='1' && entry.get('peak')==='1';
  function enablePointDetails(card,series){
    const svg=card.querySelector('.usage-chart svg');
@@ -1504,7 +1475,7 @@ function mountPeriodDashboard(d,onChange){
        const selector=d.createElement('div');selector.className='chart-style';selector.setAttribute('role','group');selector.setAttribute('aria-label','图表类型');
        const clockView=mode==='day'?clockState.view:null;
        const formats=[['line','折线图'],['bar','柱形图']];
-       if(mode==='day')formats.push(['dial','昼夜双环'],['replay','时间回溯台']);
+       if(mode==='day')formats.push(['dial','环']);
        for(const [key,label] of formats){
          const button=d.createElement('button');button.dataset.cal='chart-style';button.dataset.chart=key;
          button.textContent=label;button.setAttribute('aria-pressed',String((clockView||desktopPreview.chart)===key));selector.append(button);
@@ -1517,10 +1488,9 @@ function mountPeriodDashboard(d,onChange){
          if(maximum>0)pointIndex=details.findIndex(bin=>bin.minutes===maximum);
        }
        if(clockView){
-         const panel=d.createElement('section');panel.id='review-clock';panel.setAttribute('aria-label',clockView==='dial'?'昼夜双环':'时间回溯台');
+         const panel=d.createElement('section');panel.id='review-clock';panel.setAttribute('aria-label','环');
          trend.querySelector('.usage-chart').replaceWith(panel);
-         mountReviewClock(panel,reviewDeviceSessions(series,apps),clockState,dur,onChange,previousClockView);
-         previousClockView=null;
+         mountReviewClock(panel,reviewDeviceSessions(series,apps),clockState,dur,onChange);
        }else bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange});
      }
      if(desktop)ranking.classList.add('desktop-rank-card');
@@ -1669,9 +1639,7 @@ function mountPeriodDashboard(d,onChange){
   if(desktop && ['mode','scope'].includes(a) && button.getAttribute('aria-pressed')==='true')return true;
   if(a==='chart-style'){
     const chart=button.dataset.chart;
-    previousClockView=clockState.view;
-    clockState.view=['dial','replay'].includes(chart)?chart:null;
-    if(chart==='replay')clockState.selected=true;
+    clockState.view=chart==='dial'?'dial':null;
     if(!clockState.view)desktopPreview.chart=chart;
     draw();root.querySelector('.chart-style [data-chart="'+chart+'"]').focus({preventScroll:true});return true;
   }
@@ -1735,7 +1703,7 @@ function mountPeriodDashboard(d,onChange){
   const sane=v=>/^-?\d{1,6}$/.test(v)&&+v>=ymd(1900,0)&&+v<=today;
   if(!Object.hasOwn(modes,m)||!sane(a)||!sane(b)||+b<+a||+b-+a>366||!['all','phone','pc'].includes(sc))return;
   mode=m;period=[+a,+b];scope=sc;comparison=sane(c)&&sane(e)&&+e>=+c&&+e-+c<=366?[+c,+e]:null;picker=null;
-  clockState.view=desktop && ['dial','replay'].includes(clockView)?clockView:null;
+  clockState.view=desktop && ['dial','replay'].includes(clockView)?'dial':null;
   if(clockState.view){clockState.minute=Math.min(1439,Math.max(0,Number(minute)||0));clockState.zoom=[120,240,1440].includes(+zoom)?+zoom:240;clockState.selected=selected==='1';}
   pointIndex=mobile && /^\d+$/.test(point) && +point<bins().length?+point:null;
   layoutDraft=t==='layout'?structuredClone(layout):null;

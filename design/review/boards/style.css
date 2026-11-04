@@ -446,14 +446,15 @@ html:has(.desk-ui .behavior),
 .desktop-v2 .pd-main:has(.default-pair) {display:flex;flex-direction:column;height:100dvh;min-height:560px}
 .desktop-v2 .pd-main:has(.default-pair) > :not(.pd-bottom) {flex:none}
 .desk-ui.desktop-v2 .pd-bottom.default-pair {flex:1;min-height:0;grid-template-columns:minmax(0,1fr);grid-auto-rows:minmax(0,1fr);align-items:stretch}
-.desktop-v2 .default-pair:has(> [data-card-key=trend]:nth-child(1 of :not([hidden]))) {grid-template-rows:minmax(0,1.2fr) minmax(0,1fr)}
-.desktop-v2 .default-pair:has(> [data-card-key=ranking]:nth-child(1 of :not([hidden]))) {grid-template-rows:minmax(0,1fr) minmax(0,1.2fr)}
+.desktop-v2 .default-pair:has(> [data-card-key=trend]:nth-child(1 of :not([hidden]))) {grid-template-rows:minmax(0,1fr) auto}
+.desktop-v2 .default-pair:has(> [data-card-key=ranking]:nth-child(1 of :not([hidden]))) {grid-template-rows:auto minmax(0,1fr)}
 .desktop-v2 .default-pair > [data-card-key]:not([hidden]) {display:flex;flex-direction:column;min-height:0}
 .desktop-v2 .default-pair .usage-chart {flex:1;min-height:0;margin-top:8px}
 .desktop-v2 .default-pair .usage-chart > div:last-child {display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}
 .desktop-v2 .default-pair .usage-chart svg {height:100%;min-height:0}
 .desktop-v2 .default-pair .usage-y {height:auto;margin-bottom:20px}
-.desktop-v2 .default-pair .rank-scroll {flex:1;min-height:0;max-height:none}
+.desktop-v2 .desktop-rank-card .rank-scroll {max-height:123px;flex:none}
+.desktop-v2 .desktop-rank-card .desktop-rank-row {box-sizing:border-box;height:41px}
 .desktop-v2 .devices-view {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:14px}
 .desktop-v2 .devices-view > .page-header,.desktop-v2 .devices-view > .page-header + .panel,.desktop-v2 .devices-view > [aria-live] {grid-column:1/-1}
 .desktop-v2.unified .devices-view > .panel {padding:14px 18px;margin:0}
@@ -821,26 +822,15 @@ body.desktop-v2.imprint-study #period-dashboard .usage-chart {color:var(--print-
 body.desktop-v2.imprint-study #period-dashboard .rank-track i {background:var(--print-ink)}
 body.desktop-v2.imprint-study #period-dashboard .rank-track {background:var(--line)}
 
-/* Annotatable daily device views in the Statistics board. */
-.desktop-v2 .pd-main:has(#review-clock) {height:auto;min-height:100dvh}
-.desktop-v2 .pd-main:has(#review-clock) .pd-bottom {grid-template-rows:auto}
-.desktop-v2 #review-clock {display:grid;grid-template-columns:minmax(0,1.8fr) minmax(180px,.8fr);margin-top:12px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.clock-face {background:#19382f;color:#f1f2df;display:grid;align-content:center;padding:10px 12px}
-.clock-face svg {width:100%;height:clamp(224px,27vw,310px);display:block;touch-action:none;cursor:crosshair}
+/* Daily device ring in the desktop Statistics board. */
+.desktop-v2 #review-clock {height:clamp(270px,52vh,620px);margin-top:10px}
+.desktop-v2 .pd-main:has(.default-pair #review-clock) {min-height:840px}
+.desktop-v2 .default-pair #review-clock {flex:1;min-height:0;height:auto}
+.clock-face {box-sizing:border-box;height:100%;display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;gap:5px;padding:10px 12px;color:#f1f2df;background:#19382f;border-radius:12px}
+.clock-face svg {width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 .clock-face svg:focus-visible {outline:2px solid #edb47d;outline-offset:-2px}
 .clock-face svg text {fill:currentColor;pointer-events:none;font-family:"Segoe UI","Microsoft YaHei",sans-serif;font-variant-numeric:tabular-nums}
-.clock-face svg .clock-track-name {fill:#18332c;font-size:11px}
 .clock-legend,.clock-legend span {display:flex;gap:6px;align-items:center}
 .clock-legend {justify-content:center;gap:18px;font-size:12px}
-.clock-legend i {height:3px;width:16px;background:#a8dbc4}
+.clock-legend i {height:3px;width:16px;border-radius:2px;background:#a8dbc4}
 .clock-legend span+span i {background:#edb47d}
-.clock-readout {display:flex;flex-direction:column;justify-content:center;padding:14px clamp(12px,2vw,26px);gap:6px;font-variant-numeric:tabular-nums}
-.clock-readout>small,.clock-row small {color:var(--muted);font-size:12px}
-.clock-readout>strong {font:36px/1.15 Georgia,serif;color:var(--text)}
-.clock-row {display:grid;grid-template-columns:auto 1fr;gap:2px 8px;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
-.clock-row b,.clock-row small {text-align:right}
-.clock-row small {grid-column:2}
-.clock-steps,.clock-zoom {display:flex;flex-wrap:wrap;gap:4px}
-#period-dashboard .clock-readout button {font-size:12px;padding:5px 7px;border:1px solid var(--line)}
-#period-dashboard .clock-readout .clock-open {background:#294c3e;color:#fff9e8;align-self:flex-start;margin-top:5px;padding:7px 12px}
-#period-dashboard .clock-zoom [aria-pressed=true] {background:var(--tint);color:var(--text)}
