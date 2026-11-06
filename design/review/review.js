@@ -149,7 +149,7 @@ function captureClockPointer(svg,event){
   svg.onlostpointercapture=()=>svg.removeAttribute('data-scrubbing');
 }
 
-function mountDailyReplay(host,rows,state,{onChange=()=>{},enabled=()=>true,timeAt=defaultClockTime,dayMinutes=1440}={}){
+function mountDailyReplay(host,rows,state,{onChange=()=>{},enabled=()=>true,timeAt=defaultClockTime,dayMinutes=1440,onWindowChange=()=>{}}={}){
   host.innerHTML='<div class="clock-face clock-replay"><svg id="replay-instrument" data-style-native viewBox="0 0 600 215" tabindex="0" role="slider" aria-label="选择回溯时刻" aria-valuemin="0" aria-valuemax="'+(dayMinutes-1)+'"></svg></div>';
   const svg=host.querySelector('svg'),left=54,width=520,span=Math.min(120,dayMinutes),scale=width/span;
   const clamp=(m,max)=>Math.max(0,Math.min(max,m));
@@ -185,6 +185,7 @@ function mountDailyReplay(host,rows,state,{onChange=()=>{},enabled=()=>true,time
       start=nextStart;
       trackGroup.setAttribute('transform',`translate(${left-start*scale} 0)`);
       ticks.forEach((tick,i)=>{tick.textContent=timeAt(start+i*span/4);});
+      onWindowChange(start,start+span);
     }
     const time=timeAt(state.minute);
     const names=rows.filter(r=>r.start<=state.minute && state.minute<r.end).map(r=>r.name).join(' · ')||'无记录';
@@ -275,12 +276,65 @@ function mountDailyRing(host,rows,state,dur,{onChange=()=>{},enabled=()=>true,ti
   return update;
 }
 
+// Session coordinates and the visible window are minutes from the statistical day's start.
+function ringWindowUsage(rows,start,end){
+ const totals=new Map();
+ for(const row of rows){
+  const minutes=Math.max(0,Math.min(end,row.end)-Math.max(start,row.start));
+  if(!minutes)continue;
+  const key=JSON.stringify([row.deviceId??row.device,row.appId??row.name]);
+  const item=totals.get(key)||{...row,key,minutes:0};
+  item.minutes+=minutes;totals.set(key,item);
+ }
+ return [...totals.values()].sort((a,b)=>b.minutes-a.minutes);
+}
+
+function mountRingUsage(host,rows,dur,{timeAt=defaultClockTime,appIcon}={}){
+ host.innerHTML='<header><h4>此时段应用用时</h4><p class="ring-window-range"></p></header><div class="ring-window-list" tabindex="0" role="region" aria-label="此时段应用用时"></div>';
+ const range=host.querySelector('.ring-window-range'),content=host.querySelector('.ring-window-list');
+ const nodes=new Map();
+ const empty=host.ownerDocument.createElement('p');
+ empty.className='ring-window-empty';empty.textContent='此时段暂无使用记录';
+ function draw(start,end){
+  range.textContent=timeAt(start)+'–'+timeAt(end);
+  const ranked=ringWindowUsage(rows,start,end),maximum=ranked[0]?.minutes||1;
+  const elements=ranked.map(row=>{
+   let node=nodes.get(row.key);
+   if(!node){
+    node=host.ownerDocument.createElement('div');
+    node.className='ring-window-row';
+    node.dataset.styleId='ring-window-'+row.device+'-'+row.name;
+    const icon=appIcon?.(row)||html(Array.from(row.name)[0]||'?');
+    node.innerHTML='<span class="ring-window-icon">'+icon+'</span><span class="ring-window-name">'+html(row.name)+'<small>'+(row.device==='pc'?'电脑':'手机')+'</small></span><span class="ring-window-bar"><i></i></span><b></b>';
+    nodes.set(row.key,node);
+   }
+   node.querySelector('i').style.width=row.minutes/maximum*100+'%';
+   node.querySelector('b').textContent=dur(row.minutes);
+   return node;
+  });
+  content.replaceChildren(...(elements.length?elements:[empty]));
+ }
+ let scheduled=false,window;
+ return (start,end)=>{
+  window=[start,end];
+  if(!content.childElementCount){draw(start,end);return;}
+  if(scheduled)return;
+  scheduled=true;
+  host.ownerDocument.defaultView.requestAnimationFrame(()=>{
+   scheduled=false;
+   if(host.isConnected)draw(...window);
+  });
+ };
+}
+
 function mountRingDesk(panel,rows,state,dur,options={}){
-  panel.innerHTML='<section class="desk-dial" aria-label="全天分布"><h4>全天分布</h4><div></div></section><section class="desk-replay" aria-label="时段回溯"><h4>时段回溯</h4><div></div></section>';
-  const dial=panel.querySelector('.desk-dial > div'),replay=panel.querySelector('.desk-replay > div');
-  // Keep both sliders mounted during a drag; only refresh the other instrument.
-  const refreshRing=mountDailyRing(dial,rows,state,dur,{...options,onChange(){refreshReplay();options.onChange?.();}});
-  const refreshReplay=mountDailyReplay(replay,rows,state,{...options,onChange(){refreshRing();options.onChange?.();}});
+ panel.classList.add('ring-window');
+ panel.innerHTML='<section class="desk-dial" aria-label="全天分布"><h4>全天分布</h4><div></div></section><section class="desk-replay" aria-label="时段回溯"><h4>时段回溯</h4><div></div><section class="ring-window-usage" data-style-id="ring-window-usage"></section></section>';
+ const dial=panel.querySelector('.desk-dial > div'),replay=panel.querySelector('.desk-replay > div');
+ const updateUsage=mountRingUsage(panel.querySelector('.ring-window-usage'),rows,dur,options);
+ // Both instruments and decoded application icons stay mounted during pointer movement.
+ const refreshRing=mountDailyRing(dial,rows,state,dur,{...options,onChange(){refreshReplay();options.onChange?.();}});
+ const refreshReplay=mountDailyReplay(replay,rows,state,{...options,onWindowChange:updateUsage,onChange(){refreshRing();options.onChange?.();}});
 }
 // @generated desk-preview:end
 // All state lives in the current fixture document; no calls to the product or the notes API.
@@ -1439,48 +1493,6 @@ function reviewDeviceSessions(series,apps){
   return rows.sort((a,b)=>a.start-b.start);
 }
 
-// Review-only proposal. The shared instruments retain their existing pointer and drag behavior.
-function mountReviewRingWindow(panel,rows,state,dur,apps,options){
- let update=()=>{};
- mountRingDesk(panel,rows,state,dur,{...options,onChange(){update();options.onChange?.();}});
- panel.classList.add('ring-window-preview');
- const side=panel.querySelector('.desk-replay'),svg=side.querySelector('svg');
- const list=panel.ownerDocument.createElement('section');
- list.className='ring-window-usage';
- list.dataset.styleId='ring-window-usage';
- list.innerHTML='<header><h4>此时段应用用时</h4><p class="ring-window-range"></p></header><div class="ring-window-list" tabindex="0" role="region" aria-label="此时段应用用时"></div>';
- side.append(list);
- const range=list.querySelector('.ring-window-range'),content=list.querySelector('.ring-window-list');
- let previousStart;
- update=()=>{
-  // Read the visible scale, since dragging inside the right track keeps its window fixed.
-  const ticks=svg.querySelectorAll('.replay-grid text');
-  const first=ticks[0].textContent,last=ticks[ticks.length-1].textContent;
-  const [hour,minute]=first.split(':').map(Number);
-  const start=(hour*60+minute-240+1440)%1440,end=start+120;
-  if(start===previousStart)return;
-  previousStart=start;
-  range.textContent=first+'–'+last;
-  const totals=new Map();
-  for(const row of rows){
-   const minutes=Math.max(0,Math.min(end,row.end)-Math.max(start,row.start));
-   if(!minutes)continue;
-   const key=row.device+'|'+row.name;
-   const item=totals.get(key)||{name:row.name,device:row.device,minutes:0};
-   item.minutes+=minutes;totals.set(key,item);
-  }
-  const ranked=[...totals.values()].sort((a,b)=>b.minutes-a.minutes);
-  const maximum=ranked[0]?.minutes||1;
-  content.innerHTML=ranked.length?ranked.map(row=>{
-   const artwork=apps.find(app=>app[0]===row.name&&app[1]===row.device)?.[2];
-   const icon=artwork?'<img src="'+(artwork==='brand-icon.png'?artwork:'rank-icons/'+artwork+'.png')+'" alt="">':rankInitialSvg(row.name);
-   const device=row.device==='pc'?'电脑':'手机';
-   return '<div class="ring-window-row" data-style-id="ring-window-'+row.device+'-'+html(row.name)+'"><span class="ring-window-icon">'+icon+'</span><span class="ring-window-name">'+html(row.name)+'<small>'+device+'</small></span><span class="ring-window-bar"><i style="width:'+row.minutes/maximum*100+'%"></i></span><b>'+dur(row.minutes)+'</b></div>';
-  }).join(''):'<p class="ring-window-empty">此时段暂无使用记录</p>';
- };
- update();
-}
-
 function mountPeriodDashboard(d,onChange){
  const DAY=86400000, iso=n=>new Date(n*DAY).toISOString().slice(0,10), num=s=>Date.parse(s+'T00:00:00Z')/DAY;
  const today=num(new Date(Date.now()-4*3600000).toLocaleDateString('sv-SE',{timeZone:'Asia/Hong_Kong'}));
@@ -1629,7 +1641,10 @@ function mountPeriodDashboard(d,onChange){
          const panel=d.createElement('section');panel.id='review-clock';panel.className='daily-clock ring-desk';panel.setAttribute('aria-label','环台');
          trend.querySelector('.usage-chart').replaceWith(panel);
          const sessions=reviewDeviceSessions(series,apps);
-         mountReviewRingWindow(panel,sessions,clockState,dur,apps,{onChange,enabled:()=>!picking});
+         mountRingDesk(panel,sessions,clockState,dur,{onChange,enabled:()=>!picking,appIcon:row=>{
+           const artwork=apps.find(app=>app[0]===row.name&&app[1]===row.device)?.[2];
+           return artwork?'<img src="'+(artwork==='brand-icon.png'?artwork:'rank-icons/'+artwork+'.png')+'" alt="">':rankInitialSvg(row.name);
+         }});
        }else bindDesktopPoints(trend,details,{pointIndex,onSelect:index=>{pointIndex=index;},dur,enabled:()=>!picking,onChange});
      }
      if(desktop)ranking.classList.add('desktop-rank-card');

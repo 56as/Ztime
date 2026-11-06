@@ -347,6 +347,37 @@ html:has(.desk-ui .behavior),
 .ring-desk .needle-pin {fill:#fff1d6;stroke:#745034;stroke-width:.5}
 .dark .ring-desk .needle-body {fill:#c29b6c;stroke:#f3dfbf}
 .dark .ring-desk .needle-facet {fill:#f8d9a7}
+
+/* Application usage within the visible replay window. */
+.ring-desk.ring-window .desk-replay {
+ grid-template-rows:auto auto minmax(0,1fr);
+ align-content:start;
+ row-gap:14px;
+}
+.ring-window .desk-replay > div {min-height:0}
+.ring-window .desk-replay .clock-replay {height:auto;padding-block:0}
+.ring-window .clock-replay svg {height:auto;aspect-ratio:600/215;max-height:230px}
+.ring-window-usage {display:flex;flex-direction:column;min-height:0;border-top:1px solid var(--line);padding-top:18px}
+.ring-desk .ring-window-usage h4 {font-size:15px;font-weight:600;color:var(--text)}
+.ring-window-range {margin:4px 0 12px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ring-window-list {min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.ring-window-row {display:grid;grid-template-columns:24px minmax(70px,1fr) minmax(50px,1.5fr) max-content;align-items:center;gap:12px;min-height:62px;border-bottom:1px solid var(--line);padding:10px 4px}
+.ring-window-icon,.ring-window-icon :is(img,svg) {width:24px;height:24px;display:block}
+.ring-window-name {font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ring-window-name small {display:block;font-size:11px;color:var(--muted)}
+.ring-window-bar {height:7px;border-radius:4px;background:var(--line);overflow:hidden}
+.ring-window-bar i {display:block;height:100%;border-radius:inherit;background:#397c65}
+.dark .ring-window-bar i {background:#a8dbc4}
+.ring-window-row b {font-size:13px;font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ring-window-empty {font-size:13px;color:var(--muted);padding-block:16px}
+@media(max-width:900px){
+ .ring-desk.ring-window .desk-replay {row-gap:8px}
+ .ring-window-usage {padding-top:12px}
+ .ring-window-row {grid-template-columns:20px minmax(58px,1fr) minmax(25px,.7fr) max-content;gap:7px;min-height:54px}
+ .ring-window-icon,.ring-window-icon :is(img,svg) {width:20px;height:20px}
+ .ring-window-name {font-size:12px}
+ .ring-window-row b {font-size:12px}
+}
 /* @generated desk-preview:end */
 
 /* The phone boards share one bottom tab bar. */
@@ -871,35 +902,3 @@ body.desktop-v2.imprint-study #period-dashboard .pd-card {border:0;border-top:1p
 body.desktop-v2.imprint-study #period-dashboard .usage-chart {color:var(--print-ink)}
 body.desktop-v2.imprint-study #period-dashboard .rank-track i {background:var(--print-ink)}
 body.desktop-v2.imprint-study #period-dashboard .rank-track {background:var(--line)}
-
-
-/* Review proposal: raised replay timeline with usage for its visible two-hour window. */
-.ring-desk.ring-window-preview .desk-replay {
- grid-template-rows:auto auto minmax(0,1fr);
- align-content:start;
- row-gap:14px;
-}
-.ring-window-preview .desk-replay > div {min-height:0}
-.ring-window-preview .desk-replay .clock-replay {height:auto;padding-block:0}
-.ring-window-preview .clock-replay svg {height:auto;aspect-ratio:600/215;max-height:230px}
-.ring-window-usage {display:flex;flex-direction:column;min-height:0;border-top:1px solid var(--line);padding-top:18px}
-.ring-desk .ring-window-usage h4 {font-size:15px;font-weight:600;color:var(--text)}
-.ring-window-range {margin:4px 0 12px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-.ring-window-list {min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
-.ring-window-row {display:grid;grid-template-columns:24px minmax(70px,1fr) minmax(50px,1.5fr) max-content;align-items:center;gap:12px;min-height:62px;border-bottom:1px solid var(--line);padding:10px 4px}
-.ring-window-icon,.ring-window-icon :is(img,svg) {width:24px;height:24px;display:block}
-.ring-window-name {font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ring-window-name small {display:block;font-size:11px;color:var(--muted)}
-.ring-window-bar {height:7px;border-radius:4px;background:var(--line);overflow:hidden}
-.ring-window-bar i {display:block;height:100%;border-radius:inherit;background:#397c65}
-.dark .ring-window-bar i {background:#a8dbc4}
-.ring-window-row b {font-size:13px;font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums}
-.ring-window-empty {font-size:13px;color:var(--muted);padding-block:16px}
-@media(max-width:900px){
- .ring-desk.ring-window-preview .desk-replay {row-gap:8px}
- .ring-window-usage {padding-top:12px}
- .ring-window-row {grid-template-columns:20px minmax(58px,1fr) minmax(25px,.7fr) max-content;gap:7px;min-height:54px}
- .ring-window-icon,.ring-window-icon :is(img,svg) {width:20px;height:20px}
- .ring-window-name {font-size:12px}
- .ring-window-row b {font-size:12px}
-}

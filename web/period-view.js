@@ -135,7 +135,11 @@ export function createPeriodView({readPeriod, saveLayout, escape, duration, deta
      if(desktop && trend && dailyChart){
        const fmt=new Intl.DateTimeFormat('zh-CN',{timeZone:snapshot.settings.timeZone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
        const timeAt=m=>fmt.format(result.start+Math.round(m*60000));
-       const options={timeAt,dayMinutes:result.dayMinutes,offset:snapshot.settings.dayStart*60};
+       const options={timeAt,dayMinutes:result.dayMinutes,offset:snapshot.settings.dayStart*60,
+         appIcon:row=>{
+           const params=new URLSearchParams({v:'4',platform:row.device==='pc'?'windows':'android',id:row.appId,name:row.name});
+           return '<img alt="" src="/api/app-icon?'+escape(params.toString())+'">';
+         }};
        const rows=result.sessions, panel=trend.querySelector('.daily-clock');
        if(!clock.selected)clock.minute=rows.length?rows.reduce((last,row)=>Math.max(last,row.start),0):0;
        if(showLatestRecord && rows.length){clock.selected=true;showLatestRecord=false;}

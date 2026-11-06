@@ -38,3 +38,22 @@ test('desktop layout upgrades an existing choice without overwriting order or en
  assert.deepEqual(desktopLayout().filter(r=>r.visible).map(r=>r.key),['trend','ranking']);
  assert.ok(validDesktopLayout(next));assert.equal(validDesktopLayout([...next.slice(1),next[1]]),false);
 });
+
+
+import {ringWindowUsage} from '../web/desktop-insights.js';
+test('replay usage clips to the visible window and keeps same-name apps and devices separate',()=>{
+ const row={name:'Editor',device:'pc',deviceId:'a',appId:'editor'};
+ const sessions=[
+  {...row,start:30,end:70},
+  {...row,start:90,end:100},
+  {...row,appId:'other',start:60,end:80},
+  {...row,deviceId:'b',start:60,end:90},
+  {...row,start:0,end:60},
+  {...row,start:180,end:200}
+ ];
+ const usage=ringWindowUsage(sessions,60,180);
+ assert.deepEqual(usage.map(r=>r.minutes),[30,20,20]);
+ assert.equal(usage.find(r=>r.deviceId==='a'&&r.appId==='editor').minutes,20);
+ assert.equal(ringWindowUsage([{...row,start:1430,end:1500}],1440,1500)[0].minutes,60);
+ assert.deepEqual(ringWindowUsage(sessions,300,420),[]);
+});

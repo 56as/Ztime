@@ -93,9 +93,18 @@ try{
       const ticks=await replay.locator('.replay-grid text').allTextContents();
       const asMinute=t=>Number(t.slice(0,2))*60+Number(t.slice(3));
       assert.equal((asMinute(ticks.at(-1))-asMinute(ticks[0])+1440)%1440,120);
+      await page.waitForFunction(()=>{
+        const ticks=[...document.querySelectorAll('.replay-grid text')].map(e=>e.textContent);
+        return document.querySelector('.ring-window-range').textContent===ticks[0]+'–'+ticks.at(-1);
+      });
+      const usage=page.locator('.ring-window-usage');
+      assert.ok((await usage.boundingBox()).y>=(await replay.boundingBox()).y+(await replay.boundingBox()).height);
+      const appIcon=await usage.locator('img').first().elementHandle();
       const tracks=await replay.locator('.replay-tracks path').first().elementHandle();
       await instrument.press('ArrowLeft');
       assert.ok(await tracks.evaluate(el=>el.isConnected),'Dragging should reuse the session tracks');
+      await page.evaluate(()=>new Promise(requestAnimationFrame));
+      assert.ok(await appIcon.evaluate(el=>el.isConnected),'Dragging should reuse application icons');
       const left=await instrument.boundingBox(),right=await replay.boundingBox();
       assert.ok(left.x+left.width<=right.x+1);
       const metrics=await instrument.evaluate(el=>{
